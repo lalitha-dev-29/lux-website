@@ -68,11 +68,20 @@ anyone can read them from the deployed bundle and call EmailJS's API directly,
 bypassing the site (and this rate limit) entirely. The actual defenses against that
 live on EmailJS's side, not in this codebase:
 
-1. **Domain allowlist (do this)** — EmailJS dashboard → Account → Security → "Allowed
-   domains for API calls". Add `lalitha-dev-29.github.io`. EmailJS then rejects any
-   request whose origin doesn't match, server-side — this is what actually stops a
-   script hitting the API directly and draining the free-tier quota.
-2. **CAPTCHA on the template (optional, extra bot protection)** — in the template
-   editor, under Settings, enable reCAPTCHA/hCaptcha.
+1. **Domain allowlist** — EmailJS dashboard → Account → Security → "Allowed domains
+   for API calls". This is the strongest option (rejects any request whose origin
+   doesn't match, server-side) but is gated behind a paid EmailJS plan.
+2. **reCAPTCHA v2 on the template (what this site uses)** — free, and also enforced
+   server-side by EmailJS, so it protects against direct API calls too, not just
+   submissions through the site's UI:
+   - Register a site at [google.com/recaptcha/admin/create](https://www.google.com/recaptcha/admin/create)
+     (type: reCAPTCHA v2, "I'm not a robot" Checkbox) with this domain added.
+   - Paste the **Secret Key** into EmailJS: Email Templates → your template →
+     Settings → enable **"reCAPTCHA V2 verification"**.
+   - Set the **Site Key** (safe to be public) as `PUBLIC_RECAPTCHA_SITE_KEY` — copy
+     `.env.example` to `.env` for local dev, and add it as a repo secret
+     (Settings → Secrets and variables → Actions) for the deployed site.
+   - Left unset, the form has no captcha requirement (submissions go straight to
+     EmailJS, protected only by the client-side rate limit above).
 3. Keep an eye on usage at dashboard.emailjs.com/admin — the free tier caps at a
    monthly send count; EmailJS emails you as you approach it.
