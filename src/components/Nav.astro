@@ -1,0 +1,32 @@
+---
+import { withBase } from '../lib/url';
+
+const links = [
+  { href: '/', label: 'Home' },
+  { href: '/case-studies/', label: 'Case Studies' },
+  { href: '/journal/', label: 'Journal' },
+  { href: '/learning/', label: 'Learning' },
+  { href: '/atlas/', label: 'Atlas' },
+  { href: '/connect/', label: 'Work With Me' },
+];
+
+const currentPath = Astro.url.pathname;
+function isActive(href: string) {
+  const target = withBase(href);
+  return currentPath === target || (href !== '/' && currentPath.startsWith(target));
+}
+---
+
+<header class="site-nav" id="siteNav">
+  <div class="nav-inner">
+    <a href={withBase('/')} class="brand-mark">LMK<span class="dot"></span></a>
+    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="primary-links" id="primaryLinks">
+      {links.map((link) => (
+        <a href={withBase(link.href)} class={isActive(link.href) ? 'active' : ''}>{link.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>

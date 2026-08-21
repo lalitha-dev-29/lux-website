@@ -1,0 +1,66 @@
+---
+import { getCollection, render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { withBase } from '../../lib/url';
+
+export async function getStaticPaths() {
+  const caseStudies = await getCollection('caseStudies');
+  return caseStudies.map((entry) => ({
+    params: { slug: entry.id },
+    props: { entry },
+  }));
+}
+
+const { entry } = Astro.props;
+const c = entry.data;
+const { Content } = await render(entry);
+---
+
+<Layout title={`${c.title} | Case Studies | Lalitha Manogna Kasturi`} description={c.excerpt}>
+  <section class="tight case-detail-head">
+    <div class="container">
+      <div class="section-head reveal">
+        <a href={withBase('/case-studies/')} class="btn-line">← All Case Studies</a>
+      </div>
+      <div class="reveal">
+        <div class="card-meta">{c.cat} <span class="dot"></span> <span class="read">{c.time}</span></div>
+        <h1 style="font-size:clamp(32px, 4.6vw, 56px); margin-top:14px; line-height:1.1;">{c.title}</h1>
+        <div class="tags" style="margin-top:22px;">{c.tags.map((t) => <span>{t}</span>)}</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight" style="padding-top:0;">
+    <div class="container">
+      <div class="case-detail-media reveal">
+        <img src={c.img} alt={`${c.title} case study cover`} />
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="container">
+      <div class="prose reveal">
+        <Content />
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="container">
+      {c.pdfUrl ? (
+        <>
+          <iframe class="case-pdf-frame reveal" src={c.pdfUrl} title={`${c.title} PDF`}></iframe>
+          <div class="view-all reveal">
+            <a class="btn-solid" href={c.pdfUrl} download>Download PDF</a>
+          </div>
+        </>
+      ) : (
+        <div class="case-pdf-empty reveal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+          <p>No PDF attached yet. Set <code>pdfUrl</code> in this case study's frontmatter to make it readable and downloadable here.</p>
+        </div>
+      )}
+    </div>
+  </section>
+</Layout>

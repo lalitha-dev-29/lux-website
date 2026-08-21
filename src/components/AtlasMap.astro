@@ -1,0 +1,97 @@
+---
+import countryPaths from '../data/world-map-paths.svg?raw';
+import { centroids, countries } from '../data/atlas';
+
+const atlasData = { centroids, countries };
+---
+
+<div class="atlas-map-wrap reveal" id="atlasMapWrap">
+  <svg id="worldMapSvg" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive world map, click a country to view luxury houses studied there">
+    <rect class="ocean" x="0" y="0" width="960" height="500"></rect>
+    <g class="countries" id="countriesGroup" set:html={countryPaths}></g>
+    <g class="markers" id="atlasMarkers"></g>
+  </svg>
+  <div class="atlas-tooltip" id="atlasTooltip"></div>
+</div>
+
+<div class="atlas-scrim" id="atlasScrim"></div>
+<aside class="atlas-panel" id="atlasPanel">
+  <button class="atlas-panel-close" id="atlasPanelClose">← Close</button>
+  <span class="country-tag" id="atlasPanelTag">Country</span>
+  <h3 id="atlasPanelTitle">Country Name</h3>
+  <div id="atlasPanelList"></div>
+</aside>
+
+<script is:inline define:vars={{ atlasData }}>
+  const countryEls = document.querySelectorAll('#countriesGroup .country');
+  const markersGroup = document.getElementById('atlasMarkers');
+  const tooltip = document.getElementById('atlasTooltip');
+  const wrap = document.getElementById('atlasMapWrap');
+  const atlasPanel = document.getElementById('atlasPanel');
+  const atlasScrim = document.getElementById('atlasScrim');
+  const atlasPanelTag = document.getElementById('atlasPanelTag');
+  const atlasPanelTitle = document.getElementById('atlasPanelTitle');
+  const atlasPanelList = document.getElementById('atlasPanelList');
+  let activeHotspot = null;
+
+  function openAtlasPanel(country, el) {
+    if (activeHotspot) activeHotspot.classList.remove('selected');
+    activeHotspot = el;
+    el.classList.add('selected');
+    const data = atlasData.countries[country];
+    atlasPanelTag.textContent = country;
+    if (data) {
+      atlasPanelTitle.textContent = data.heading;
+      const brandsHtml =
+        data.brands && data.brands.length
+          ? data.brands.map((h) => `<div class="atlas-house"><div class="maison">${h.name}</div><div class="cat">${h.cat}</div></div>`).join('')
+          : '';
+      atlasPanelList.innerHTML = `<p class="atlas-empty">${data.description}</p>${brandsHtml}`;
+    } else {
+      atlasPanelTitle.textContent = country;
+      atlasPanelList.innerHTML = `<p class="atlas-empty">Research for ${country} is coming soon. Check back as the atlas grows.</p>`;
+    }
+    atlasPanel.classList.add('open');
+    atlasScrim.classList.add('open');
+  }
+
+  function closeAtlasPanel() {
+    atlasPanel.classList.remove('open');
+    atlasScrim.classList.remove('open');
+    if (activeHotspot) {
+      activeHotspot.classList.remove('selected');
+      activeHotspot = null;
+    }
+  }
+
+  countryEls.forEach((path) => {
+    const name = path.dataset.name;
+    if (atlasData.countries[name]) path.classList.add('has-data');
+    path.addEventListener('click', () => openAtlasPanel(name, path));
+    path.addEventListener('mouseenter', () => {
+      tooltip.innerHTML = `<span class="dot"></span>${name}`;
+      tooltip.classList.add('show');
+    });
+    path.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
+  });
+
+  wrap.addEventListener('mousemove', (e) => {
+    const r = wrap.getBoundingClientRect();
+    tooltip.style.left = e.clientX - r.left + 'px';
+    tooltip.style.top = e.clientY - r.top + 'px';
+  });
+
+  markersGroup.innerHTML = Object.keys(atlasData.countries)
+    .map((name) => {
+      const c = atlasData.centroids[name];
+      if (!c) return '';
+      return `<circle class="atlas-marker-pulse" cx="${c.x}" cy="${c.y}" r="4"/><circle class="atlas-marker" cx="${c.x}" cy="${c.y}" r="3.4"/>`;
+    })
+    .join('');
+
+  document.getElementById('atlasPanelClose').addEventListener('click', closeAtlasPanel);
+  atlasScrim.addEventListener('click', closeAtlasPanel);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeAtlasPanel();
+  });
+</script>

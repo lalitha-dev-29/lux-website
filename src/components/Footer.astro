@@ -1,0 +1,26 @@
+---
+import { withBase } from '../lib/url';
+
+const links = [
+  { href: '/', label: 'Home' },
+  { href: '/case-studies/', label: 'Case Studies' },
+  { href: '/journal/', label: 'Journal' },
+  { href: '/learning/', label: 'Learning' },
+  { href: '/atlas/', label: 'Atlas' },
+  { href: '/connect/', label: 'Work With Me' },
+];
+---
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <a href={withBase('/')} class="brand-mark">LMK<span class="dot"></span></a>
+      <nav>
+        {links.map((link) => <a href={withBase(link.href)}>{link.label}</a>)}
+      </nav>
+    </div>
+    <p class="footer-note">Luxury Marketing. Brand Strategy · Consumer Behaviour · Creative Marketing.</p>
+    <p class="footer-note tagline">Reinvent the new. Without changing the roots.</p>
+    <p class="footer-note">© 2026 Lalitha Manogna Kasturi</p>
+  </div>
+</footer>

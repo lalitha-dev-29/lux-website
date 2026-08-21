@@ -1,0 +1,96 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import CertCard from '../components/CertCard.astro';
+
+const certifications = (await getCollection('certifications')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Layout title="Learning | Lalitha Manogna Kasturi">
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Learning</span>
+        <h2>I'm Still Learning. And I Think That's a Good Thing.</h2>
+        <p>Marketing changes constantly. Consumers change. Culture changes. And luxury definitely changes. So I don't want to treat learning as something that ends with a degree or a certificate. I want it to be part of how I build my career.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight" style="padding-top:0;">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Right Now</span>
+        <h2>What I'm Currently Learning About</h2>
+      </div>
+      <div class="grid-2">
+        <article class="card reveal">
+          <div class="card-body">
+            <h3>Luxury Strategy</h3>
+            <p class="excerpt">I'm learning what makes luxury different from traditional marketing and why the usual rules don't always apply.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <h3>Brand Management</h3>
+            <p class="excerpt">I'm interested in how global brands are managed over the long term, from positioning and communication to consumer experience.</p>
+          </div>
+        </article>
+        <article class="card reveal">
+          <div class="card-body">
+            <h3>Consumer Psychology</h3>
+            <p class="excerpt">I'm exploring the reasons behind aspiration, desire, identity and the emotional value people attach to brands.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <h3>Culture</h3>
+            <p class="excerpt">I'm increasingly interested in how culture influences what consumers consider desirable and how brands can respond without losing their identity.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Education</span>
+      </div>
+      <div class="grid-2">
+        <article class="card reveal">
+          <div class="card-body">
+            <div class="issuer">ESSEC Business School <span class="date">· Singapore, 2026</span></div>
+            <h3>MSc Marketing Management &amp; Digital</h3>
+            <p class="excerpt">My current academic journey, where I'm developing a stronger understanding of marketing, digital strategy and consumer behaviour.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <div class="issuer">NMIMS <span class="date">· India</span></div>
+            <h3>BBA Marketing</h3>
+            <p class="excerpt">Where I built my foundation in marketing and started understanding how brands, consumers and businesses connect.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Certifications</span>
+        <h2>Courses &amp; Credentials</h2>
+      </div>
+      {certifications.length ? (
+        <div class="grid-3">
+          {certifications.map((entry, i) => (
+            <CertCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
+          ))}
+        </div>
+      ) : (
+        <p class="atlas-empty reveal">No certifications added yet. This section will grow as I complete new courses and credentials.</p>
+      )}
+    </div>
+  </section>
+</Layout>

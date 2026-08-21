@@ -1,0 +1,80 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import JournalListItem from '../components/JournalListItem.astro';
+
+const journalPosts = (await getCollection('journal')).sort((a, b) => a.data.order - b.data.order);
+---
+
+<Layout title="Journal | Lalitha Manogna Kasturi">
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">The Journal</span>
+        <h2>Things I'm Thinking About in Luxury Marketing</h2>
+        <p>I use LinkedIn to share things I find interesting, but also to work through my own thoughts. Sometimes it's a brand I've been studying. Sometimes it's a campaign. Sometimes it's a consumer behaviour that made me stop and think. And sometimes it's simply a question I wanted to explore. This is where I keep those thoughts.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight" style="padding-top:0;">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">What I Write About</span>
+      </div>
+      <div class="grid-2">
+        <article class="card reveal">
+          <div class="card-body">
+            <h3>Luxury Strategy</h3>
+            <p class="excerpt">How luxury brands build desire, protect value and stay relevant.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <h3>Consumer Psychology</h3>
+            <p class="excerpt">Why we want certain brands and what those brands mean to us.</p>
+          </div>
+        </article>
+        <article class="card reveal">
+          <div class="card-body">
+            <h3>Brand Breakdowns</h3>
+            <p class="excerpt">Looking closely at the decisions behind well known brands.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <h3>Culture &amp; Luxury</h3>
+            <p class="excerpt">How changing culture changes the meaning of luxury.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-2">
+          <div class="card-body">
+            <h3>Gen Z &amp; Luxury</h3>
+            <p class="excerpt">What younger consumers are changing about aspiration, identity and consumption.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="container">
+      {journalPosts.map((entry, i) => <JournalListItem entry={entry} revealClass={i % 2 === 1 ? 'reveal-delay-1' : ''} />)}
+    </div>
+  </section>
+
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">My Journal</span>
+      </div>
+      <div class="prose reveal">
+        <p>I don't write because I think I have everything figured out. I write because I like exploring ideas.</p>
+        <p>And sometimes writing something down is the best way to understand what I actually think.</p>
+      </div>
+      <div class="view-all reveal">
+        <a href="https://www.linkedin.com/in/lalitha-manogna-kasturi/" target="_blank" rel="noopener" class="btn-line">Follow Me on LinkedIn <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+</Layout>

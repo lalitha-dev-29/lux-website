@@ -1,0 +1,179 @@
+---
+import { getCollection } from 'astro:content';
+import Layout from '../layouts/Layout.astro';
+import CaseStudyCard from '../components/CaseStudyCard.astro';
+import JournalPreviewCard from '../components/JournalPreviewCard.astro';
+import { withBase } from '../lib/url';
+
+const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.order - b.data.order).slice(0, 3);
+const journalPosts = (await getCollection('journal')).sort((a, b) => a.data.order - b.data.order).slice(0, 2);
+---
+
+<Layout title="Lalitha Manogna Kasturi | Luxury Brand Strategy &amp; Marketing">
+  <div class="hero">
+    <div class="container hero-grid">
+      <div class="hero-copy reveal">
+        <span class="eyebrow">Luxury Marketing</span>
+        <h1>Lalitha Manogna<br /><em>Kasturi</em></h1>
+        <p class="lede">I like understanding why people want certain brands.</p>
+        <p class="sub">I'm an emerging luxury marketer interested in brand strategy, consumer behaviour and the role culture plays in shaping what people desire.</p>
+        <p class="sub">I'm especially interested in how luxury brands can stay relevant, keep evolving and still remain true to what made people fall in love with them in the first place.</p>
+        <p class="tagline">Reinvent the new. Without changing the roots.</p>
+        <div class="hero-actions">
+          <a href={withBase('/case-studies/')} class="btn-line">Explore My Work <span class="arrow">→</span></a>
+          <a href={withBase('/connect/')} class="btn-line">Work With Me <span class="arrow">→</span></a>
+        </div>
+        <div class="contact-row">
+          <a href="https://www.linkedin.com/in/lalitha-manogna-kasturi/" target="_blank" rel="noopener"><span>LinkedIn</span>Connect with me</a>
+          <a href="mailto:lalitha2manogna9@gmail.com"><span>Email</span>lalitha2manogna9@gmail.com</a>
+        </div>
+      </div>
+      <div class="hero-portrait reveal reveal-delay-1">
+        <img src="https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=1000&q=80" alt="Lalitha Manogna Kasturi" />
+      </div>
+    </div>
+  </div>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">About</span>
+        <h2>A Little About What I Do</h2>
+      </div>
+      <div class="prose reveal">
+        <p>I'm currently building my career around luxury marketing, with a particular interest in brand management and marketing strategy.</p>
+        <p>I enjoy breaking down brands, understanding what makes them different and looking at the choices behind the things we usually just see on the surface.</p>
+        <p>A campaign is never just a campaign to me.<br />A store is never just a store.<br />And a product is rarely just a product.</p>
+        <p>There's usually a strategy, a consumer insight, a cultural idea or a story behind it. That's what I like finding.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Focus Areas</span>
+        <h2>What I'm Interested In</h2>
+      </div>
+      <div class="grid-2">
+        <article class="card reveal">
+          <div class="card-body">
+            <h3>Brand Strategy</h3>
+            <p class="excerpt">Understanding how brands build a strong identity and, more importantly, how they protect it while continuing to grow.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <h3>Consumer Behaviour</h3>
+            <p class="excerpt">Understanding why people desire certain products, what luxury means to different consumers and how those meanings change over time.</p>
+          </div>
+        </article>
+        <article class="card reveal">
+          <div class="card-body">
+            <h3>Culture</h3>
+            <p class="excerpt">Looking at how culture, changing lifestyles and new generations influence the way luxury is understood.</p>
+          </div>
+        </article>
+        <article class="card reveal reveal-delay-1">
+          <div class="card-body">
+            <h3>Creative Marketing</h3>
+            <p class="excerpt">Taking a strategic thought and turning it into an idea that people actually notice, remember and want to engage with.</p>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">How I Think</span>
+        <h2>My Approach</h2>
+      </div>
+      <div class="prose reveal">
+        <p>I'm curious by nature. I like asking questions, looking at things from different perspectives and figuring out why something works.</p>
+        <p>I'm also quite observant. Sometimes a small detail in a campaign, a store or even the way a product is presented can tell you a lot about how a brand thinks.</p>
+        <p>My goal is to bring that curiosity into marketing, but balance it with strong research and strategic thinking.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">This Site</span>
+        <h2>What You'll Find Here</h2>
+      </div>
+      <div class="prose reveal">
+        <p>This website is a collection of the things I'm working on, learning about and thinking through.</p>
+        <p>You'll find my marketing projects, luxury brand analyses, LinkedIn writing, research and the brands I'm currently studying.</p>
+        <p>It will keep changing as I learn more and do more.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">A Thought I Keep Coming Back To</span>
+        <h2>The best luxury brands know what should never change, and what needs to.</h2>
+        <p>That balance between heritage and reinvention is probably what interests me most about the industry.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Case Studies</span>
+        <h2>A Few Brands I've Been Studying</h2>
+      </div>
+      <div class="grid-3">
+        {caseStudies.map((entry, i) => (
+          <CaseStudyCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
+        ))}
+      </div>
+      <div class="view-all reveal">
+        <a href={withBase('/case-studies/')} class="btn-line">View All Case Studies <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider container" style="max-width:var(--container);"></div>
+
+  <section>
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">The Journal</span>
+        <h2>Some Recent Thinking</h2>
+      </div>
+      <div class="grid-2">
+        {journalPosts.map((entry, i) => <JournalPreviewCard entry={entry} revealClass={i === 1 ? 'reveal-delay-1' : ''} />)}
+      </div>
+      <div class="view-all reveal">
+        <a href={withBase('/journal/')} class="btn-line">Read More Articles <span class="arrow">→</span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="band-dark">
+    <div class="container reveal">
+      <span class="eyebrow">Let's Talk</span>
+      <h2>I'm building towards a career in global luxury brand strategy.</h2>
+      <p>If you're working on interesting brands, ideas or problems in luxury, I'd love to talk.</p>
+      <a href={withBase('/connect/')} class="btn-solid">Work With Me</a>
+    </div>
+  </section>
+</Layout>

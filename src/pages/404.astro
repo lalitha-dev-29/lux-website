@@ -1,0 +1,17 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { withBase } from '../lib/url';
+---
+
+<Layout title="Page Not Found | Lalitha Manogna Kasturi">
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">404</span>
+        <h2>This Page Doesn't Exist</h2>
+        <p>The page you're looking for may have moved or never existed.</p>
+      </div>
+      <a href={withBase('/')} class="btn-line">Back to Home <span class="arrow">→</span></a>
+    </div>
+  </section>
+</Layout>

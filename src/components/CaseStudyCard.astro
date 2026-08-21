@@ -1,0 +1,25 @@
+---
+import { withBase } from '../lib/url';
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  entry: CollectionEntry<'caseStudies'>;
+  revealClass?: string;
+}
+
+const { entry, revealClass = '' } = Astro.props;
+const c = entry.data;
+---
+
+<a href={withBase(`/case-studies/${entry.id}/`)} class={`card case-card reveal ${revealClass}`}>
+  <div class="card-media">
+    <img src={c.img} alt={`${c.title} case study cover`} loading="lazy" />
+    <span class="card-tag">Coming Soon</span>
+  </div>
+  <div class="card-body">
+    <div class="card-meta">{c.cat} <span class="dot"></span> <span class="read">{c.time}</span></div>
+    <h3>{c.title}</h3>
+    <p class="excerpt">{c.excerpt}</p>
+    <div class="tags">{c.tags.map((t) => <span>{t}</span>)}</div>
+  </div>
+</a>
