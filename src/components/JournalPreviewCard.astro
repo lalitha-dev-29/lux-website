@@ -10,10 +10,10 @@ const { entry, revealClass = '' } = Astro.props;
 const p = entry.data;
 ---
 
-<article class={`card reveal ${revealClass}`}>
+<a href={p.url} target="_blank" rel="noopener" class={`card reveal ${revealClass}`}>
   <div class="card-body">
     <div class="card-meta">LinkedIn Post</div>
     <h3>{p.title}</h3>
     <p class="excerpt">{p.excerpt}</p>
   </div>
-</article>
+</a>
