@@ -627,14 +627,48 @@ header.site-nav.scrolled{
    two-item split (brand / everything-else) at every breakpoint instead of
    redistributing as controls are added. */
 .nav-controls{display:flex; align-items:center; gap:var(--sp-3);}
+/* Script "KLM" wordmark — see the long comment in BrandMark.astro: this is
+   a placeholder built from a cursive webfont + a hand-drawn flourish,
+   standing in for the client's real logo artwork until that's supplied.
+   Two full ink/gold copies are stacked in the SVG and swapped with
+   `display`, the same pattern the theme-toggle sun/moon icons already use
+   just below — needed here because the gold version is a gradient, which
+   a plain `currentColor`/`fill` swap on one copy couldn't produce. */
 .brand-mark{
-  display:inline-flex; align-items:center; gap:var(--sp-2);
-  font-family:var(--font-display); font-size:21px; letter-spacing:.12em; font-weight:600;
+  display:inline-flex; align-items:center;
   min-height:44px;
-  transition:color var(--dur) var(--ease);
+  transition:transform var(--dur) var(--ease);
 }
-.brand-mark:hover{color:var(--gold-ink);}
-.brand-mark .dot{width:5px; height:5px; border-radius:50%; background:var(--gold); flex:none;}
+.brand-mark:hover{transform:translateY(-1px);}
+.brand-glyph{width:clamp(84px, 9vw, 104px); height:auto; overflow:visible;}
+.brand-glyph text{font-size:52px;}
+.brand-glyph-ink{fill:var(--charcoal);}
+.brand-mark:hover .brand-glyph-ink{fill:var(--gold-ink);}
+.brand-glyph-gold{display:none;}
+.brand-flourish{fill:none; stroke-width:1.4; stroke-linecap:round; opacity:.55;}
+/* Ink flourish's colour is set here in CSS (overridable on hover); the gold
+   flourish's colour comes from its own inline `stroke="url(#...)"` in the
+   markup instead — a gradient can't be expressed as a CSS custom property,
+   so this rule must NOT set `stroke` at all, or it would (CSS beats SVG
+   presentation attributes) blank the gradient out. */
+.brand-flourish-ink{stroke:var(--charcoal);}
+.brand-mark:hover .brand-flourish-ink{stroke:var(--gold-ink);}
+.brand-flourish-gold{display:none;}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .brand-glyph-ink,
+  :root:not([data-theme="light"]) .brand-flourish-ink{display:none;}
+  :root:not([data-theme="light"]) .brand-glyph-gold,
+  :root:not([data-theme="light"]) .brand-flourish-gold{display:block;}
+}
+:root[data-theme="dark"] .brand-glyph-ink,
+:root[data-theme="dark"] .brand-flourish-ink{display:none;}
+:root[data-theme="dark"] .brand-glyph-gold,
+:root[data-theme="dark"] .brand-flourish-gold{display:block;}
+:root[data-theme="light"] .brand-glyph-ink,
+:root[data-theme="light"] .brand-flourish-ink{display:block;}
+:root[data-theme="light"] .brand-glyph-gold,
+:root[data-theme="light"] .brand-flourish-gold{display:none;}
 
 /* Mobile drawer (default). Becomes an inline bar at >=880px. */
 nav.primary-links{

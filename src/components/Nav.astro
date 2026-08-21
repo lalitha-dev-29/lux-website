@@ -1,5 +1,6 @@
 ---
 import { withBase } from '../lib/url';
+import BrandMark from './BrandMark.astro';
 
 const links = [
   { href: '/', label: 'Home' },
@@ -19,7 +20,7 @@ function isCurrent(href: string) {
 
 <header class="site-nav" id="siteNav">
   <div class="nav-inner">
-    <a href={withBase('/')} class="brand-mark" aria-label="KLM — home">KLM<span class="dot" aria-hidden="true"></span></a>
+    <BrandMark id="nav" />
 
     <div class="nav-controls">
       <nav class="primary-links" id="primaryLinks" aria-label="Primary">
