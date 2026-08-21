@@ -81,10 +81,20 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
       submitBtn.disabled = true;
       submitBtn.textContent = 'Sending…';
 
+      const formData = new FormData(connectForm);
+      const templateParams = {
+        name: formData.get('name'),
+        mobile: formData.get('mobile'),
+        email: formData.get('email'),
+        reason: formData.get('reason'),
+      };
+      const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
+
       try {
-        await emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, connectForm, {
-          publicKey: EMAILJS_PUBLIC_KEY,
-        });
+        await Promise.race([
+          emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, { publicKey: EMAILJS_PUBLIC_KEY }),
+          timeout,
+        ]);
         connectForm.style.display = 'none';
         resumePanel.classList.add('show');
       } catch {
