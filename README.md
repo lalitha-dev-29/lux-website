@@ -53,3 +53,26 @@ To enable it:
 2. Copy your Service ID, Template ID, and Public Key from the dashboard.
 3. For local dev: copy `.env.example` to `.env` and fill them in.
 4. For the deployed site: add them as **repo secrets** (Settings → Secrets and variables → Actions) named `PUBLIC_EMAILJS_SERVICE_ID`, `PUBLIC_EMAILJS_TEMPLATE_ID`, `PUBLIC_EMAILJS_PUBLIC_KEY` — the deploy workflow already reads them.
+
+### Abuse protection
+
+The form blocks more than one submission per email address per 24 hours, tracked in
+the visitor's `localStorage`. **This is a UX nicety, not real security** — it lives
+entirely in the visitor's own browser, so a private window, a different browser, or
+clearing site data resets it instantly. It stops accidental double-submits and
+casual repeat use through the form; it does not stop someone determined to abuse it.
+
+That's an inherent limit of any backend-less contact form: the EmailJS Service ID,
+Template ID, and Public Key all have to ship in the site's JS to work at all, so
+anyone can read them from the deployed bundle and call EmailJS's API directly,
+bypassing the site (and this rate limit) entirely. The actual defenses against that
+live on EmailJS's side, not in this codebase:
+
+1. **Domain allowlist (do this)** — EmailJS dashboard → Account → Security → "Allowed
+   domains for API calls". Add `lalitha-dev-29.github.io`. EmailJS then rejects any
+   request whose origin doesn't match, server-side — this is what actually stops a
+   script hitting the API directly and draining the free-tier quota.
+2. **CAPTCHA on the template (optional, extra bot protection)** — in the template
+   editor, under Settings, enable reCAPTCHA/hCaptcha.
+3. Keep an eye on usage at dashboard.emailjs.com/admin — the free tier caps at a
+   monthly send count; EmailJS emails you as you approach it.

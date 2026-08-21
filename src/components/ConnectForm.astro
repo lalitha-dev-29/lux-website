@@ -30,6 +30,7 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
       </select>
     </div>
     <p class="form-error" id="formError" role="alert" hidden>Something went wrong sending your message. Please try again or email me directly.</p>
+    <p class="form-error" id="formRateLimited" role="alert" hidden>You've already sent a message from this email today. I'll get back to you soon — try again tomorrow if it's urgent.</p>
     <button type="submit" class="btn-solid" id="connectSubmitBtn">Submit &amp; Unlock CV</button>
   </form>
   <div class="resume-panel" id="resumePanel">
@@ -55,10 +56,41 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
   const resumeDownloadBtn = document.getElementById('resumeDownloadBtn') as HTMLAnchorElement | null;
   const submitBtn = document.getElementById('connectSubmitBtn') as HTMLButtonElement | null;
   const formError = document.getElementById('formError');
+  const formRateLimited = document.getElementById('formRateLimited');
 
   const EMAILJS_SERVICE_ID = import.meta.env.PUBLIC_EMAILJS_SERVICE_ID as string | undefined;
   const EMAILJS_TEMPLATE_ID = import.meta.env.PUBLIC_EMAILJS_TEMPLATE_ID as string | undefined;
   const EMAILJS_PUBLIC_KEY = import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY as string | undefined;
+
+  /* Client-side "1 message per email per day" deterrent. This stops accidental
+     double-submits and casual repeat use through the form itself, but it is NOT a
+     real abuse defense: it lives in localStorage, so a private window, a different
+     browser, or simply clearing site data resets it. Real protection against
+     someone draining the EmailJS free quota has to happen on EmailJS's side (domain
+     allowlist + optional CAPTCHA on the template) — see README for setup. */
+  const RATE_LIMIT_KEY_PREFIX = 'lmk_contact_last_sent_';
+  const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+  function rateLimitKeyFor(email: string) {
+    return RATE_LIMIT_KEY_PREFIX + email.trim().toLowerCase();
+  }
+
+  function isRateLimited(email: string): boolean {
+    try {
+      const last = localStorage.getItem(rateLimitKeyFor(email));
+      return !!last && Date.now() - Number(last) < RATE_LIMIT_WINDOW_MS;
+    } catch {
+      return false; // localStorage unavailable (e.g. blocked) — don't block sending over it
+    }
+  }
+
+  function recordSend(email: string) {
+    try {
+      localStorage.setItem(rateLimitKeyFor(email), String(Date.now()));
+    } catch {
+      /* ignore */
+    }
+  }
 
   if (connectForm && resumePanel && submitBtn) {
     connectForm.addEventListener('submit', async (e) => {
@@ -68,6 +100,13 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
         return;
       }
       formError?.setAttribute('hidden', '');
+      formRateLimited?.setAttribute('hidden', '');
+
+      const emailValue = (document.getElementById('cemail') as HTMLInputElement).value;
+      if (isRateLimited(emailValue)) {
+        formRateLimited?.removeAttribute('hidden');
+        return;
+      }
 
       if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
         /* EmailJS isn't configured (no PUBLIC_EMAILJS_* env vars at build time) — fall
@@ -95,6 +134,7 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
           emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, { publicKey: EMAILJS_PUBLIC_KEY }),
           timeout,
         ]);
+        recordSend(emailValue);
         connectForm.style.display = 'none';
         resumePanel.classList.add('show');
       } catch {
