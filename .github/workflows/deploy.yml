@@ -29,5 +29,11 @@ jobs:
           # user/org site served from the domain root instead.
           BASE_PATH: /${{ github.event.repository.name }}
           SITE_URL: https://${{ github.repository_owner }}.github.io
+          # Set these three as repo secrets (Settings → Secrets and variables →
+          # Actions) to enable the /connect/ form to actually send email via
+          # EmailJS. Left unset, the form falls back to CV-gate-only behavior.
+          PUBLIC_EMAILJS_SERVICE_ID: ${{ secrets.PUBLIC_EMAILJS_SERVICE_ID }}
+          PUBLIC_EMAILJS_TEMPLATE_ID: ${{ secrets.PUBLIC_EMAILJS_TEMPLATE_ID }}
+          PUBLIC_EMAILJS_PUBLIC_KEY: ${{ secrets.PUBLIC_EMAILJS_PUBLIC_KEY }}
       - uses: actions/deploy-pages@v4
         id: deployment

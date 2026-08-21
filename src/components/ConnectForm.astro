@@ -8,19 +8,19 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
   <form id="connectForm">
     <div class="field">
       <label for="cname">Name</label>
-      <input id="cname" type="text" placeholder="Your full name" required />
+      <input id="cname" name="name" type="text" placeholder="Your full name" required />
     </div>
     <div class="field">
       <label for="cmobile">Mobile Number</label>
-      <input id="cmobile" type="tel" placeholder="+1 555 000 0000" required />
+      <input id="cmobile" name="mobile" type="tel" placeholder="+1 555 000 0000" required />
     </div>
     <div class="field">
       <label for="cemail">Email</label>
-      <input id="cemail" type="email" placeholder="you@example.com" required />
+      <input id="cemail" name="email" type="email" placeholder="you@example.com" required />
     </div>
     <div class="field">
       <label for="creason">Reason for Contacting</label>
-      <select id="creason" class="field-select" required>
+      <select id="creason" name="reason" class="field-select" required>
         <option value="" disabled selected>Select a reason</option>
         <option>Collaboration / Research</option>
         <option>Job Opportunity</option>
@@ -29,7 +29,8 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
         <option>Other</option>
       </select>
     </div>
-    <button type="submit" class="btn-solid">Submit &amp; Unlock CV</button>
+    <p class="form-error" id="formError" role="alert" hidden>Something went wrong sending your message. Please try again or email me directly.</p>
+    <button type="submit" class="btn-solid" id="connectSubmitBtn">Submit &amp; Unlock CV</button>
   </form>
   <div class="resume-panel" id="resumePanel">
     <div class="check">
@@ -45,21 +46,52 @@ const cvHref = withBase('/assets/Lalitha-Manogna-Kasturi-CV.pdf');
 </div>
 
 <script>
+  import emailjs from '@emailjs/browser';
+
   /* ============ CONNECT FORM / CV GATE ============ */
   const connectForm = document.getElementById('connectForm') as HTMLFormElement | null;
   const resumePanel = document.getElementById('resumePanel');
   const resumeResetBtn = document.getElementById('resumeResetBtn');
   const resumeDownloadBtn = document.getElementById('resumeDownloadBtn') as HTMLAnchorElement | null;
+  const submitBtn = document.getElementById('connectSubmitBtn') as HTMLButtonElement | null;
+  const formError = document.getElementById('formError');
 
-  if (connectForm && resumePanel) {
-    connectForm.addEventListener('submit', (e) => {
+  const EMAILJS_SERVICE_ID = import.meta.env.PUBLIC_EMAILJS_SERVICE_ID as string | undefined;
+  const EMAILJS_TEMPLATE_ID = import.meta.env.PUBLIC_EMAILJS_TEMPLATE_ID as string | undefined;
+  const EMAILJS_PUBLIC_KEY = import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY as string | undefined;
+
+  if (connectForm && resumePanel && submitBtn) {
+    connectForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!connectForm.checkValidity()) {
         connectForm.reportValidity();
         return;
       }
-      connectForm.style.display = 'none';
-      resumePanel.classList.add('show');
+      formError?.setAttribute('hidden', '');
+
+      if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
+        /* EmailJS isn't configured (no PUBLIC_EMAILJS_* env vars at build time) — fall
+           back to the CV-gate-only behavior instead of pretending to send anything. */
+        connectForm.style.display = 'none';
+        resumePanel.classList.add('show');
+        return;
+      }
+
+      const originalLabel = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending…';
+
+      try {
+        await emailjs.sendForm(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, connectForm, {
+          publicKey: EMAILJS_PUBLIC_KEY,
+        });
+        connectForm.style.display = 'none';
+        resumePanel.classList.add('show');
+      } catch {
+        formError?.removeAttribute('hidden');
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalLabel;
+      }
     });
     resumeResetBtn?.addEventListener('click', () => {
       connectForm.reset();
