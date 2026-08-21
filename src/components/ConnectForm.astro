@@ -3,23 +3,30 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
 ---
 
 <div class="connect-form-wrap reveal reveal-delay-1">
-  <form id="connectForm">
-    <div class="field">
+  <form id="connectForm" novalidate>
+    <h2 class="visually-hidden">Send me a message</h2>
+
+    <div class="field" id="fieldName">
       <label for="cname">Name</label>
-      <input id="cname" name="name" type="text" placeholder="Your full name" required />
+      <input id="cname" name="name" type="text" placeholder="Your full name" required autocomplete="name" aria-describedby="nameError" />
+      <p class="field-error" id="nameError" hidden></p>
     </div>
-    <div class="field">
+
+    <div class="field" id="fieldMobile">
       <label for="cmobile">Mobile Number</label>
-      <input id="cmobile" name="mobile" type="tel" placeholder="Mobile number" required />
-      <p class="field-error" id="mobileError" role="alert" hidden></p>
+      <input id="cmobile" name="mobile" type="tel" placeholder="Mobile number" required autocomplete="tel" aria-describedby="mobileError" />
+      <p class="field-error" id="mobileError" hidden></p>
     </div>
-    <div class="field">
+
+    <div class="field" id="fieldEmail">
       <label for="cemail">Email</label>
-      <input id="cemail" name="email" type="email" placeholder="you@example.com" required />
+      <input id="cemail" name="email" type="email" placeholder="you@example.com" required autocomplete="email" aria-describedby="emailError" />
+      <p class="field-error" id="emailError" hidden></p>
     </div>
-    <div class="field">
+
+    <div class="field" id="fieldReason">
       <label for="creason">Reason for Contacting</label>
-      <select id="creason" name="reason" class="field-select" required>
+      <select id="creason" name="reason" class="field-select" required aria-describedby="reasonError">
         <option value="" disabled selected>Select a reason</option>
         <option>Collaboration / Research</option>
         <option>Job Opportunity</option>
@@ -27,24 +34,34 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
         <option>General Inquiry</option>
         <option>Other</option>
       </select>
+      <p class="field-error" id="reasonError" hidden></p>
     </div>
-    <div class="field" id="messageField" hidden>
+
+    <div class="field" id="fieldMessage" hidden>
       <label for="cmessage" id="messageLabel">Your Message</label>
-      <textarea id="cmessage" name="message" placeholder="Tell me a bit about why you're reaching out."></textarea>
+      <textarea id="cmessage" name="message" placeholder="Tell me a bit about why you're reaching out." aria-describedby="messageError"></textarea>
+      <p class="field-error" id="messageError" hidden></p>
     </div>
+
     {recaptchaSiteKey && (
       <div class="field">
         <div class="g-recaptcha" data-sitekey={recaptchaSiteKey}></div>
+        <p class="field-error" id="formCaptchaRequired" hidden>Please complete the "I'm not a robot" check above before submitting.</p>
       </div>
     )}
-    <p class="form-error" id="formError" role="alert" hidden>Something went wrong sending your message. Please try again or email me directly.</p>
-    <p class="form-error" id="formRateLimited" role="alert" hidden>You've already sent a message from this email today. I'll get back to you soon — try again tomorrow if it's urgent.</p>
-    <p class="form-error" id="formCaptchaRequired" role="alert" hidden>Please complete the "I'm not a robot" check above before submitting.</p>
+
+    {/* Announced to screen readers the moment a submission fails. */}
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden>Something went wrong sending your message. Please try again or email me directly.</p>
+      <p class="form-notice" id="formRateLimited" hidden>You've already sent a message from this email today. I'll get back to you soon — try again tomorrow if it's urgent.</p>
+    </div>
+
     <button type="submit" class="btn-solid" id="connectSubmitBtn">Submit</button>
   </form>
-  <div class="resume-panel" id="resumePanel">
-    <div class="check">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9.5 18L20 6" stroke="#A9863F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+
+  <div class="resume-panel" id="resumePanel" role="status" aria-live="polite">
+    <div class="check" aria-hidden="true">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9.5 18L20 6" stroke="#866A32" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
     </div>
     <h3 id="resumeHeading">Thank you, details received</h3>
     <p id="resumeBody">I'll get back to you by email or phone shortly.</p>
@@ -98,13 +115,54 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     },
   };
 
+  const connectForm = document.getElementById('connectForm') as HTMLFormElement | null;
   const reasonSelect = document.getElementById('creason') as HTMLSelectElement | null;
-  const messageField = document.getElementById('messageField');
+  const messageField = document.getElementById('fieldMessage');
   const messageLabel = document.getElementById('messageLabel');
   const messageInput = document.getElementById('cmessage') as HTMLTextAreaElement | null;
   const submitBtn = document.getElementById('connectSubmitBtn') as HTMLButtonElement | null;
+  const mobileInput = document.getElementById('cmobile') as HTMLInputElement | null;
+  const resumePanel = document.getElementById('resumePanel');
+  const resumeHeading = document.getElementById('resumeHeading');
+  const resumeBody = document.getElementById('resumeBody');
+  const resumeResetBtn = document.getElementById('resumeResetBtn');
+  const formError = document.getElementById('formError');
+  const formRateLimited = document.getElementById('formRateLimited');
+  const formCaptchaRequired = document.getElementById('formCaptchaRequired');
 
-  function isCvUnlockReason(reason: string): boolean {
+  /* ---------- field-level error helpers ---------- */
+  function setFieldError(fieldId: string, errorId: string, message: string | null) {
+    const field = document.getElementById(fieldId);
+    const err = document.getElementById(errorId);
+    const control = field?.querySelector('input, select, textarea') as HTMLElement | null;
+    if (!field || !err) return;
+
+    if (message) {
+      field.classList.add('has-error');
+      err.textContent = message;
+      err.hidden = false;
+      control?.setAttribute('aria-invalid', 'true');
+    } else {
+      field.classList.remove('has-error');
+      err.hidden = true;
+      err.textContent = '';
+      control?.removeAttribute('aria-invalid');
+    }
+  }
+
+  function clearAllErrors() {
+    setFieldError('fieldName', 'nameError', null);
+    setFieldError('fieldMobile', 'mobileError', null);
+    setFieldError('fieldEmail', 'emailError', null);
+    setFieldError('fieldReason', 'reasonError', null);
+    setFieldError('fieldMessage', 'messageError', null);
+    formError!.hidden = true;
+    formRateLimited!.hidden = true;
+    if (formCaptchaRequired) formCaptchaRequired.hidden = true;
+  }
+
+  /* ---------- reason drives the button label + message prompt ---------- */
+  function isCvUnlockReason(reason: string) {
     return CV_UNLOCK_REASONS.has(reason);
   }
 
@@ -112,9 +170,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     const reason = reasonSelect?.value ?? '';
     const prompt = MESSAGE_PROMPTS[reason];
 
-    if (submitBtn) {
-      submitBtn.textContent = isCvUnlockReason(reason) ? 'Submit & Unlock CV' : 'Submit';
-    }
+    if (submitBtn) submitBtn.textContent = isCvUnlockReason(reason) ? 'Submit & Unlock CV' : 'Submit';
 
     if (prompt && messageField && messageLabel && messageInput) {
       messageField.hidden = false;
@@ -127,14 +183,14 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     }
   }
 
-  reasonSelect?.addEventListener('change', updateForReason);
+  reasonSelect?.addEventListener('change', () => {
+    setFieldError('fieldReason', 'reasonError', null);
+    updateForReason();
+  });
   updateForReason();
 
-  /* ============ MOBILE NUMBER (country code, formatting, validation) ============ */
-  const mobileInput = document.getElementById('cmobile') as HTMLInputElement | null;
-  const mobileError = document.getElementById('mobileError');
+  /* ---------- phone: country code, formatting, validation ---------- */
   let phoneIti: Iti | null = null;
-
   if (mobileInput) {
     phoneIti = intlTelInput(mobileInput, {
       initialCountry: 'sg',
@@ -144,7 +200,6 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
   }
 
   const PHONE_ERROR_MESSAGES: Record<string, string> = {
-    IS_POSSIBLE: '',
     INVALID_COUNTRY_CODE: 'Please select a valid country code.',
     TOO_SHORT: 'This number looks too short for the selected country.',
     TOO_LONG: 'This number looks too long for the selected country.',
@@ -154,52 +209,34 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
 
   async function validatePhone(): Promise<boolean> {
     if (!phoneIti || !mobileInput) return true;
-    await phoneIti.promise; // wait for the validation utils to finish loading
+    await phoneIti.promise;
 
     if (!mobileInput.value.trim()) {
-      mobileError?.removeAttribute('hidden');
-      if (mobileError) mobileError.textContent = 'Please enter a mobile number.';
+      setFieldError('fieldMobile', 'mobileError', 'Please enter a mobile number.');
       return false;
     }
-
     if (phoneIti.isValidNumber()) {
-      mobileError?.setAttribute('hidden', '');
+      setFieldError('fieldMobile', 'mobileError', null);
       return true;
     }
-
-    const errorCode = phoneIti.getValidationError();
-    const message = (errorCode && PHONE_ERROR_MESSAGES[errorCode]) || 'Please enter a valid mobile number.';
-    if (mobileError) mobileError.textContent = message;
-    mobileError?.removeAttribute('hidden');
+    const code = phoneIti.getValidationError();
+    setFieldError(
+      'fieldMobile',
+      'mobileError',
+      (code && PHONE_ERROR_MESSAGES[code]) || 'Please enter a valid mobile number.'
+    );
     return false;
   }
 
   mobileInput?.addEventListener('blur', () => {
     if (mobileInput.value.trim()) validatePhone();
   });
-  mobileInput?.addEventListener('input', () => {
-    if (mobileError && !mobileError.hasAttribute('hidden')) mobileError.setAttribute('hidden', '');
-  });
+  mobileInput?.addEventListener('input', () => setFieldError('fieldMobile', 'mobileError', null));
+  document.getElementById('cname')?.addEventListener('input', () => setFieldError('fieldName', 'nameError', null));
+  document.getElementById('cemail')?.addEventListener('input', () => setFieldError('fieldEmail', 'emailError', null));
+  messageInput?.addEventListener('input', () => setFieldError('fieldMessage', 'messageError', null));
 
-  /* ============ CONNECT FORM / CV GATE ============ */
-  const connectForm = document.getElementById('connectForm') as HTMLFormElement | null;
-  const resumePanel = document.getElementById('resumePanel');
-  const resumeHeading = document.getElementById('resumeHeading');
-  const resumeBody = document.getElementById('resumeBody');
-  const resumeResetBtn = document.getElementById('resumeResetBtn');
-  const formError = document.getElementById('formError');
-  const formRateLimited = document.getElementById('formRateLimited');
-  const formCaptchaRequired = document.getElementById('formCaptchaRequired');
-
-  const EMAILJS_SERVICE_ID = import.meta.env.PUBLIC_EMAILJS_SERVICE_ID as string | undefined;
-  const EMAILJS_TEMPLATE_ID = import.meta.env.PUBLIC_EMAILJS_TEMPLATE_ID as string | undefined;
-  const EMAILJS_PUBLIC_KEY = import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY as string | undefined;
-  const RECAPTCHA_SITE_KEY = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
-
-  function resetCaptcha() {
-    window.grecaptcha?.reset();
-  }
-
+  /* ---------- success panel ---------- */
   function showSuccessPanel(cvUnlocked: boolean) {
     if (!connectForm || !resumePanel) return;
     if (resumeHeading) resumeHeading.textContent = cvUnlocked ? 'Thank you, details received' : 'Thank you, message received';
@@ -210,58 +247,78 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     }
     connectForm.style.display = 'none';
     resumePanel.classList.add('show');
+    resumePanel.focus?.();
   }
 
-  /* Client-side "1 message per email per day" deterrent. This stops accidental
-     double-submits and casual repeat use through the form itself, but it is NOT a
-     real abuse defense: it lives in localStorage, so a private window, a different
-     browser, or simply clearing site data resets it. Real protection against
-     someone draining the EmailJS free quota has to happen on EmailJS's side (domain
-     allowlist + reCAPTCHA on the template) — see README for setup. */
+  /* ---------- 1 message per email per day (client-side deterrent) ---------- */
   const RATE_LIMIT_KEY_PREFIX = 'lmk_contact_last_sent_';
   const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
+  const rateKey = (email: string) => RATE_LIMIT_KEY_PREFIX + email.trim().toLowerCase();
 
-  function rateLimitKeyFor(email: string) {
-    return RATE_LIMIT_KEY_PREFIX + email.trim().toLowerCase();
-  }
-
-  function isRateLimited(email: string): boolean {
+  function isRateLimited(email: string) {
     try {
-      const last = localStorage.getItem(rateLimitKeyFor(email));
+      const last = localStorage.getItem(rateKey(email));
       return !!last && Date.now() - Number(last) < RATE_LIMIT_WINDOW_MS;
     } catch {
-      return false; // localStorage unavailable (e.g. blocked) — don't block sending over it
+      return false;
     }
   }
-
   function recordSend(email: string) {
     try {
-      localStorage.setItem(rateLimitKeyFor(email), String(Date.now()));
+      localStorage.setItem(rateKey(email), String(Date.now()));
     } catch {
       /* ignore */
     }
   }
 
+  const EMAILJS_SERVICE_ID = import.meta.env.PUBLIC_EMAILJS_SERVICE_ID as string | undefined;
+  const EMAILJS_TEMPLATE_ID = import.meta.env.PUBLIC_EMAILJS_TEMPLATE_ID as string | undefined;
+  const EMAILJS_PUBLIC_KEY = import.meta.env.PUBLIC_EMAILJS_PUBLIC_KEY as string | undefined;
+  const RECAPTCHA_SITE_KEY = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | undefined;
+
+  const resetCaptcha = () => window.grecaptcha?.reset();
+
   if (connectForm && resumePanel && submitBtn) {
     connectForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (!connectForm.checkValidity()) {
-        connectForm.reportValidity();
-        return;
-      }
-      formError?.setAttribute('hidden', '');
-      formRateLimited?.setAttribute('hidden', '');
-      formCaptchaRequired?.setAttribute('hidden', '');
+      clearAllErrors();
 
+      /* Validate every field first so the user sees all problems at once,
+         then move focus to the first one rather than only flagging it. */
+      let firstInvalid: HTMLElement | null = null;
+      const nameEl = document.getElementById('cname') as HTMLInputElement;
+      const emailEl = document.getElementById('cemail') as HTMLInputElement;
+
+      if (!nameEl.value.trim()) {
+        setFieldError('fieldName', 'nameError', 'Please enter your name.');
+        firstInvalid ||= nameEl;
+      }
       const phoneOk = await validatePhone();
-      if (!phoneOk) {
-        mobileInput?.focus();
+      if (!phoneOk) firstInvalid ||= mobileInput;
+      if (!emailEl.value.trim()) {
+        setFieldError('fieldEmail', 'emailError', 'Please enter your email address.');
+        firstInvalid ||= emailEl;
+      } else if (!emailEl.checkValidity()) {
+        setFieldError('fieldEmail', 'emailError', 'Please enter a valid email address, like you@example.com.');
+        firstInvalid ||= emailEl;
+      }
+      if (!reasonSelect?.value) {
+        setFieldError('fieldReason', 'reasonError', 'Please choose a reason so I know how to help.');
+        firstInvalid ||= reasonSelect;
+      }
+      if (messageInput?.required && !messageInput.value.trim()) {
+        setFieldError('fieldMessage', 'messageError', 'Please add a short message.');
+        firstInvalid ||= messageInput;
+      }
+
+      if (firstInvalid) {
+        firstInvalid.focus();
         return;
       }
 
-      const emailValue = (document.getElementById('cemail') as HTMLInputElement).value;
+      const emailValue = emailEl.value;
       if (isRateLimited(emailValue)) {
-        formRateLimited?.removeAttribute('hidden');
+        formRateLimited!.hidden = false;
         return;
       }
 
@@ -269,27 +326,23 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
       const cvUnlocked = isCvUnlockReason(reasonValue);
 
       if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
-        /* EmailJS isn't configured (no PUBLIC_EMAILJS_* env vars at build time) — fall
-           back to the CV-gate-only behavior instead of pretending to send anything. */
         showSuccessPanel(cvUnlocked);
         return;
       }
 
-      /* reCAPTCHA is verified server-side by EmailJS itself (Template settings →
-         Enable reCAPTCHA V2) once the secret key is configured there — this check
-         just avoids a wasted round trip when it's obviously unsolved. */
       let captchaToken: string | undefined;
       if (RECAPTCHA_SITE_KEY) {
         captchaToken = window.grecaptcha?.getResponse();
         if (!captchaToken) {
-          formCaptchaRequired?.removeAttribute('hidden');
+          if (formCaptchaRequired) formCaptchaRequired.hidden = false;
           return;
         }
       }
 
       const originalLabel = submitBtn.textContent;
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Sending…';
+      submitBtn.dataset.busy = 'true';
+      submitBtn.setAttribute('aria-busy', 'true');
 
       const formData = new FormData(connectForm);
       const templateParams: Record<string, unknown> = {
@@ -300,6 +353,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
         message: formData.get('message'),
       };
       if (captchaToken) templateParams['g-recaptcha-response'] = captchaToken;
+
       const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
 
       try {
@@ -310,19 +364,26 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
         recordSend(emailValue);
         showSuccessPanel(cvUnlocked);
       } catch {
-        formError?.removeAttribute('hidden');
+        formError!.hidden = false;
         submitBtn.disabled = false;
+        delete submitBtn.dataset.busy;
+        submitBtn.removeAttribute('aria-busy');
         submitBtn.textContent = originalLabel;
         resetCaptcha();
       }
     });
+
     resumeResetBtn?.addEventListener('click', () => {
       connectForm.reset();
       connectForm.style.display = '';
       resumePanel.classList.remove('show');
+      submitBtn.disabled = false;
+      delete submitBtn.dataset.busy;
+      submitBtn.removeAttribute('aria-busy');
+      clearAllErrors();
       resetCaptcha();
       updateForReason();
+      (document.getElementById('cname') as HTMLInputElement | null)?.focus();
     });
   }
-
 </script>

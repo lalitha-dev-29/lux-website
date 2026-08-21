@@ -3,26 +3,49 @@ import countryPaths from '../data/world-map-paths.svg?raw';
 import { centroids, countries } from '../data/atlas';
 
 const atlasData = { centroids, countries };
+const countryNames = Object.keys(countries);
 ---
 
 <div class="atlas-map-wrap reveal" id="atlasMapWrap">
-  <svg id="worldMapSvg" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Interactive world map, click a country to view luxury houses studied there">
+  <svg id="worldMapSvg" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="World map. Countries with research on file are highlighted in gold; use the country buttons below the map to open each one.">
     <rect class="ocean" x="0" y="0" width="960" height="500"></rect>
     <g class="countries" id="countriesGroup" set:html={countryPaths}></g>
     <g class="markers" id="atlasMarkers"></g>
   </svg>
-  <div class="atlas-tooltip" id="atlasTooltip"></div>
+  <div class="atlas-tooltip" id="atlasTooltip" aria-hidden="true"></div>
+</div>
+
+{/*
+  Tappable country list. The map's own hit areas are far too small on a phone
+  (Italy is roughly 10x11px at 375px wide) and hover tooltips don't exist on
+  touch at all — so this list is the reliable way in on mobile, and a
+  keyboard-accessible one everywhere. Same countries, same panel.
+*/}
+<div class="atlas-picker reveal">
+  <p class="atlas-picker-label" id="atlasPickerLabel">Open a country</p>
+  <div class="atlas-chips" role="group" aria-labelledby="atlasPickerLabel">
+    {countryNames.map((name) => (
+      <button type="button" class="atlas-chip" data-country={name} aria-haspopup="dialog" aria-expanded="false">{name}</button>
+    ))}
+  </div>
 </div>
 
 <div class="atlas-scrim" id="atlasScrim"></div>
-<aside class="atlas-panel" id="atlasPanel">
-  <button class="atlas-panel-close" id="atlasPanelClose">← Close</button>
+<aside
+  class="atlas-panel"
+  id="atlasPanel"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="atlasPanelTitle"
+  hidden
+>
+  <button class="atlas-panel-close" id="atlasPanelClose" type="button"><span aria-hidden="true">←</span> Close</button>
   <span class="country-tag" id="atlasPanelTag">Country</span>
   <h3 id="atlasPanelTitle">Country Name</h3>
   <div id="atlasPanelList"></div>
 </aside>
 
-<script is:inline define:vars={{ atlasData }}>
+<script define:vars={{ atlasData }}>
   const countryEls = document.querySelectorAll('#countriesGroup .country');
   const markersGroup = document.getElementById('atlasMarkers');
   const tooltip = document.getElementById('atlasTooltip');
@@ -32,41 +55,89 @@ const atlasData = { centroids, countries };
   const atlasPanelTag = document.getElementById('atlasPanelTag');
   const atlasPanelTitle = document.getElementById('atlasPanelTitle');
   const atlasPanelList = document.getElementById('atlasPanelList');
-  let activeHotspot = null;
+  const closeBtn = document.getElementById('atlasPanelClose');
+  const chips = Array.from(document.querySelectorAll('.atlas-chip'));
 
-  function openAtlasPanel(country, el) {
-    if (activeHotspot) activeHotspot.classList.remove('selected');
-    activeHotspot = el;
-    el.classList.add('selected');
+  let activeHotspot = null;
+  let lastFocused = null;
+  let openedAt = 0;
+
+  function renderPanel(country) {
     const data = atlasData.countries[country];
     atlasPanelTag.textContent = country;
+
     if (data) {
       atlasPanelTitle.textContent = data.heading;
-      const brandsHtml =
+      const brands =
         data.brands && data.brands.length
-          ? data.brands.map((h) => `<div class="atlas-house"><div class="maison">${h.name}</div><div class="cat">${h.cat}</div></div>`).join('')
+          ? data.brands
+              .map(
+                (h) =>
+                  `<div class="atlas-house"><div class="maison">${h.name}</div><div class="cat">${h.cat}</div></div>`
+              )
+              .join('')
           : '';
-      atlasPanelList.innerHTML = `<p class="atlas-empty">${data.description}</p>${brandsHtml}`;
+      atlasPanelList.innerHTML = `<p class="atlas-empty">${data.description}</p>${brands}`;
     } else {
       atlasPanelTitle.textContent = country;
       atlasPanelList.innerHTML = `<p class="atlas-empty">Research for ${country} is coming soon. Check back as the atlas grows.</p>`;
     }
+  }
+
+  function openAtlasPanel(country, el) {
+    lastFocused = document.activeElement;
+
+    if (activeHotspot) activeHotspot.classList.remove('selected');
+    const path = document.querySelector(`#countriesGroup .country[data-name="${CSS.escape(country)}"]`);
+    if (path) {
+      path.classList.add('selected');
+      activeHotspot = path;
+    }
+
+    chips.forEach((c) => c.setAttribute('aria-expanded', String(c.dataset.country === country)));
+
+    renderPanel(country);
+
+    atlasPanel.hidden = false;
+    openedAt = Date.now();
+    document.body.classList.add('nav-open');
+
+    // Force a reflow so the browser records the off-canvas start state before
+    // `.open` flips it — this makes the slide-in animate without depending on
+    // requestAnimationFrame, which browsers throttle in backgrounded tabs.
+    void atlasPanel.offsetHeight;
+
     atlasPanel.classList.add('open');
     atlasScrim.classList.add('open');
+
+    // Flush styles again so `.open`'s `visibility:visible` is actually applied
+    // before we move focus — focus() is a no-op on a still-hidden subtree.
+    void atlasPanel.offsetHeight;
+    closeBtn.focus();
   }
 
   function closeAtlasPanel() {
+    if (atlasPanel.hidden) return;
     atlasPanel.classList.remove('open');
     atlasScrim.classList.remove('open');
+    document.body.classList.remove('nav-open');
+    chips.forEach((c) => c.setAttribute('aria-expanded', 'false'));
     if (activeHotspot) {
       activeHotspot.classList.remove('selected');
       activeHotspot = null;
     }
+    window.setTimeout(() => {
+      atlasPanel.hidden = true;
+    }, 320);
+    if (lastFocused && typeof lastFocused.focus === 'function') lastFocused.focus();
   }
 
+  /* --- map interactions (pointer only; the chips cover keyboard/touch) --- */
   countryEls.forEach((path) => {
     const name = path.dataset.name;
-    if (atlasData.countries[name]) path.classList.add('has-data');
+    const hasData = !!atlasData.countries[name];
+    if (hasData) path.classList.add('has-data');
+
     path.addEventListener('click', () => openAtlasPanel(name, path));
     path.addEventListener('mouseenter', () => {
       tooltip.innerHTML = `<span class="dot"></span>${name}`;
@@ -80,7 +151,14 @@ const atlasData = { centroids, countries };
     tooltip.style.left = e.clientX - r.left + 'px';
     tooltip.style.top = e.clientY - r.top + 'px';
   });
+  wrap.addEventListener('mouseleave', () => tooltip.classList.remove('show'));
 
+  /* --- chips --- */
+  chips.forEach((chip) => {
+    chip.addEventListener('click', () => openAtlasPanel(chip.dataset.country, chip));
+  });
+
+  /* --- pulsing markers over researched countries --- */
   markersGroup.innerHTML = Object.keys(atlasData.countries)
     .map((name) => {
       const c = atlasData.centroids[name];
@@ -89,9 +167,38 @@ const atlasData = { centroids, countries };
     })
     .join('');
 
-  document.getElementById('atlasPanelClose').addEventListener('click', closeAtlasPanel);
-  atlasScrim.addEventListener('click', closeAtlasPanel);
+  /* --- dismissal + focus trap --- */
+  closeBtn.addEventListener('click', closeAtlasPanel);
+
+  /* Opening the panel makes the scrim interactive mid-gesture, so the tail of
+     the very same click can land on it and close the panel again immediately.
+     Ignore scrim clicks that arrive within a moment of opening. */
+  atlasScrim.addEventListener('click', (e) => {
+    if (e.target !== atlasScrim) return;
+    if (Date.now() - openedAt < 250) return;
+    closeAtlasPanel();
+  });
+
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeAtlasPanel();
+    if (atlasPanel.hidden) return;
+
+    if (e.key === 'Escape') {
+      closeAtlasPanel();
+      return;
+    }
+
+    if (e.key === 'Tab') {
+      const focusables = atlasPanel.querySelectorAll('a[href], button:not([disabled])');
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
   });
 </script>

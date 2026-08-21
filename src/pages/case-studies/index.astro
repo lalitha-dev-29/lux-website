@@ -11,19 +11,23 @@ const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.o
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">Case Studies</span>
-        <h2>Brands I'm Curious About. Questions I'm Trying to Answer.</h2>
+        <h1>Brands I'm Curious About. Questions I'm Trying to Answer.</h1>
         <p>I like looking beyond what a brand is showing us and trying to understand what is happening underneath. Why does this brand feel different? Why does this product have so much meaning? Why does a certain campaign work? Why do consumers keep coming back? And what can another brand learn from it? These projects are my way of exploring those questions.</p>
       </div>
     </div>
   </section>
 
-  <section class="tight" style="padding-top:0;">
-    <div class="container">
-      <div class="section-head reveal">
-        <span class="eyebrow">Method</span>
-        <h2>How I Look at a Brand</h2>
+  <div class="divider"></div>
+
+  <section class="tight">
+    <div class="container split">
+      <div class="split-aside reveal">
+        <div class="section-head">
+          <span class="eyebrow">Method</span>
+          <h2>How I Look at a Brand</h2>
+        </div>
       </div>
-      <div class="prose reveal">
+      <div class="split-body prose reveal reveal-delay-1">
         <p>I usually start with the brand itself. Then I look at the consumer. Then the culture around it. And finally, I try to connect everything back to strategy.</p>
         <p>I'm interested in the bigger picture, but I also enjoy getting into the details.</p>
       </div>
@@ -32,6 +36,7 @@ const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.o
 
   <section class="tight">
     <div class="container">
+      <h2 class="visually-hidden">All case studies</h2>
       <div class="grid-3">
         {caseStudies.map((entry, i) => (
           <CaseStudyCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
@@ -40,13 +45,17 @@ const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.o
     </div>
   </section>
 
+  <div class="divider"></div>
+
   <section class="tight">
-    <div class="container">
-      <div class="section-head reveal">
-        <span class="eyebrow">More to Come</span>
-        <h2>This List Is Still Growing</h2>
+    <div class="container split">
+      <div class="split-aside reveal">
+        <div class="section-head">
+          <span class="eyebrow">More to Come</span>
+          <h2>This List Is Still Growing</h2>
+        </div>
       </div>
-      <div class="prose reveal">
+      <div class="split-body prose reveal reveal-delay-1">
         <p>I want this section to keep growing. As I work on more brands and marketing problems, I'll keep adding them here.</p>
         <p>The brands I'm studying today are helping me build the kind of strategist I want to become tomorrow.</p>
       </div>

@@ -12,8 +12,8 @@ const c = entry.data;
 
 <article class={`card cert-card reveal ${revealClass}`}>
   <div class="card-media">
-    <img src={c.img} alt={`${c.title} certificate`} loading="lazy" />
-    <span class="badge">
+    <img src={c.img} alt="" loading="lazy" width="800" height="600" />
+    <span class="badge" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
         <path d="M12 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" />
         <path d="M8.5 13.5L7 21l5-2.5 5 2.5-1.5-7.5" />
@@ -24,6 +24,9 @@ const c = entry.data;
     <div class="issuer">{c.issuer} <span class="date">· {c.date}</span></div>
     <h3>{c.title}</h3>
     <div class="cert-id"><span>Credential ID</span><code>{c.credentialId}</code></div>
-    <a class="view-cert" href={c.url} target="_blank" rel="noopener">View Certificate <span class="arrow">→</span></a>
+    <a class="link-arrow view-cert" href={c.url} target="_blank" rel="noopener">
+      View Certificate<span class="visually-hidden"> for {c.title} (opens in a new tab)</span>
+      <span class="arrow" aria-hidden="true">→</span>
+    </a>
   </div>
 </article>

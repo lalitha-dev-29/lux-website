@@ -4,6 +4,28 @@ import Layout from '../layouts/Layout.astro';
 import CertCard from '../components/CertCard.astro';
 
 const certifications = (await getCollection('certifications')).sort((a, b) => a.data.order - b.data.order);
+
+const learningNow = [
+  { title: 'Luxury Strategy', body: "I'm learning what makes luxury different from traditional marketing and why the usual rules don't always apply." },
+  { title: 'Brand Management', body: "I'm interested in how global brands are managed over the long term, from positioning and communication to consumer experience." },
+  { title: 'Consumer Psychology', body: "I'm exploring the reasons behind aspiration, desire, identity and the emotional value people attach to brands." },
+  { title: 'Culture', body: "I'm increasingly interested in how culture influences what consumers consider desirable and how brands can respond without losing their identity." },
+];
+
+const education = [
+  {
+    issuer: 'ESSEC Business School',
+    date: 'Singapore, 2026',
+    title: 'MSc Marketing Management & Digital',
+    body: "My current academic journey, where I'm developing a stronger understanding of marketing, digital strategy and consumer behaviour.",
+  },
+  {
+    issuer: 'NMIMS',
+    date: 'India',
+    title: 'BBA Marketing',
+    body: 'Where I built my foundation in marketing and started understanding how brands, consumers and businesses connect.',
+  },
+];
 ---
 
 <Layout title="Learning | Lalitha Manogna Kasturi">
@@ -11,70 +33,59 @@ const certifications = (await getCollection('certifications')).sort((a, b) => a.
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">Learning</span>
-        <h2>I'm Still Learning. And I Think That's a Good Thing.</h2>
+        <h1>I'm Still Learning. And I Think That's a Good Thing.</h1>
         <p>Marketing changes constantly. Consumers change. Culture changes. And luxury definitely changes. So I don't want to treat learning as something that ends with a degree or a certificate. I want it to be part of how I build my career.</p>
       </div>
     </div>
   </section>
 
-  <section class="tight" style="padding-top:0;">
+  <div class="divider"></div>
+
+  <section class="tight">
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">Right Now</span>
         <h2>What I'm Currently Learning About</h2>
       </div>
       <div class="grid-2">
-        <article class="card reveal">
-          <div class="card-body">
-            <h3>Luxury Strategy</h3>
-            <p class="excerpt">I'm learning what makes luxury different from traditional marketing and why the usual rules don't always apply.</p>
-          </div>
-        </article>
-        <article class="card reveal reveal-delay-1">
-          <div class="card-body">
-            <h3>Brand Management</h3>
-            <p class="excerpt">I'm interested in how global brands are managed over the long term, from positioning and communication to consumer experience.</p>
-          </div>
-        </article>
-        <article class="card reveal">
-          <div class="card-body">
-            <h3>Consumer Psychology</h3>
-            <p class="excerpt">I'm exploring the reasons behind aspiration, desire, identity and the emotional value people attach to brands.</p>
-          </div>
-        </article>
-        <article class="card reveal reveal-delay-1">
-          <div class="card-body">
-            <h3>Culture</h3>
-            <p class="excerpt">I'm increasingly interested in how culture influences what consumers consider desirable and how brands can respond without losing their identity.</p>
-          </div>
-        </article>
+        {learningNow.map((item, i) => (
+          <article class={`card card-numbered reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
+            <div class="card-body">
+              <span class="card-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <h3>{item.title}</h3>
+              <p class="excerpt">{item.body}</p>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   </section>
+
+  <div class="divider"></div>
 
   <section class="tight">
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">Education</span>
+        {/* Mirrors the eyebrow so the section has a real heading for screen
+            readers without adding any new visible copy. */}
+        <h2 class="visually-hidden">Education</h2>
       </div>
       <div class="grid-2">
-        <article class="card reveal">
-          <div class="card-body">
-            <div class="issuer">ESSEC Business School <span class="date">· Singapore, 2026</span></div>
-            <h3>MSc Marketing Management &amp; Digital</h3>
-            <p class="excerpt">My current academic journey, where I'm developing a stronger understanding of marketing, digital strategy and consumer behaviour.</p>
-          </div>
-        </article>
-        <article class="card reveal reveal-delay-1">
-          <div class="card-body">
-            <div class="issuer">NMIMS <span class="date">· India</span></div>
-            <h3>BBA Marketing</h3>
-            <p class="excerpt">Where I built my foundation in marketing and started understanding how brands, consumers and businesses connect.</p>
-          </div>
-        </article>
+        {education.map((item, i) => (
+          <article class={`card reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
+            <div class="card-body">
+              <div class="issuer">{item.issuer} <span class="date">· {item.date}</span></div>
+              <h3>{item.title}</h3>
+              <p class="excerpt">{item.body}</p>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   </section>
+
+  <div class="divider"></div>
 
   <section class="tight">
     <div class="container">
@@ -89,7 +100,13 @@ const certifications = (await getCollection('certifications')).sort((a, b) => a.
           ))}
         </div>
       ) : (
-        <p class="atlas-empty reveal">No certifications added yet. This section will grow as I complete new courses and credentials.</p>
+        <div class="empty-state reveal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M12 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" />
+            <path d="M8.5 13.5L7 21l5-2.5 5 2.5-1.5-7.5" />
+          </svg>
+          <p>No certifications added yet. This section will grow as I complete new courses and credentials.</p>
+        </div>
       )}
     </div>
   </section>

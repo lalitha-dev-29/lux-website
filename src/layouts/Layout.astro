@@ -23,6 +23,7 @@ const {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content={description} />
   <meta name="author" content="Lalitha Manogna Kasturi" />
+  <meta name="theme-color" content="#F7F4EC" />
   <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
   <title>{title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -31,19 +32,31 @@ const {
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap"
     rel="stylesheet"
   />
-  <noscript>
-    <style>
-      /* Without JS the reveal animations never trigger, so show everything immediately. */
-      .reveal{opacity:1 !important; transform:none !important;}
-      nav.primary-links{position:static; transform:none; flex-direction:row; background:none; padding:0; height:auto;}
-      .nav-toggle{display:none;}
-    </style>
-  </noscript>
+  <!--
+    Scroll-reveal is opt-IN, set synchronously here so there's no flash.
+    Content is visible by default in CSS; this class is what enables the
+    hidden-then-fade-in state. If JS is off, this never runs and everything
+    is simply visible — content is never trapped behind a failed animation.
+    Users who prefer reduced motion never get the class at all.
+  -->
+  <script is:inline>
+    try {
+      if (
+        'IntersectionObserver' in window &&
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ) {
+        document.documentElement.classList.add('js-anim');
+      }
+    } catch (e) {
+      /* leave content visible */
+    }
+  </script>
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
   <SiteMotifs />
   <Nav />
-  <main>
+  <main id="main" tabindex="-1">
     <slot />
   </main>
   <Footer />

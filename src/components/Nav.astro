@@ -11,7 +11,7 @@ const links = [
 ];
 
 const currentPath = Astro.url.pathname;
-function isActive(href: string) {
+function isCurrent(href: string) {
   const target = withBase(href);
   return currentPath === target || (href !== '/' && currentPath.startsWith(target));
 }
@@ -19,13 +19,20 @@ function isActive(href: string) {
 
 <header class="site-nav" id="siteNav">
   <div class="nav-inner">
-    <a href={withBase('/')} class="brand-mark">LMK<span class="dot"></span></a>
-    <button class="nav-toggle" id="navToggle" aria-label="Toggle menu" aria-expanded="false">
-      <span></span><span></span><span></span>
+    <a href={withBase('/')} class="brand-mark" aria-label="LMK — home">LMK<span class="dot" aria-hidden="true"></span></a>
+    <button
+      class="nav-toggle"
+      id="navToggle"
+      type="button"
+      aria-label="Open menu"
+      aria-expanded="false"
+      aria-controls="primaryLinks"
+    >
+      <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
     </button>
-    <nav class="primary-links" id="primaryLinks">
+    <nav class="primary-links" id="primaryLinks" aria-label="Primary">
       {links.map((link) => (
-        <a href={withBase(link.href)} class={isActive(link.href) ? 'active' : ''}>{link.label}</a>
+        <a href={withBase(link.href)} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a>
       ))}
     </nav>
   </div>

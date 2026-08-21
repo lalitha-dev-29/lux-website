@@ -4,6 +4,14 @@ import Layout from '../layouts/Layout.astro';
 import JournalListItem from '../components/JournalListItem.astro';
 
 const journalPosts = (await getCollection('journal')).sort((a, b) => a.data.order - b.data.order);
+
+const topics = [
+  { title: 'Luxury Strategy', body: 'How luxury brands build desire, protect value and stay relevant.' },
+  { title: 'Consumer Psychology', body: 'Why we want certain brands and what those brands mean to us.' },
+  { title: 'Brand Breakdowns', body: 'Looking closely at the decisions behind well known brands.' },
+  { title: 'Culture & Luxury', body: 'How changing culture changes the meaning of luxury.' },
+  { title: 'Gen Z & Luxury', body: 'What younger consumers are changing about aspiration, identity and consumption.' },
+];
 ---
 
 <Layout title="Journal | Lalitha Manogna Kasturi">
@@ -11,69 +19,65 @@ const journalPosts = (await getCollection('journal')).sort((a, b) => a.data.orde
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">The Journal</span>
-        <h2>Things I'm Thinking About in Luxury Marketing</h2>
+        <h1>Things I'm Thinking About in Luxury Marketing</h1>
         <p>I use LinkedIn to share things I find interesting, but also to work through my own thoughts. Sometimes it's a brand I've been studying. Sometimes it's a campaign. Sometimes it's a consumer behaviour that made me stop and think. And sometimes it's simply a question I wanted to explore. This is where I keep those thoughts.</p>
       </div>
     </div>
   </section>
 
-  <section class="tight" style="padding-top:0;">
+  <div class="divider"></div>
+
+  <section class="tight">
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">What I Write About</span>
+        {/* Mirrors the eyebrow so the section has a real heading for screen
+            readers without adding any new visible copy. */}
+        <h2 class="visually-hidden">What I Write About</h2>
       </div>
-      <div class="grid-2">
-        <article class="card reveal">
-          <div class="card-body">
-            <h3>Luxury Strategy</h3>
-            <p class="excerpt">How luxury brands build desire, protect value and stay relevant.</p>
-          </div>
-        </article>
-        <article class="card reveal reveal-delay-1">
-          <div class="card-body">
-            <h3>Consumer Psychology</h3>
-            <p class="excerpt">Why we want certain brands and what those brands mean to us.</p>
-          </div>
-        </article>
-        <article class="card reveal">
-          <div class="card-body">
-            <h3>Brand Breakdowns</h3>
-            <p class="excerpt">Looking closely at the decisions behind well known brands.</p>
-          </div>
-        </article>
-        <article class="card reveal reveal-delay-1">
-          <div class="card-body">
-            <h3>Culture &amp; Luxury</h3>
-            <p class="excerpt">How changing culture changes the meaning of luxury.</p>
-          </div>
-        </article>
-        <article class="card reveal reveal-delay-2">
-          <div class="card-body">
-            <h3>Gen Z &amp; Luxury</h3>
-            <p class="excerpt">What younger consumers are changing about aspiration, identity and consumption.</p>
-          </div>
-        </article>
+      <div class="grid-3">
+        {topics.map((t, i) => (
+          <article class={`card card-numbered reveal ${i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''}`}>
+            <div class="card-body">
+              <span class="card-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+              <h3 set:html={t.title.replace('&', '&amp;')} />
+              <p class="excerpt">{t.body}</p>
+            </div>
+          </article>
+        ))}
       </div>
     </div>
   </section>
 
+  <div class="divider"></div>
+
   <section class="tight">
     <div class="container">
+      <h2 class="visually-hidden">LinkedIn posts</h2>
       {journalPosts.map((entry, i) => <JournalListItem entry={entry} revealClass={i % 2 === 1 ? 'reveal-delay-1' : ''} />)}
     </div>
   </section>
 
+  <div class="divider"></div>
+
   <section class="tight">
-    <div class="container">
-      <div class="section-head reveal">
-        <span class="eyebrow">My Journal</span>
+    <div class="container split">
+      <div class="split-aside reveal">
+        <div class="section-head">
+          <span class="eyebrow">My Journal</span>
+          <h2 class="visually-hidden">My Journal</h2>
+        </div>
       </div>
-      <div class="prose reveal">
-        <p>I don't write because I think I have everything figured out. I write because I like exploring ideas.</p>
-        <p>And sometimes writing something down is the best way to understand what I actually think.</p>
-      </div>
-      <div class="view-all reveal">
-        <a href="https://www.linkedin.com/in/lalitha-manogna-kasturi/" target="_blank" rel="noopener" class="btn-line">Follow Me on LinkedIn <span class="arrow">→</span></a>
+      <div class="split-body reveal reveal-delay-1">
+        <div class="prose">
+          <p>I don't write because I think I have everything figured out. I write because I like exploring ideas.</p>
+          <p>And sometimes writing something down is the best way to understand what I actually think.</p>
+        </div>
+        <div class="cta-inline">
+          <a href="https://www.linkedin.com/in/lalitha-manogna-kasturi/" target="_blank" rel="noopener" class="btn-solid">
+            Follow Me on LinkedIn<span class="visually-hidden"> (opens in a new tab)</span>
+          </a>
+        </div>
       </div>
     </div>
   </section>
