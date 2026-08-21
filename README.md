@@ -1,4 +1,4 @@
-# Lalitha Manogna Kasturi — Portfolio
+# Kasturi Lalitha Manogna — Portfolio
 
 Personal luxury-marketing portfolio site: case studies, journal, learning, and an interactive world atlas.
 
