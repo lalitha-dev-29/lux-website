@@ -20,20 +20,34 @@ function isCurrent(href: string) {
 <header class="site-nav" id="siteNav">
   <div class="nav-inner">
     <a href={withBase('/')} class="brand-mark" aria-label="LMK — home">LMK<span class="dot" aria-hidden="true"></span></a>
-    <button
-      class="nav-toggle"
-      id="navToggle"
-      type="button"
-      aria-label="Open menu"
-      aria-expanded="false"
-      aria-controls="primaryLinks"
-    >
-      <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
-    </button>
-    <nav class="primary-links" id="primaryLinks" aria-label="Primary">
-      {links.map((link) => (
-        <a href={withBase(link.href)} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a>
-      ))}
-    </nav>
+
+    <div class="nav-controls">
+      <nav class="primary-links" id="primaryLinks" aria-label="Primary">
+        {links.map((link) => (
+          <a href={withBase(link.href)} aria-current={isCurrent(link.href) ? 'page' : undefined}>{link.label}</a>
+        ))}
+      </nav>
+
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark mode">
+        <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+        <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="4.2" />
+          <path d="M12 2.5v2.5M12 19v2.5M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2.5 12H5M19 12h2.5M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8" />
+        </svg>
+      </button>
+
+      <button
+        class="nav-toggle"
+        id="navToggle"
+        type="button"
+        aria-label="Open menu"
+        aria-expanded="false"
+        aria-controls="primaryLinks"
+      >
+        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+      </button>
+    </div>
   </div>
 </header>

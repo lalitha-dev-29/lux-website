@@ -23,7 +23,8 @@ const {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content={description} />
   <meta name="author" content="Lalitha Manogna Kasturi" />
-  <meta name="theme-color" content="#F7F4EC" />
+  <meta name="theme-color" content="#F7F4EC" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#17140D" media="(prefers-color-scheme: dark)" />
   <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
   <title>{title}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -32,6 +33,25 @@ const {
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500;600&display=swap"
     rel="stylesheet"
   />
+  <!--
+    Theme must be resolved and applied before first paint, or the page
+    flashes the wrong colours for a frame — this has to be a synchronous,
+    blocking inline script (not the deferred site.ts) so it runs before
+    <body> is rendered. An explicit stored choice always wins; with none
+    yet, `data-theme` is simply left unset and CSS falls back to
+    prefers-color-scheme on its own, so this script has nothing to do
+    (and nothing to get wrong) for a first-time visitor.
+  -->
+  <script is:inline>
+    try {
+      var t = localStorage.getItem('lmk-theme');
+      if (t === 'light' || t === 'dark') {
+        document.documentElement.setAttribute('data-theme', t);
+      }
+    } catch (e) {
+      /* localStorage unavailable — fall back to prefers-color-scheme */
+    }
+  </script>
   <!--
     Scroll-reveal is opt-IN, set synchronously here so there's no flash.
     Content is visible by default in CSS; this class is what enables the

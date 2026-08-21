@@ -82,7 +82,125 @@
 
   --focus-ring:2px solid var(--gold-ink);
   --focus-offset:3px;
+
+  /* Fixed dark ink, does NOT swap between themes. Every other token that
+     represents "ink" or "paper" inverts meaning in dark mode (--charcoal
+     becomes a light colour, --ivory becomes a dark one) so that the whole
+     stylesheet's existing light-surface/dark-ink logic auto-inverts
+     correctly everywhere. This token is for the few spots that need a
+     genuinely dark colour regardless of theme — text sitting on a gold or
+     cream accent surface, which stays light-ish in both themes. */
+  --ink-on-accent:#19170F;
+
+  /* The Atlas map is deliberately a fixed dark "chalkboard" surface — like a
+     code block or an embedded map, its own artwork doesn't invert with the
+     page theme. Fixed, not swapped, for the same reason --ink-on-accent
+     isn't: without this, its ocean/markers would use --charcoal/--ivory and
+     flip to a light map with dark (near-invisible) markers in dark mode. */
+  --atlas-bg:#19170F;
+  --atlas-fg:#F7F4EC;
+
+  /* translucent surfaces built from tokens (see the dark-mode block below
+     for why these can't just be literal rgba(247,244,236,x) — the colour
+     needs to track the theme). */
+  --nav-surface:color-mix(in srgb, var(--ivory) 88%, transparent);
+  --shadow-nav:0 1px 20px -12px rgba(25,23,15,.30);
 }
+
+/* ============================================================
+   DARK MODE
+   Default (no explicit choice): follow the OS. An explicit choice (the
+   toggle in the nav) sets data-theme and always wins over the OS setting,
+   in either direction — see the two blocks below.
+
+   Every colour here was chosen and checked independently for dark
+   surfaces (not just the light palette inverted), then verified to clear
+   4.5:1 for every text/background pairing actually used in the CSS below
+   (body text, secondary text, labels, gold links, error text, and the
+   button hover states that live inside the (also-inverting) dark CTA
+   band) — the same bar the light palette was held to.
+   ============================================================ */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ivory:#17140D;
+    --ivory-2:#1D1912;
+    --ivory-3:#241F16;
+    --card:#221E15;
+    --white:#221E15;
+    --charcoal:#F2ECDD;
+    --charcoal-soft:#D9D0BC;
+
+    --stone:#ADA48C;         /* 7.41:1 on --ivory */
+    --stone-mute:#A79E86;    /* 6.90:1 on --ivory */
+    --stone-light:#4A4536;   /* decorative only */
+
+    --gold:#C29A52;
+    --gold-ink:#E0B563;      /* 9.59:1 on --ivory */
+    --gold-soft:#D9B978;
+    --gold-wash:#2A2313;
+
+    --line:#332C1F;
+    --line-strong:#453C29;
+
+    --danger:#E2695A;        /* 5.60:1 on --ivory */
+    --danger-wash:#2E1712;
+    --success:#7FA377;
+
+    /* Shadows read as "ink cast on paper" and were tuned for a light
+       surface — reused as-is they'd all but disappear against a dark one,
+       so dark mode gets its own, blacker set. */
+    --shadow-sm:0 1px 2px rgba(0,0,0,.35), 0 2px 8px -4px rgba(0,0,0,.45);
+    --shadow-md:0 8px 24px -12px rgba(0,0,0,.55), 0 2px 6px -3px rgba(0,0,0,.35);
+    --shadow-lg:0 28px 56px -28px rgba(0,0,0,.65), 0 6px 16px -8px rgba(0,0,0,.45);
+    --shadow-nav:0 1px 20px -12px rgba(0,0,0,.55);
+  }
+}
+:root[data-theme="dark"]{
+  --ivory:#17140D;
+  --ivory-2:#1D1912;
+  --ivory-3:#241F16;
+  --card:#221E15;
+  --white:#221E15;
+  --charcoal:#F2ECDD;
+  --charcoal-soft:#D9D0BC;
+
+  --stone:#ADA48C;
+  --stone-mute:#A79E86;
+  --stone-light:#4A4536;
+
+  --gold:#C29A52;
+  --gold-ink:#E0B563;
+  --gold-soft:#D9B978;
+  --gold-wash:#2A2313;
+
+  --line:#332C1F;
+  --line-strong:#453C29;
+
+  --danger:#E2695A;
+  --danger-wash:#2E1712;
+  --success:#7FA377;
+
+  --shadow-sm:0 1px 2px rgba(0,0,0,.35), 0 2px 8px -4px rgba(0,0,0,.45);
+  --shadow-md:0 8px 24px -12px rgba(0,0,0,.55), 0 2px 6px -3px rgba(0,0,0,.35);
+  --shadow-lg:0 28px 56px -28px rgba(0,0,0,.65), 0 6px 16px -8px rgba(0,0,0,.45);
+  --shadow-nav:0 1px 20px -12px rgba(0,0,0,.55);
+}
+
+/* The dark CTA band and its button already invert correctly via the ink/paper
+   token swap above (dark band -> light band, light button -> dark button —
+   same relative contrast in both themes). The one thing that token swap
+   *can't* fix on its own is the two spots that hard-code "dark ink" as the
+   readable colour on a gold/cream surface: in dark mode --charcoal points at
+   a LIGHT colour, so `color:var(--charcoal)` on a gold background would put
+   light text on a light background. Both get the fixed --ink-on-accent
+   token instead — a no-op in light mode (it's the same hex --charcoal
+   already was), a real fix in dark mode. */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .band-dark .btn-solid:hover{color:var(--ink-on-accent);}
+  :root:not([data-theme="light"]) .band-dark :focus-visible{outline-color:var(--ink-on-accent);}
+}
+:root[data-theme="dark"] .band-dark .btn-solid:hover{color:var(--ink-on-accent);}
+:root[data-theme="dark"] .band-dark :focus-visible{outline-color:var(--ink-on-accent);}
 
 /* ============================================================
    RESET & BASE
@@ -357,6 +475,34 @@ a.card:hover .card-cta .arrow{transform:translateX(3px);}
 .motif-spine{fill:none; stroke:var(--gold); stroke-width:.55; vector-effect:non-scaling-stroke;}
 .motif-dot{fill:var(--gold);}
 
+/* Traditional Indian ornament, set slowly in motion: the two corner
+   medallions are drawn as concentric mandala rings (a Rangoli-style
+   radial layout already present in the markup) and turn in opposite
+   directions like a chakra, so slowly it reads as ambient life rather
+   than an obvious spin. The temple silhouette gets a much smaller,
+   slower "breathing" scale instead of rotating — a temple should feel
+   grounded, not spun. Every rule here only ever touches `transform` and
+   `opacity`, so it composites on the GPU and never triggers layout. */
+.motif-spin{
+  transform-box:fill-box; transform-origin:center;
+  animation:motif-rotate 220s linear infinite;
+}
+.motif-spin-reverse{animation-direction:reverse; animation-duration:260s;}
+@keyframes motif-rotate{to{transform:rotate(360deg);}}
+
+.motif-breathe{
+  transform-box:fill-box; transform-origin:50% 100%;
+  animation:motif-breathe 14s ease-in-out infinite;
+}
+@keyframes motif-breathe{
+  0%,100%{transform:scale(1); opacity:1;}
+  50%{transform:scale(1.015); opacity:.85;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .motif-spin,.motif-spin-reverse,.motif-breathe{animation:none;}
+}
+
 /* ============================================================
    HEADER / NAV
    ============================================================ */
@@ -365,22 +511,27 @@ header.site-nav{
   min-height:var(--nav-h);
   display:flex; align-items:center;
   border-bottom:1px solid transparent;
-  background:rgba(247,244,236,0);
+  background:transparent;
   transition:background var(--dur) var(--ease), border-color var(--dur) var(--ease),
              backdrop-filter var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
 header.site-nav.scrolled{
-  background:rgba(247,244,236,.88);
+  background:var(--nav-surface);
   backdrop-filter:blur(14px) saturate(150%);
   -webkit-backdrop-filter:blur(14px) saturate(150%);
   border-bottom-color:var(--line);
-  box-shadow:0 1px 20px -12px rgba(25,23,15,.30);
+  box-shadow:var(--shadow-nav);
 }
 .nav-inner{
   width:100%; max-width:var(--container); margin-inline:auto;
   padding-inline:var(--gutter);
   display:flex; align-items:center; justify-content:space-between; gap:var(--sp-5);
 }
+/* Groups the nav links, theme toggle, and hamburger as one unit on the
+   right, so justify-content:space-between on .nav-inner stays a simple
+   two-item split (brand / everything-else) at every breakpoint instead of
+   redistributing as controls are added. */
+.nav-controls{display:flex; align-items:center; gap:var(--sp-3);}
 .brand-mark{
   display:inline-flex; align-items:center; gap:var(--sp-2);
   font-family:var(--font-display); font-size:21px; letter-spacing:.12em; font-weight:600;
@@ -446,6 +597,46 @@ nav.primary-links a[aria-current="page"]::after{
 
 /* Lock background scroll while the drawer is open */
 body.nav-open{overflow:hidden;}
+
+/* ============ THEME TOGGLE ============
+   Always shows the icon for what clicking it switches TO (moon = "go dark"
+   while in light mode, sun = "go light" while in dark mode). Before any
+   explicit choice, its state — like every colour on the page — follows the
+   OS via prefers-color-scheme; an explicit click always wins from then on. */
+.theme-toggle{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:44px; height:44px; flex:none;
+  border-radius:50%;
+  color:var(--charcoal);
+  transition:background var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+.theme-toggle:hover{background:var(--ivory-2); color:var(--gold-ink);}
+.theme-toggle svg{width:19px; height:19px; stroke:currentColor;}
+.theme-toggle .icon-moon{display:block;}
+.theme-toggle .icon-sun{display:none;}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:none;}
+  :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:block;}
+}
+:root[data-theme="dark"] .theme-toggle .icon-moon{display:none;}
+:root[data-theme="dark"] .theme-toggle .icon-sun{display:block;}
+:root[data-theme="light"] .theme-toggle .icon-moon{display:block;}
+:root[data-theme="light"] .theme-toggle .icon-sun{display:none;}
+
+/* Applied to <html> for ~250ms only while the theme is actively switching
+   (see the toggle script), so every surface cross-fades together instead of
+   hard-cutting. Scoped to a short-lived class rather than left on
+   permanently, so it never stacks with each component's own hover/focus
+   transitions the rest of the time. */
+.theme-transition,
+.theme-transition *{
+  transition:background-color .22s ease, color .22s ease, border-color .22s ease,
+             fill .22s ease, stroke .22s ease, box-shadow .22s ease !important;
+}
+@media (prefers-reduced-motion: reduce){
+  .theme-transition,.theme-transition *{transition:none !important;}
+}
 
 /* ============================================================
    HERO
@@ -561,7 +752,7 @@ a.card:hover .card-media img{transform:scale(1.05);}
 .band-dark .eyebrow{color:var(--gold-soft);}
 .band-dark .eyebrow::before{background:var(--gold-soft);}
 .band-dark h2{color:var(--ivory); font-size:var(--display-2); margin-top:var(--sp-4); max-width:20ch; margin-inline:auto;}
-.band-dark p{color:rgba(247,244,236,.72); max-width:56ch; margin:var(--sp-5) auto 0; font-size:var(--fs-md);}
+.band-dark p{color:color-mix(in srgb, var(--ivory) 72%, transparent); max-width:56ch; margin:var(--sp-5) auto 0; font-size:var(--fs-md);}
 .band-dark .btn-solid{margin-top:var(--sp-7);}
 
 /* ============================================================
@@ -610,21 +801,22 @@ a.card:hover .card-media img{transform:scale(1.05);}
 }
 .atlas-note .pulse{
   width:8px; height:8px; border-radius:50%; background:var(--gold); flex:none; margin-top:5px;
-  box-shadow:0 0 0 0 rgba(169,134,63,.5); animation:pulse 2.4s infinite;
+  box-shadow:0 0 0 0 color-mix(in srgb, var(--gold) 50%, transparent);
+  animation:pulse 2.4s infinite;
 }
 @keyframes pulse{
-  0%{box-shadow:0 0 0 0 rgba(169,134,63,.45);}
-  70%{box-shadow:0 0 0 9px rgba(169,134,63,0);}
-  100%{box-shadow:0 0 0 0 rgba(169,134,63,0);}
+  0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--gold) 45%, transparent);}
+  70%{box-shadow:0 0 0 9px color-mix(in srgb, var(--gold) 0%, transparent);}
+  100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--gold) 0%, transparent);}
 }
 
 .atlas-map-wrap{
   position:relative; overflow:hidden;
   border:1px solid var(--line); border-radius:var(--r-md);
-  background:var(--charcoal);
+  background:var(--atlas-bg);
 }
 .atlas-map-wrap svg{width:100%; height:auto; display:block;}
-.atlas-map-wrap .ocean{fill:var(--charcoal);}
+.atlas-map-wrap .ocean{fill:var(--atlas-bg);}
 
 .country{
   fill:#3A362C; stroke:#19170F; stroke-width:.6; stroke-linejoin:round;
@@ -632,10 +824,10 @@ a.card:hover .card-media img{transform:scale(1.05);}
 }
 .country.has-data{fill:#6B5528; cursor:pointer;}
 .country.has-data:hover{fill:var(--gold);}
-.country.has-data:focus-visible{fill:var(--gold); outline:none; stroke:var(--ivory); stroke-width:1.4;}
+.country.has-data:focus-visible{fill:var(--gold); outline:none; stroke:var(--atlas-fg); stroke-width:1.4;}
 .country.selected{fill:var(--gold-soft);}
 
-.atlas-marker{fill:var(--ivory); stroke:var(--gold); stroke-width:1.4; pointer-events:none;}
+.atlas-marker{fill:var(--atlas-fg); stroke:var(--gold); stroke-width:1.4; pointer-events:none;}
 .atlas-marker-pulse{
   fill:none; stroke:var(--gold-soft); stroke-width:1; pointer-events:none;
   animation:mapPulse 2.6s var(--ease) infinite;
@@ -816,7 +1008,7 @@ a.card:hover .card-media img{transform:scale(1.05);}
 .field select:focus{
   outline:none;
   border-color:var(--gold-ink);
-  box-shadow:0 0 0 3px rgba(134,106,50,.14);
+  box-shadow:0 0 0 3px color-mix(in srgb, var(--gold-ink) 14%, transparent);
 }
 .field textarea{resize:vertical; min-height:132px; line-height:1.7; padding-top:var(--sp-4);}
 
@@ -830,7 +1022,7 @@ a.card:hover .card-media img{transform:scale(1.05);}
 }
 .field.has-error input:focus,
 .field.has-error textarea:focus,
-.field.has-error select:focus{box-shadow:0 0 0 3px rgba(181,67,46,.16);}
+.field.has-error select:focus{box-shadow:0 0 0 3px color-mix(in srgb, var(--danger) 16%, transparent);}
 
 .field-error{
   display:flex; align-items:flex-start; gap:6px;
@@ -863,7 +1055,7 @@ select.field-select{
   border-radius:var(--r-md);
   margin-bottom:var(--sp-5);
 }
-.form-error{color:var(--danger); background:var(--danger-wash); border:1px solid rgba(181,67,46,.28);}
+.form-error{color:var(--danger); background:var(--danger-wash); border:1px solid color-mix(in srgb, var(--danger) 28%, transparent);}
 .form-notice{color:var(--charcoal-soft); background:var(--gold-wash); border:1px solid var(--line-strong);}
 
 .connect-info h3{font-size:var(--display-4); margin-bottom:var(--sp-1);}
@@ -915,7 +1107,7 @@ select.field-select{
 .btn-solid[data-busy="true"]::after{
   content:''; position:absolute; inset:0; margin:auto;
   width:17px; height:17px; border-radius:50%;
-  border:2px solid rgba(247,244,236,.35); border-top-color:var(--ivory);
+  border:2px solid color-mix(in srgb, var(--ivory) 35%, transparent); border-top-color:var(--ivory);
   animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}

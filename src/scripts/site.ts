@@ -1,3 +1,67 @@
+/* ============ THEME TOGGLE ============
+   The blocking inline script in <head> already applied any stored choice
+   before paint (avoiding a flash) — this just wires up the button and
+   keeps everything in sync from here on: persisting new choices, updating
+   the toggle's label/pressed state, and reacting live if the OS theme
+   changes while no explicit choice has been made yet. */
+const THEME_KEY = 'lmk-theme';
+const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement | null;
+const darkSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+function effectiveTheme(): 'light' | 'dark' {
+  const explicit = document.documentElement.getAttribute('data-theme');
+  if (explicit === 'light' || explicit === 'dark') return explicit;
+  return darkSchemeQuery.matches ? 'dark' : 'light';
+}
+
+function updateThemeToggleLabel() {
+  if (!themeToggle) return;
+  const isDark = effectiveTheme() === 'dark';
+  themeToggle.setAttribute('aria-label', isDark ? 'Switch to light mode' : 'Switch to dark mode');
+  themeToggle.setAttribute('aria-pressed', String(isDark));
+}
+
+function updateMetaThemeColor() {
+  const isDark = effectiveTheme() === 'dark';
+  document
+    .querySelectorAll('meta[name="theme-color"]')
+    .forEach((m) => m.setAttribute('content', isDark ? '#17140D' : '#F7F4EC'));
+}
+
+if (themeToggle) {
+  updateThemeToggleLabel();
+
+  themeToggle.addEventListener('click', () => {
+    const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+    const html = document.documentElement;
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (!prefersReducedMotion) html.classList.add('theme-transition');
+    html.setAttribute('data-theme', next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch {
+      /* localStorage unavailable — theme still applies, just won't persist */
+    }
+
+    updateThemeToggleLabel();
+    updateMetaThemeColor();
+
+    if (!prefersReducedMotion) {
+      window.setTimeout(() => html.classList.remove('theme-transition'), 260);
+    }
+  });
+
+  // No explicit choice yet: if the OS theme changes (e.g. sunset auto-switch),
+  // follow it live — but never override a choice the visitor already made.
+  darkSchemeQuery.addEventListener('change', () => {
+    if (!document.documentElement.getAttribute('data-theme')) {
+      updateThemeToggleLabel();
+      updateMetaThemeColor();
+    }
+  });
+}
+
 /* ============ NAV SCROLL STATE ============ */
 const siteNav = document.getElementById('siteNav');
 if (siteNav) {
