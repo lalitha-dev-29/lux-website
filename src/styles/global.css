@@ -105,6 +105,26 @@
      needs to track the theme). */
   --nav-surface:color-mix(in srgb, var(--ivory) 88%, transparent);
   --shadow-nav:0 1px 20px -12px rgba(25,23,15,.30);
+
+  /* --- background motif system ---
+     Tuned independently per theme rather than inverted: a fixed opacity
+     reads completely differently on a near-white surface than on a
+     near-black one (the same alpha delta is a much smaller fraction of the
+     light surface's luminance headroom — Weber's law), which is why the old
+     single-opacity gold motifs were invisible in light mode but fine in
+     dark. Light mode leans on ink (--charcoal) for structural line-work,
+     since it starts far darker than gold and so reaches usable contrast on
+     ivory at a much lower, still-tasteful alpha; gold is reserved for
+     sparing "jewel" accents. Dark mode can afford gold as the primary line
+     colour — near-black gives it huge natural headroom — plus a soft glow
+     for atmosphere. */
+  --motif-field-1:color-mix(in srgb, var(--gold) 14%, transparent);
+  --motif-field-2:color-mix(in srgb, var(--gold) 9%, transparent);
+  --motif-ring:color-mix(in srgb, var(--charcoal) 15%, transparent);
+  --motif-spoke:color-mix(in srgb, var(--charcoal) 20%, transparent);
+  --motif-accent:color-mix(in srgb, var(--gold) 65%, transparent);
+  --motif-particle:color-mix(in srgb, var(--gold) 55%, transparent);
+  --motif-glow:none;
 }
 
 /* ============================================================
@@ -153,6 +173,18 @@
     --shadow-md:0 8px 24px -12px rgba(0,0,0,.55), 0 2px 6px -3px rgba(0,0,0,.35);
     --shadow-lg:0 28px 56px -28px rgba(0,0,0,.65), 0 6px 16px -8px rgba(0,0,0,.45);
     --shadow-nav:0 1px 20px -12px rgba(0,0,0,.55);
+
+    /* Same shapes, richer treatment: gold carries the whole system here
+       (mixed against the *dark* --gold token, not light's) and gets a soft
+       glow for atmosphere — near-black backgrounds have the headroom to
+       take it without the page feeling busy. */
+    --motif-field-1:color-mix(in srgb, var(--gold) 20%, transparent);
+    --motif-field-2:color-mix(in srgb, var(--gold) 13%, transparent);
+    --motif-ring:color-mix(in srgb, var(--gold) 30%, transparent);
+    --motif-spoke:color-mix(in srgb, var(--gold) 42%, transparent);
+    --motif-accent:color-mix(in srgb, var(--gold-soft) 78%, transparent);
+    --motif-particle:color-mix(in srgb, var(--gold-soft) 70%, transparent);
+    --motif-glow:drop-shadow(0 0 22px color-mix(in srgb, var(--gold) 35%, transparent));
   }
 }
 :root[data-theme="dark"]{
@@ -184,6 +216,14 @@
   --shadow-md:0 8px 24px -12px rgba(0,0,0,.55), 0 2px 6px -3px rgba(0,0,0,.35);
   --shadow-lg:0 28px 56px -28px rgba(0,0,0,.65), 0 6px 16px -8px rgba(0,0,0,.45);
   --shadow-nav:0 1px 20px -12px rgba(0,0,0,.55);
+
+  --motif-field-1:color-mix(in srgb, var(--gold) 20%, transparent);
+  --motif-field-2:color-mix(in srgb, var(--gold) 13%, transparent);
+  --motif-ring:color-mix(in srgb, var(--gold) 30%, transparent);
+  --motif-spoke:color-mix(in srgb, var(--gold) 42%, transparent);
+  --motif-accent:color-mix(in srgb, var(--gold-soft) 78%, transparent);
+  --motif-particle:color-mix(in srgb, var(--gold-soft) 70%, transparent);
+  --motif-glow:drop-shadow(0 0 22px color-mix(in srgb, var(--gold) 35%, transparent));
 }
 
 /* The dark CTA band and its button already invert correctly via the ink/paper
@@ -460,29 +500,73 @@ a.card:hover .card-cta .arrow{transform:translateX(3px);}
 
 /* ============================================================
    SITE MOTIFS (fixed decorative background)
+   A layered system rather than one flat texture, so light and dark mode
+   can each be tuned for their own contrast rather than sharing one opacity
+   value that only happens to work in one of them (see the --motif-* token
+   comment above). Every layer is transform/opacity only and z-index:-1,
+   pointer-events:none, so none of it ever touches layout or interaction.
    ============================================================ */
 .site-motifs{
   position:fixed; inset:0; z-index:-1; overflow:hidden; pointer-events:none;
 }
-.motif-corner{position:absolute; width:clamp(230px, 32vw, 420px); height:auto; opacity:.13;}
+
+/* Layer 1 — atmosphere: two soft gold blooms anchored top-left/bottom-right,
+   giving the page a faint sense of light source instead of a flat fill. */
+.motif-atmosphere{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(ellipse 900px 640px at 10% -8%, var(--motif-field-1), transparent 60%),
+    radial-gradient(ellipse 760px 620px at 100% 106%, var(--motif-field-2), transparent 62%);
+}
+
+/* Layer 3 — corner medallions: concentric mandala/rangoli rings, turning
+   in opposite directions like a chakra, so slowly it reads as ambient life
+   rather than an obvious spin. Two-tone on purpose — neutral ink rings give
+   the structure enough presence to read on ivory, gold is kept for the
+   spokes and dots so it still feels like a precious accent, not a flat
+   wash. Dark mode layers a soft glow on top via --motif-glow. */
+.motif-corner{
+  position:absolute; width:clamp(320px, 44vw, 620px); height:auto;
+  filter:var(--motif-glow);
+}
 .motif-corner-tl{top:0; left:0; transform:translate(-27%,-27%);}
 .motif-corner-br{bottom:0; right:0; transform:translate(27%,27%) rotate(180deg);}
-.motif-temple{
-  position:absolute; left:50%; bottom:0; width:clamp(240px,28vw,360px); height:auto;
-  transform:translate(-50%, 14%); opacity:.07;
-}
-.motif-line{fill:none; stroke:var(--gold); stroke-width:.9; vector-effect:non-scaling-stroke;}
-.motif-spine{fill:none; stroke:var(--gold); stroke-width:.55; vector-effect:non-scaling-stroke;}
-.motif-dot{fill:var(--gold);}
+.motif-corner .motif-ring{fill:none; stroke:var(--motif-ring); stroke-width:.9; vector-effect:non-scaling-stroke;}
+.motif-corner .motif-spoke{fill:none; stroke:var(--motif-spoke); stroke-width:.7; vector-effect:non-scaling-stroke;}
+.motif-corner .motif-spine{fill:none; stroke:var(--motif-accent); stroke-width:.6; vector-effect:non-scaling-stroke;}
+.motif-corner .motif-dot{fill:var(--motif-accent);}
 
-/* Traditional Indian ornament, set slowly in motion: the two corner
-   medallions are drawn as concentric mandala rings (a Rangoli-style
-   radial layout already present in the markup) and turn in opposite
-   directions like a chakra, so slowly it reads as ambient life rather
-   than an obvious spin. The temple silhouette gets a much smaller,
-   slower "breathing" scale instead of rotating — a temple should feel
-   grounded, not spun. Every rule here only ever touches `transform` and
-   `opacity`, so it composites on the GPU and never triggers layout. */
+/* Layer 4 — bloom: an abstract rangoli-style burst low on the page, radial
+   lines fanning from an off-canvas centre. Deliberately not a literal
+   building or icon — just geometry, so it reads as craft rather than
+   souvenir imagery. */
+.motif-bloom{
+  position:absolute; left:50%; bottom:0; width:clamp(320px,44vw,620px); height:auto;
+  transform:translate(-50%, 18%);
+}
+.motif-bloom .bloom-ray{fill:none; stroke:var(--motif-ring); stroke-width:.8; vector-effect:non-scaling-stroke;}
+.motif-bloom .bloom-arc{fill:none; stroke:var(--motif-accent); stroke-width:.7; vector-effect:non-scaling-stroke;}
+.motif-bloom .bloom-dot{fill:var(--motif-accent);}
+
+/* Layer 5 — particles: small brass-toned points adrift, like light through
+   a jaali screen. Position and timing come from inline custom properties
+   per instance (see the component markup) so eight elements can share one
+   rule instead of eight near-duplicate ones. */
+.motif-particles{position:absolute; inset:0;}
+.motif-particle{
+  position:absolute; left:var(--x); top:var(--y);
+  width:var(--size,3px); height:var(--size,3px); border-radius:50%;
+  background:var(--motif-particle);
+  animation:motif-float var(--dur,16s) ease-in-out infinite;
+  animation-delay:var(--delay,0s);
+}
+@keyframes motif-float{
+  0%,100%{transform:translateY(0); opacity:.25;}
+  50%{transform:translateY(-22px); opacity:.85;}
+}
+
+/* Every layer only ever touches transform/translate/opacity/filter, so it
+   composites on the GPU and never triggers layout. */
 .motif-spin{
   transform-box:fill-box; transform-origin:center;
   animation:motif-rotate 220s linear infinite;
@@ -492,15 +576,26 @@ a.card:hover .card-cta .arrow{transform:translateX(3px);}
 
 .motif-breathe{
   transform-box:fill-box; transform-origin:50% 100%;
-  animation:motif-breathe 14s ease-in-out infinite;
+  animation:motif-breathe 16s ease-in-out infinite;
 }
 @keyframes motif-breathe{
   0%,100%{transform:scale(1); opacity:1;}
-  50%{transform:scale(1.015); opacity:.85;}
+  50%{transform:scale(1.02); opacity:.82;}
+}
+
+/* Gentle scroll parallax: `--motif-scroll` is written by site.ts (rAF-
+   throttled, only once `.js-anim` is present — i.e. JS is running and the
+   visitor hasn't asked for reduced motion) and read here as an independent
+   `translate`, so it composes with each layer's own positioning translate
+   above instead of fighting it. No JS, no `.js-anim`, or reduced motion:
+   the property is simply unset and every layer sits still at its base
+   position — never a broken or half-applied effect. */
+.js-anim [data-parallax]{
+  translate:0 calc(var(--motif-scroll, 0px) * var(--parallax-speed, 0));
 }
 
 @media (prefers-reduced-motion: reduce){
-  .motif-spin,.motif-spin-reverse,.motif-breathe{animation:none;}
+  .motif-spin,.motif-spin-reverse,.motif-breathe,.motif-particle{animation:none;}
 }
 
 /* ============================================================

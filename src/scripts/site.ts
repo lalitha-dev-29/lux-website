@@ -133,6 +133,37 @@ if (navToggle && primaryLinks) {
   });
 }
 
+/* ============ BACKGROUND PARALLAX ============
+   The motif layers in SiteMotifs.astro that carry `data-parallax` read a
+   `--motif-scroll` custom property (see global.css) as an independent
+   `translate`, each at its own speed via its own --parallax-speed. So the
+   only job here is keeping that one property in sync with scroll position,
+   throttled to one write per animation frame. Gated behind `.js-anim` (JS
+   running + not prefers-reduced-motion, set synchronously in <head>) so a
+   reduced-motion visitor never gets the scroll listener attached at all —
+   the CSS rule that reads --motif-scroll is scoped under .js-anim too, so
+   even a stray write here would be a no-op for them regardless. */
+if (document.documentElement.classList.contains('js-anim')) {
+  const root = document.documentElement;
+  let ticking = false;
+
+  function updateMotifScroll() {
+    root.style.setProperty('--motif-scroll', `${window.scrollY}px`);
+    ticking = false;
+  }
+
+  updateMotifScroll();
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(updateMotifScroll);
+    },
+    { passive: true }
+  );
+}
+
 /* ============ SCROLL REVEAL ============
    Only runs when the inline head script opted in via `.js-anim`. Content is
    visible by default, so every failure path here degrades to "just shown". */
