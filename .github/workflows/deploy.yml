@@ -20,6 +20,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: withastro/action@v3
+        with:
+          node-version: 22
         env:
           # Repo name becomes the base path, e.g. /lux-website/ — matches how
           # GitHub Pages serves a project site at <user>.github.io/<repo>/.
