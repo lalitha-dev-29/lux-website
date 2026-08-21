@@ -20,7 +20,7 @@ export interface AtlasCentroid {
  * marker and description still appear. Give it a matching entry in "centroids" too,
  * so a pulsing marker renders over the right spot on the map. */
 export const centroids: Record<string, AtlasCentroid> = {
-  France: { x: 469.85, y: 115.02 },
+  France: { x: 485.65, y: 100.47 },
   'United Kingdom': { x: 473.5, y: 78.51 },
   Italy: { x: 509.96, y: 112.4 },
   India: { x: 689.2, y: 174.55 },
