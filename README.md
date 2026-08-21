@@ -49,10 +49,23 @@ The `/connect/` form sends submissions via [EmailJS](https://www.emailjs.com) di
 
 To enable it:
 
-1. Sign up at emailjs.com, add an **Email Service** (e.g. connect your Gmail), and create an **Email Template** with variables `{{name}}`, `{{mobile}}`, `{{email}}`, `{{reason}}`.
+1. Sign up at emailjs.com, add an **Email Service** (e.g. connect your Gmail), and create an **Email Template** with variables `{{name}}`, `{{mobile}}`, `{{email}}`, `{{reason}}`, `{{message}}`.
 2. Copy your Service ID, Template ID, and Public Key from the dashboard.
 3. For local dev: copy `.env.example` to `.env` and fill them in.
 4. For the deployed site: add them as **repo secrets** (Settings → Secrets and variables → Actions) named `PUBLIC_EMAILJS_SERVICE_ID`, `PUBLIC_EMAILJS_TEMPLATE_ID`, `PUBLIC_EMAILJS_PUBLIC_KEY` — the deploy workflow already reads them.
+
+### Form behavior
+
+- **CV unlock is reason-dependent.** Only "Job Opportunity" and "Collaboration /
+  Research" unlock the CV download after submitting — the button reads "Submit &
+  Unlock CV" for those, and just "Submit" for everything else. This lives in
+  `CV_UNLOCK_REASONS` in `ConnectForm.astro`; add/remove reasons there.
+- **The message field is reason-dependent too.** Its label and placeholder change
+  per reason (`MESSAGE_PROMPTS` in the same file) and it's hidden until a reason is
+  picked. It's sent to EmailJS as `{{message}}`.
+- **Mobile number** uses [intl-tel-input](https://intl-tel-input.com) for country-code
+  selection, as-you-type formatting, and validation — sent to EmailJS as a full
+  E.164 number (e.g. `+6591234567`), regardless of how it displays in the field.
 
 ### Abuse protection
 

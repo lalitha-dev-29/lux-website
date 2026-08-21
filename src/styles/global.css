@@ -372,6 +372,13 @@ a.card:hover .card-media img{transform:scale(1.08);}
 .field input:focus, .field textarea:focus{border-color:var(--gold); outline:none;}
 .field textarea{resize:vertical; min-height:110px;}
 .form-error{color:#B5432E; font-size:13px; margin-bottom:20px; line-height:1.6;}
+.field-error{color:#B5432E; font-size:12.5px; margin-top:8px; line-height:1.6;}
+
+/* ============ MOBILE NUMBER (intl-tel-input) ============ */
+.field .iti{display:block; width:100%;}
+.field .iti input.iti__tel-input{width:100%;}
+.field .iti__country-container{padding:0;}
+.field .iti__selected-country-primary{padding-right:8px;}
 .connect-info h3{font-size:22px; margin-bottom:6px;}
 .connect-info .item{margin-bottom:30px;}
 .connect-info .item span{display:block; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--stone-light); margin-bottom:6px;}

@@ -13,7 +13,8 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     </div>
     <div class="field">
       <label for="cmobile">Mobile Number</label>
-      <input id="cmobile" name="mobile" type="tel" placeholder="+1 555 000 0000" required />
+      <input id="cmobile" name="mobile" type="tel" placeholder="Mobile number" required />
+      <p class="field-error" id="mobileError" role="alert" hidden></p>
     </div>
     <div class="field">
       <label for="cemail">Email</label>
@@ -30,6 +31,10 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
         <option>Other</option>
       </select>
     </div>
+    <div class="field" id="messageField" hidden>
+      <label for="cmessage" id="messageLabel">Your Message</label>
+      <textarea id="cmessage" name="message" placeholder="Tell me a bit about why you're reaching out."></textarea>
+    </div>
     {recaptchaSiteKey && (
       <div class="field">
         <div class="g-recaptcha" data-sitekey={recaptchaSiteKey}></div>
@@ -38,16 +43,16 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     <p class="form-error" id="formError" role="alert" hidden>Something went wrong sending your message. Please try again or email me directly.</p>
     <p class="form-error" id="formRateLimited" role="alert" hidden>You've already sent a message from this email today. I'll get back to you soon — try again tomorrow if it's urgent.</p>
     <p class="form-error" id="formCaptchaRequired" role="alert" hidden>Please complete the "I'm not a robot" check above before submitting.</p>
-    <button type="submit" class="btn-solid" id="connectSubmitBtn">Submit &amp; Unlock CV</button>
+    <button type="submit" class="btn-solid" id="connectSubmitBtn">Submit</button>
   </form>
   <div class="resume-panel" id="resumePanel">
     <div class="check">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 12.5L9.5 18L20 6" stroke="#A9863F" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path></svg>
     </div>
-    <h3>Thank you, details received</h3>
-    <p>My CV is ready to download below. I'll also get back to you by email or phone shortly.</p>
+    <h3 id="resumeHeading">Thank you, details received</h3>
+    <p id="resumeBody">I'll get back to you by email or phone shortly.</p>
     <div class="actions">
-      <a class="btn-solid" href={cvHref} id="resumeDownloadBtn" download="Lalitha-Manogna-Kasturi-CV.pdf">Download CV</a>
+      <a class="btn-solid" href={cvHref} id="resumeDownloadBtn" download="Lalitha-Manogna-Kasturi-CV.pdf" hidden>Download CV</a>
       <button type="button" class="reset-link" id="resumeResetBtn">Send another message</button>
     </div>
   </div>
@@ -57,6 +62,9 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
 
 <script>
   import emailjs from '@emailjs/browser';
+  import intlTelInput from 'intl-tel-input';
+  import type { Iti } from 'intl-tel-input';
+  import 'intl-tel-input/styles';
 
   declare global {
     interface Window {
@@ -67,12 +75,123 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     }
   }
 
+  /* ============ REASON-DEPENDENT BEHAVIOR ============
+     Only these two reasons unlock the CV; everything else is just a message. */
+  const CV_UNLOCK_REASONS = new Set(['Job Opportunity', 'Collaboration / Research']);
+
+  const MESSAGE_PROMPTS: Record<string, { label: string; placeholder: string }> = {
+    'Job Opportunity': {
+      label: 'About the Role',
+      placeholder: 'Tell me about the role, the company, and the opportunity.',
+    },
+    'Collaboration / Research': {
+      label: 'About the Collaboration',
+      placeholder: 'Tell me about the collaboration proposal, research topic, or project you have in mind.',
+    },
+    'Speaking / Press': {
+      label: 'About the Feature',
+      placeholder: 'Tell me about the event, publication, or feature you have in mind.',
+    },
+    'General Inquiry': {
+      label: 'Your Question',
+      placeholder: 'What would you like to know?',
+    },
+    Other: {
+      label: 'Your Message',
+      placeholder: "Tell me a bit about why you're reaching out.",
+    },
+  };
+
+  const reasonSelect = document.getElementById('creason') as HTMLSelectElement | null;
+  const messageField = document.getElementById('messageField');
+  const messageLabel = document.getElementById('messageLabel');
+  const messageInput = document.getElementById('cmessage') as HTMLTextAreaElement | null;
+  const submitBtn = document.getElementById('connectSubmitBtn') as HTMLButtonElement | null;
+
+  function isCvUnlockReason(reason: string): boolean {
+    return CV_UNLOCK_REASONS.has(reason);
+  }
+
+  function updateForReason() {
+    const reason = reasonSelect?.value ?? '';
+    const prompt = MESSAGE_PROMPTS[reason];
+
+    if (submitBtn) {
+      submitBtn.textContent = isCvUnlockReason(reason) ? 'Submit & Unlock CV' : 'Submit';
+    }
+
+    if (prompt && messageField && messageLabel && messageInput) {
+      messageField.hidden = false;
+      messageLabel.textContent = prompt.label;
+      messageInput.placeholder = prompt.placeholder;
+      messageInput.required = true;
+    } else if (messageField && messageInput) {
+      messageField.hidden = true;
+      messageInput.required = false;
+    }
+  }
+
+  reasonSelect?.addEventListener('change', updateForReason);
+  updateForReason();
+
+  /* ============ MOBILE NUMBER (country code, formatting, validation) ============ */
+  const mobileInput = document.getElementById('cmobile') as HTMLInputElement | null;
+  const mobileError = document.getElementById('mobileError');
+  let phoneIti: Iti | null = null;
+
+  if (mobileInput) {
+    phoneIti = intlTelInput(mobileInput, {
+      initialCountry: 'sg',
+      separateDialCode: true,
+      loadUtils: () => import('intl-tel-input/utils'),
+    });
+  }
+
+  const PHONE_ERROR_MESSAGES: Record<string, string> = {
+    IS_POSSIBLE: '',
+    INVALID_COUNTRY_CODE: 'Please select a valid country code.',
+    TOO_SHORT: 'This number looks too short for the selected country.',
+    TOO_LONG: 'This number looks too long for the selected country.',
+    IS_POSSIBLE_LOCAL_ONLY: 'Please include the area code, not just the local number.',
+    INVALID_LENGTH: "This doesn't look like a valid number length for the selected country.",
+  };
+
+  async function validatePhone(): Promise<boolean> {
+    if (!phoneIti || !mobileInput) return true;
+    await phoneIti.promise; // wait for the validation utils to finish loading
+
+    if (!mobileInput.value.trim()) {
+      mobileError?.removeAttribute('hidden');
+      if (mobileError) mobileError.textContent = 'Please enter a mobile number.';
+      return false;
+    }
+
+    if (phoneIti.isValidNumber()) {
+      mobileError?.setAttribute('hidden', '');
+      return true;
+    }
+
+    const errorCode = phoneIti.getValidationError();
+    const message = (errorCode && PHONE_ERROR_MESSAGES[errorCode]) || 'Please enter a valid mobile number.';
+    if (mobileError) mobileError.textContent = message;
+    mobileError?.removeAttribute('hidden');
+    return false;
+  }
+
+  mobileInput?.addEventListener('blur', () => {
+    if (mobileInput.value.trim()) validatePhone();
+  });
+  mobileInput?.addEventListener('input', () => {
+    if (mobileError && !mobileError.hasAttribute('hidden')) mobileError.setAttribute('hidden', '');
+  });
+
   /* ============ CONNECT FORM / CV GATE ============ */
   const connectForm = document.getElementById('connectForm') as HTMLFormElement | null;
   const resumePanel = document.getElementById('resumePanel');
+  const resumeHeading = document.getElementById('resumeHeading');
+  const resumeBody = document.getElementById('resumeBody');
   const resumeResetBtn = document.getElementById('resumeResetBtn');
   const resumeDownloadBtn = document.getElementById('resumeDownloadBtn') as HTMLAnchorElement | null;
-  const submitBtn = document.getElementById('connectSubmitBtn') as HTMLButtonElement | null;
   const formError = document.getElementById('formError');
   const formRateLimited = document.getElementById('formRateLimited');
   const formCaptchaRequired = document.getElementById('formCaptchaRequired');
@@ -86,12 +205,25 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
     window.grecaptcha?.reset();
   }
 
+  function showSuccessPanel(cvUnlocked: boolean) {
+    if (!connectForm || !resumePanel) return;
+    if (resumeHeading) resumeHeading.textContent = cvUnlocked ? 'Thank you, details received' : 'Thank you, message received';
+    if (resumeBody) {
+      resumeBody.textContent = cvUnlocked
+        ? "My CV is ready to download below. I'll also get back to you by email or phone shortly."
+        : "I'll get back to you by email or phone shortly.";
+    }
+    resumeDownloadBtn?.toggleAttribute('hidden', !cvUnlocked);
+    connectForm.style.display = 'none';
+    resumePanel.classList.add('show');
+  }
+
   /* Client-side "1 message per email per day" deterrent. This stops accidental
      double-submits and casual repeat use through the form itself, but it is NOT a
      real abuse defense: it lives in localStorage, so a private window, a different
      browser, or simply clearing site data resets it. Real protection against
      someone draining the EmailJS free quota has to happen on EmailJS's side (domain
-     allowlist + optional CAPTCHA on the template) — see README for setup. */
+     allowlist + reCAPTCHA on the template) — see README for setup. */
   const RATE_LIMIT_KEY_PREFIX = 'lmk_contact_last_sent_';
   const RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000;
 
@@ -127,17 +259,25 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
       formRateLimited?.setAttribute('hidden', '');
       formCaptchaRequired?.setAttribute('hidden', '');
 
+      const phoneOk = await validatePhone();
+      if (!phoneOk) {
+        mobileInput?.focus();
+        return;
+      }
+
       const emailValue = (document.getElementById('cemail') as HTMLInputElement).value;
       if (isRateLimited(emailValue)) {
         formRateLimited?.removeAttribute('hidden');
         return;
       }
 
+      const reasonValue = reasonSelect?.value ?? '';
+      const cvUnlocked = isCvUnlockReason(reasonValue);
+
       if (!EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID || !EMAILJS_PUBLIC_KEY) {
         /* EmailJS isn't configured (no PUBLIC_EMAILJS_* env vars at build time) — fall
            back to the CV-gate-only behavior instead of pretending to send anything. */
-        connectForm.style.display = 'none';
-        resumePanel.classList.add('show');
+        showSuccessPanel(cvUnlocked);
         return;
       }
 
@@ -160,9 +300,10 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
       const formData = new FormData(connectForm);
       const templateParams: Record<string, unknown> = {
         name: formData.get('name'),
-        mobile: formData.get('mobile'),
+        mobile: phoneIti?.getNumber() || formData.get('mobile'),
         email: formData.get('email'),
-        reason: formData.get('reason'),
+        reason: reasonValue,
+        message: formData.get('message'),
       };
       if (captchaToken) templateParams['g-recaptcha-response'] = captchaToken;
       const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 10000));
@@ -173,8 +314,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
           timeout,
         ]);
         recordSend(emailValue);
-        connectForm.style.display = 'none';
-        resumePanel.classList.add('show');
+        showSuccessPanel(cvUnlocked);
       } catch {
         formError?.removeAttribute('hidden');
         submitBtn.disabled = false;
@@ -187,6 +327,7 @@ const recaptchaSiteKey = import.meta.env.PUBLIC_RECAPTCHA_SITE_KEY as string | u
       connectForm.style.display = '';
       resumePanel.classList.remove('show');
       resetCaptcha();
+      updateForReason();
     });
   }
 
