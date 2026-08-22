@@ -2,11 +2,9 @@
 import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import CaseStudyCard from '../components/CaseStudyCard.astro';
-import JournalPreviewCard from '../components/JournalPreviewCard.astro';
 import { withBase } from '../lib/url';
 
 const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.order - b.data.order).slice(0, 3);
-const journalPosts = (await getCollection('journal')).sort((a, b) => a.data.order - b.data.order).slice(0, 2);
 
 const focusAreas = [
   {
@@ -157,8 +155,8 @@ const focusAreas = [
         <span class="eyebrow">The Journal</span>
         <h2>Some Recent Thinking</h2>
       </div>
-      <div class="grid-2">
-        {journalPosts.map((entry, i) => <JournalPreviewCard entry={entry} revealClass={i === 1 ? 'reveal-delay-1' : ''} />)}
+      <div class="grid-2" id="journalPreviewGrid">
+        <p class="journal-status" id="journalPreviewLoading">Loading posts…</p>
       </div>
       <div class="view-all reveal">
         <a href={withBase('/journal/')} class="btn-line">Read More Articles <span class="arrow" aria-hidden="true">→</span></a>
@@ -175,3 +173,18 @@ const focusAreas = [
     </div>
   </section>
 </Layout>
+
+<script>
+  import { fetchPublishedJournalPosts } from '../lib/journalClient';
+  import { renderJournalPreviewCard } from '../lib/journalPublic';
+
+  const grid = document.getElementById('journalPreviewGrid')!;
+
+  fetchPublishedJournalPosts().then((posts) => {
+    if (!posts || posts.length === 0) {
+      grid.innerHTML = '<p class="journal-status">No posts yet — check back soon.</p>';
+      return;
+    }
+    grid.innerHTML = posts.slice(0, 2).map(renderJournalPreviewCard).join('');
+  });
+</script>
