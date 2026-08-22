@@ -104,21 +104,34 @@ export async function getJournalPostById(id: string): Promise<JournalPost | null
   return data as JournalPost | null;
 }
 
+/** Postgres unique-violation. Slugs are derived from the title, so two posts named
+ *  alike collide — suffix the slug rather than making the admin rename the post. */
+const UNIQUE_VIOLATION = '23505';
+
 export async function createJournalPost(
   input: JournalPostInput,
   status: JournalStatus
 ): Promise<JournalPost> {
-  const { data, error } = await getSupabaseClient()
-    .from('journal_posts')
-    .insert({
-      ...input,
-      status,
-      published_at: status === 'published' ? new Date().toISOString() : null,
-    })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as JournalPost;
+  const supabase = getSupabaseClient();
+  const payload = {
+    ...input,
+    status,
+    published_at: status === 'published' ? new Date().toISOString() : null,
+  };
+
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const slug = attempt === 0 ? input.slug : `${input.slug}-${attempt + 1}`;
+    const { data, error } = await supabase
+      .from('journal_posts')
+      .insert({ ...payload, slug })
+      .select()
+      .single();
+
+    if (!error) return data as JournalPost;
+    if (error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
+  }
+
+  throw new Error('Could not generate a unique URL slug for this title. Try a different title.');
 }
 
 export async function updateJournalPost(

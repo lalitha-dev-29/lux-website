@@ -31,6 +31,7 @@ import { withBase } from '../../lib/url';
   <script>
     import { listAllJournalPosts } from '../../lib/supabaseAdmin';
     import { withBase } from '../../lib/url';
+    import { escapeHtml } from '../../lib/html';
 
     document.addEventListener('admin:ready', async () => {
       const rows = document.getElementById('recentRows')!;
@@ -59,9 +60,5 @@ import { withBase } from '../../lib/url';
         rows.innerHTML = `<tr><td colspan="3" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
       }
     });
-
-    function escapeHtml(s: string): string {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
   </script>
 </AdminLayout>

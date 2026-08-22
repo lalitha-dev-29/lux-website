@@ -39,6 +39,7 @@ import { withBase } from '../../../lib/url';
       deleteJournalPost,
     } from '../../../lib/supabaseAdmin';
     import { withBase } from '../../../lib/url';
+    import { escapeHtml } from '../../../lib/html';
     import type { JournalPost } from '../../../lib/journalTypes';
 
     let allPosts: JournalPost[] = [];
@@ -46,10 +47,6 @@ import { withBase } from '../../../lib/url';
     const rows = document.getElementById('postRows')!;
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
     const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
-
-    function escapeHtml(s: string): string {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    }
 
     function render() {
       const query = searchInput.value.trim().toLowerCase();

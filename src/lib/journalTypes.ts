@@ -21,12 +21,22 @@ export const PUBLIC_JOURNAL_FIELDS =
   'id,title,slug,excerpt,content,external_url,category,tags,cover_image,published_at' as const;
 
 export function slugify(title: string): string {
-  return title
+  const slug = title
+    .normalize('NFD')
+    // Fold accents onto their base letter ("Café" -> "cafe") instead of
+    // dropping them, which would otherwise yield "caf-society".
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
-    .slice(0, 96);
+    .slice(0, 96)
+    .replace(/-+$/, '');
+  // A title with no Latin characters at all (e.g. CJK, emoji, punctuation)
+  // reduces to an empty string, which would produce an unreachable
+  // /journal/post/?slug= URL. createJournalPost() de-duplicates the
+  // fallback into post-2, post-3, ... as needed.
+  return slug || 'post';
 }
 
 /** Escapes HTML, then turns blank-line-separated paragraphs into <p> tags. No markdown parsing — the

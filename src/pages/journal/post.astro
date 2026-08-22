@@ -23,10 +23,7 @@ import { withBase } from '../../lib/url';
 <script>
   import { fetchPublishedJournalPostBySlug } from '../../lib/journalClient';
   import { renderJournalContent } from '../../lib/journalTypes';
-
-  function escapeHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  }
+  import { escapeHtml, safeUrl } from '../../lib/html';
 
   const params = new URLSearchParams(window.location.search);
   const slug = params.get('slug');
@@ -60,7 +57,7 @@ import { withBase } from '../../lib/url';
     if (post.content) {
       content.innerHTML = renderJournalContent(post.content);
     } else if (post.external_url) {
-      content.innerHTML = `<p><a class="btn-line" href="${escapeHtml(post.external_url)}" target="_blank" rel="noopener">View on LinkedIn <span class="arrow" aria-hidden="true">→</span></a></p>`;
+      content.innerHTML = `<p><a class="btn-line" href="${safeUrl(post.external_url)}" target="_blank" rel="noopener">View on LinkedIn <span class="arrow" aria-hidden="true">→</span></a></p>`;
     }
   }
 
