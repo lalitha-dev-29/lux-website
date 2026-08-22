@@ -1,9 +1,5 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
-import JournalListItem from '../components/JournalListItem.astro';
-
-const journalPosts = (await getCollection('journal')).sort((a, b) => a.data.order - b.data.order);
 
 const topics = [
   { title: 'Luxury Strategy', body: 'How luxury brands build desire, protect value and stay relevant.' },
@@ -53,8 +49,10 @@ const topics = [
 
   <section class="tight">
     <div class="container">
-      <h2 class="visually-hidden">LinkedIn posts</h2>
-      {journalPosts.map((entry, i) => <JournalListItem entry={entry} revealClass={i % 2 === 1 ? 'reveal-delay-1' : ''} />)}
+      <h2 class="visually-hidden">Journal posts</h2>
+      <div id="journalPosts">
+        <p class="journal-status" id="journalLoading">Loading posts…</p>
+      </div>
     </div>
   </section>
 
@@ -82,3 +80,22 @@ const topics = [
     </div>
   </section>
 </Layout>
+
+<script>
+  import { fetchPublishedJournalPosts } from '../lib/journalClient';
+  import { renderJournalListItem } from '../lib/journalPublic';
+
+  const container = document.getElementById('journalPosts')!;
+
+  fetchPublishedJournalPosts().then((posts) => {
+    if (!posts) {
+      container.innerHTML = '<p class="journal-status">Unable to load Journal posts right now.</p>';
+      return;
+    }
+    if (posts.length === 0) {
+      container.innerHTML = '<p class="journal-status">No posts yet — check back soon.</p>';
+      return;
+    }
+    container.innerHTML = posts.map(renderJournalListItem).join('');
+  });
+</script>

@@ -1,0 +1,128 @@
+/* Admin panel — functional and clean, deliberately NOT reusing the public
+   site's decorative motifs/Atlas/reveal animations (see README "Journal
+   CMS" section). Reuses the same design tokens/fonts/.field/.btn-* classes
+   from global.css so it doesn't feel like an unrelated product bolted on. */
+
+body.admin{overflow-x:visible;}
+
+.admin-topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:var(--sp-4);
+  padding:var(--sp-4) var(--gutter);
+  background:var(--ivory);
+  border-bottom:1px solid var(--line);
+}
+.admin-brand{
+  font-family:var(--font-display);
+  font-size:var(--fs-lg);
+  letter-spacing:.02em;
+}
+.admin-brand .dot{color:var(--gold-ink);}
+.admin-nav{display:flex; align-items:center; gap:var(--sp-5); flex-wrap:wrap;}
+.admin-nav a{
+  font-size:var(--fs-xs); letter-spacing:var(--tracking-label); text-transform:uppercase;
+  color:var(--stone-mute);
+}
+.admin-nav a:hover,
+.admin-nav a[aria-current="page"]{color:var(--charcoal);}
+.admin-nav button{
+  font-size:var(--fs-xs); letter-spacing:var(--tracking-label); text-transform:uppercase;
+  color:var(--stone-mute); border:1px solid var(--line-strong); border-radius:var(--r-sm);
+  padding:var(--sp-2) var(--sp-4); min-height:36px;
+}
+.admin-nav button:hover{border-color:var(--gold-ink); color:var(--gold-ink);}
+
+.admin-main{padding:var(--sp-7) var(--gutter); max-width:1080px; margin-inline:auto;}
+.admin-main h1{font-size:var(--display-4); margin-bottom:var(--sp-2);}
+.admin-lede{color:var(--stone); margin-bottom:var(--sp-7); max-width:60ch;}
+
+.admin-gate-loading{padding:var(--sp-9) var(--gutter); text-align:center; color:var(--stone);}
+
+/* --- dashboard stat cards --- */
+.admin-stats{
+  display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+  gap:var(--sp-4); margin-bottom:var(--sp-8);
+}
+.admin-stat{
+  border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);
+  padding:var(--sp-5);
+}
+.admin-stat .num{font-family:var(--font-display); font-size:var(--display-3); line-height:1;}
+.admin-stat .label{font-size:var(--fs-2xs); letter-spacing:var(--tracking-label); text-transform:uppercase; color:var(--stone-mute); margin-top:var(--sp-2); display:block;}
+
+.admin-section-head{
+  display:flex; align-items:baseline; justify-content:space-between; gap:var(--sp-4);
+  margin-bottom:var(--sp-4); flex-wrap:wrap;
+}
+.admin-section-head h2{font-size:var(--fs-lg); font-family:var(--font-display); font-weight:500;}
+
+/* --- toolbar (search + filter + new) --- */
+.admin-toolbar{
+  display:flex; flex-wrap:wrap; gap:var(--sp-3); align-items:center;
+  margin-bottom:var(--sp-5);
+}
+.admin-toolbar input[type="search"],
+.admin-toolbar select{
+  min-height:44px; padding:var(--sp-2) var(--sp-4);
+  border:1px solid var(--line-strong); border-radius:var(--r-md);
+  background:var(--card); font-size:var(--fs-sm);
+}
+.admin-toolbar input[type="search"]{flex:1; min-width:180px;}
+.admin-toolbar .spacer{flex:1;}
+
+/* --- table --- */
+.admin-table-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);}
+table.admin-table{width:100%; border-collapse:collapse; min-width:640px;}
+.admin-table th,
+.admin-table td{
+  text-align:left; padding:var(--sp-3) var(--sp-4); border-bottom:1px solid var(--line);
+  font-size:var(--fs-sm); vertical-align:middle;
+}
+.admin-table th{
+  font-size:var(--fs-2xs); letter-spacing:var(--tracking-label); text-transform:uppercase;
+  color:var(--stone-mute); font-weight:500;
+}
+.admin-table tr:last-child td{border-bottom:none;}
+.admin-table td.title-cell{font-family:var(--font-display); font-size:var(--fs-md);}
+.admin-table td.actions-cell{white-space:nowrap; text-align:right;}
+.admin-table td.actions-cell button,
+.admin-table td.actions-cell a{
+  font-size:var(--fs-2xs); letter-spacing:.1em; text-transform:uppercase;
+  color:var(--stone-mute); margin-left:var(--sp-3);
+}
+.admin-table td.actions-cell button:hover,
+.admin-table td.actions-cell a:hover{color:var(--gold-ink);}
+.admin-table td.actions-cell button.danger:hover{color:var(--danger);}
+.admin-empty{padding:var(--sp-8); text-align:center; color:var(--stone);}
+
+.badge{
+  display:inline-block; padding:2px var(--sp-3); border-radius:999px;
+  font-size:var(--fs-2xs); letter-spacing:.08em; text-transform:uppercase; font-weight:500;
+}
+.badge-published{background:color-mix(in srgb, var(--success) 14%, transparent); color:var(--success);}
+.badge-draft{background:var(--gold-wash); color:var(--gold-ink);}
+
+/* --- editor form --- */
+.admin-form{max-width:64ch;}
+.admin-form-actions{
+  display:flex; gap:var(--sp-4); flex-wrap:wrap; align-items:center;
+  margin-top:var(--sp-6); padding-top:var(--sp-6); border-top:1px solid var(--line);
+}
+.admin-form-actions .spacer{flex:1;}
+.admin-danger-zone{margin-top:var(--sp-8); padding-top:var(--sp-6); border-top:1px solid var(--line);}
+.admin-danger-zone h2{font-size:var(--fs-md); color:var(--danger); margin-bottom:var(--sp-3);}
+
+.field .char-count{font-size:var(--fs-2xs); color:var(--stone-light); text-align:right; display:block; margin-top:var(--sp-1);}
+
+/* --- login --- */
+.admin-login-wrap{
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  padding:var(--sp-6);
+}
+.admin-login-card{
+  width:100%; max-width:400px; border:1px solid var(--line); border-radius:var(--r-lg);
+  background:var(--card); padding:var(--sp-8) var(--sp-7); box-shadow:var(--shadow-md);
+}
+.admin-login-card h1{font-size:var(--display-4); text-align:center; margin-bottom:var(--sp-2);}
+.admin-login-card .admin-lede{text-align:center; margin-bottom:var(--sp-6); max-width:none;}

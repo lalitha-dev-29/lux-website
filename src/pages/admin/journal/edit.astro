@@ -1,0 +1,171 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import JournalFormFields from '../../../components/admin/JournalFormFields.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Edit Journal Post">
+  <div class="admin-section-head">
+    <div>
+      <h1>Edit Journal Post</h1>
+      <p class="admin-lede" id="statusLede">Loading…</p>
+    </div>
+  </div>
+
+  <form class="admin-form" id="journalForm" novalidate hidden>
+    <JournalFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+      <p class="form-notice" id="formNotice" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/journal/')} class="btn-line">Back to Journal</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="toggleStatusBtn"></button>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Post</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import {
+      getJournalPostById,
+      updateJournalPost,
+      setJournalPostStatus,
+      deleteJournalPost,
+    } from '../../../lib/supabaseAdmin';
+    import { readJournalForm, writeJournalForm, validateJournalForm, toJournalPostInput } from '../../../lib/journalForm';
+    import { withBase } from '../../../lib/url';
+    import type { JournalPost } from '../../../lib/journalTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('journalForm') as HTMLFormElement;
+    const statusLede = document.getElementById('statusLede')!;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const noticeEl = document.getElementById('formNotice') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const toggleBtn = document.getElementById('toggleStatusBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    let current: JournalPost | null = null;
+    let dirty = false;
+
+    function renderStatus() {
+      if (!current) return;
+      statusLede.textContent = `Status: ${current.status === 'published' ? 'Published' : 'Draft'} · Last updated ${new Date(current.updated_at).toLocaleString()}`;
+      toggleBtn.textContent = current.status === 'published' ? 'Unpublish' : 'Publish';
+    }
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No post specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const post = await getJournalPostById(id);
+        if (!post) {
+          loadError.textContent = 'Post not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = post;
+        writeJournalForm({
+          title: post.title,
+          excerpt: post.excerpt,
+          content: post.content ?? '',
+          external_url: post.external_url ?? '',
+          category: post.category ?? '',
+          tags: post.tags.join(', '),
+          cover_image: post.cover_image ?? '',
+        });
+        renderStatus();
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load post.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      noticeEl.hidden = true;
+      const values = readJournalForm();
+      const validationError = validateJournalForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateJournalPost(current.id, toJournalPostInput(values, current.slug));
+        dirty = false;
+        renderStatus();
+        noticeEl.textContent = 'Changes saved.';
+        noticeEl.hidden = false;
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      if (!current) return;
+      const next = current.status === 'published' ? 'draft' : 'published';
+      toggleBtn.disabled = true;
+      try {
+        current = await setJournalPostStatus(current.id, next);
+        renderStatus();
+        noticeEl.textContent = next === 'published' ? 'Post published.' : 'Post unpublished.';
+        noticeEl.hidden = false;
+        errorEl.hidden = true;
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to update status.';
+        errorEl.hidden = false;
+      } finally {
+        toggleBtn.disabled = false;
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.title}"? This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteJournalPost(current.id);
+        dirty = false;
+        window.location.href = withBase('/admin/journal/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

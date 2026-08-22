@@ -1,0 +1,38 @@
+{/* Shared field markup for src/pages/admin/journal/new.astro and edit.astro. Values are populated/read by each page's own script. */}
+<div class="field">
+  <label for="fTitle">Title</label>
+  <input id="fTitle" name="title" type="text" required maxlength="200" />
+</div>
+
+<div class="field">
+  <label for="fExcerpt">Excerpt</label>
+  <textarea id="fExcerpt" name="excerpt" required maxlength="400" rows="3"></textarea>
+  <p class="hint">Shown on the Journal listing card.</p>
+</div>
+
+<div class="field">
+  <label for="fContent">Main Content</label>
+  <textarea id="fContent" name="content" rows="10"></textarea>
+  <p class="hint">Optional. Plain text — separate paragraphs with a blank line. Leave empty for a LinkedIn-only preview card.</p>
+</div>
+
+<div class="field">
+  <label for="fExternalUrl">External LinkedIn URL</label>
+  <input id="fExternalUrl" name="external_url" type="url" placeholder="https://www.linkedin.com/…" />
+  <p class="hint">Required if Main Content is left empty.</p>
+</div>
+
+<div class="field">
+  <label for="fCategory">Category</label>
+  <input id="fCategory" name="category" type="text" maxlength="60" />
+</div>
+
+<div class="field">
+  <label for="fTags">Tags</label>
+  <input id="fTags" name="tags" type="text" placeholder="comma, separated, tags" />
+</div>
+
+<div class="field">
+  <label for="fCoverImage">Cover Image URL</label>
+  <input id="fCoverImage" name="cover_image" type="url" placeholder="/assets/journal/…" />
+</div>

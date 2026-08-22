@@ -1,0 +1,76 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import JournalFormFields from '../../../components/admin/JournalFormFields.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="New Journal Post">
+  <h1>New Journal Post</h1>
+  <p class="admin-lede">Save as a draft to keep working, or publish right away.</p>
+
+  <form class="admin-form" id="journalForm" novalidate>
+    <JournalFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/journal/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="saveDraftBtn">Save Draft</button>
+      <button type="button" class="btn-solid" id="publishBtn">Publish</button>
+    </div>
+  </form>
+
+  <script>
+    import { createJournalPost } from '../../../lib/supabaseAdmin';
+    import { readJournalForm, validateJournalForm, toJournalPostInput } from '../../../lib/journalForm';
+    import { withBase } from '../../../lib/url';
+
+    const form = document.getElementById('journalForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const draftBtn = document.getElementById('saveDraftBtn') as HTMLButtonElement;
+    const publishBtn = document.getElementById('publishBtn') as HTMLButtonElement;
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    async function submit(status: 'draft' | 'published') {
+      errorEl.hidden = true;
+      const values = readJournalForm();
+      const validationError = validateJournalForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+
+      draftBtn.disabled = true;
+      publishBtn.disabled = true;
+      const busyBtn = status === 'draft' ? draftBtn : publishBtn;
+      const originalLabel = busyBtn.textContent;
+      busyBtn.textContent = 'Saving…';
+
+      try {
+        const post = await createJournalPost(toJournalPostInput(values), status);
+        dirty = false;
+        window.location.href = withBase(`/admin/journal/edit/?id=${post.id}`);
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        draftBtn.disabled = false;
+        publishBtn.disabled = false;
+        busyBtn.textContent = originalLabel;
+      }
+    }
+
+    draftBtn.addEventListener('click', () => submit('draft'));
+    publishBtn.addEventListener('click', () => submit('published'));
+  </script>
+</AdminLayout>
