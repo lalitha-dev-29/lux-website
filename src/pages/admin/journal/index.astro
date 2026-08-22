@@ -1,0 +1,138 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Journal">
+  <div class="admin-section-head">
+    <div>
+      <h1>Journal</h1>
+      <p class="admin-lede">Create, edit, publish and manage Journal posts.</p>
+    </div>
+    <a href={withBase('/admin/journal/new/')} class="btn-solid">New Post</a>
+  </div>
+
+  <div class="admin-toolbar">
+    <input type="search" id="searchInput" placeholder="Search by title or excerpt…" aria-label="Search Journal posts" />
+    <select id="statusFilter" aria-label="Filter by status">
+      <option value="all">All statuses</option>
+      <option value="published">Published</option>
+      <option value="draft">Draft</option>
+    </select>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Title</th><th>Status</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody id="postRows">
+        <tr><td colspan="4" class="admin-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    import {
+      listAllJournalPosts,
+      setJournalPostStatus,
+      deleteJournalPost,
+    } from '../../../lib/supabaseAdmin';
+    import { withBase } from '../../../lib/url';
+    import type { JournalPost } from '../../../lib/journalTypes';
+
+    let allPosts: JournalPost[] = [];
+
+    const rows = document.getElementById('postRows')!;
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
+
+    function escapeHtml(s: string): string {
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      const filtered = allPosts.filter((p) => {
+        const matchesStatus = status === 'all' || p.status === status;
+        const matchesQuery =
+          !query || p.title.toLowerCase().includes(query) || p.excerpt.toLowerCase().includes(query);
+        return matchesStatus && matchesQuery;
+      });
+
+      if (filtered.length === 0) {
+        rows.innerHTML = '<tr><td colspan="4" class="admin-empty">No matching Journal posts.</td></tr>';
+        return;
+      }
+
+      rows.innerHTML = filtered
+        .map(
+          (p) => `
+        <tr data-id="${p.id}">
+          <td class="title-cell"><a href="${withBase(`/admin/journal/edit/?id=${p.id}`)}">${escapeHtml(p.title)}</a></td>
+          <td><span class="badge badge-${p.status}">${p.status}</span></td>
+          <td>${new Date(p.updated_at).toLocaleDateString()}</td>
+          <td class="actions-cell">
+            <button type="button" class="toggle-status-btn" data-id="${p.id}" data-next="${p.status === 'published' ? 'draft' : 'published'}">
+              ${p.status === 'published' ? 'Unpublish' : 'Publish'}
+            </button>
+            <a href="${withBase(`/admin/journal/edit/?id=${p.id}`)}">Edit</a>
+            <button type="button" class="danger delete-btn" data-id="${p.id}" data-title="${escapeHtml(p.title)}">Delete</button>
+          </td>
+        </tr>`
+        )
+        .join('');
+    }
+
+    async function load() {
+      try {
+        allPosts = await listAllJournalPosts();
+        render();
+      } catch (err) {
+        rows.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+      }
+    }
+
+    rows.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      const toggleBtn = target.closest('.toggle-status-btn') as HTMLButtonElement | null;
+      if (toggleBtn) {
+        const id = toggleBtn.dataset.id!;
+        const next = toggleBtn.dataset.next as 'draft' | 'published';
+        toggleBtn.disabled = true;
+        try {
+          const updated = await setJournalPostStatus(id, next);
+          allPosts = allPosts.map((p) => (p.id === id ? updated : p));
+          render();
+        } catch (err) {
+          alert(err instanceof Error ? err.message : 'Failed to update status.');
+          toggleBtn.disabled = false;
+        }
+        return;
+      }
+
+      const deleteBtn = target.closest('.delete-btn') as HTMLButtonElement | null;
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.id!;
+        const title = deleteBtn.dataset.title!;
+        if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+        deleteBtn.disabled = true;
+        try {
+          await deleteJournalPost(id);
+          allPosts = allPosts.filter((p) => p.id !== id);
+          render();
+        } catch (err) {
+          alert(err instanceof Error ? err.message : 'Failed to delete.');
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', render);
+    statusFilter.addEventListener('change', render);
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>
