@@ -1,0 +1,69 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+---
+
+<AdminLayout title="Sign In" bare>
+  <div class="admin-login-wrap">
+    <div class="admin-login-card">
+      <h1>KLM Admin</h1>
+      <p class="admin-lede">Sign in to manage Journal content.</p>
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="username" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" required autocomplete="current-password" />
+        </div>
+
+        <div aria-live="polite" aria-atomic="true">
+          <p class="form-error" id="loginError" hidden></p>
+        </div>
+
+        <button type="submit" class="btn-solid" id="loginSubmitBtn" style="width:100%;">Sign In</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    import { signInAdmin, getSession } from '../../lib/supabaseAdmin';
+    import { withBase } from '../../lib/url';
+
+    const form = document.getElementById('loginForm') as HTMLFormElement;
+    const errorEl = document.getElementById('loginError') as HTMLParagraphElement;
+    const submitBtn = document.getElementById('loginSubmitBtn') as HTMLButtonElement;
+
+    // Already signed in as admin? Skip the form. If Supabase isn't configured yet
+    // (e.g. local dev without .env), surface that clearly instead of a silent hang.
+    getSession()
+      .then((session) => {
+        if (session) window.location.href = withBase('/admin/');
+      })
+      .catch((err) => {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to check session.';
+        errorEl.hidden = false;
+      });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorEl.hidden = true;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Signing In…';
+
+      const email = (document.getElementById('email') as HTMLInputElement).value.trim();
+      const password = (document.getElementById('password') as HTMLInputElement).value;
+
+      try {
+        await signInAdmin(email, password);
+        window.location.href = withBase('/admin/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Sign in failed.';
+        errorEl.hidden = false;
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sign In';
+      }
+    });
+  </script>
+</AdminLayout>
