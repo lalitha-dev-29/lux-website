@@ -38,5 +38,12 @@ jobs:
           # Optional: reCAPTCHA v2 site key (see README's "Abuse protection"
           # section). Left unset, the form has no captcha requirement.
           PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.PUBLIC_RECAPTCHA_SITE_KEY }}
+          # Supabase project for the Journal CMS (see supabase/schema.sql and
+          # the "Journal CMS" section in the README). Both are meant to be
+          # public — safety comes from Row Level Security, not secrecy — but
+          # they still live in repo secrets since they're environment-specific.
+          # Left unset, the Journal page and /admin panel fail to load data.
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
       - uses: actions/deploy-pages@v4
         id: deployment

@@ -9,24 +9,98 @@ Built with [Astro](https://astro.build) — static output, near-zero client JS, 
 ```
 src/
   components/     Reusable UI: Nav, Footer, cards, the atlas map, the connect form
+    admin/        Admin-only form fragments (Journal editor fields)
   content/        Markdown content collections
     case-studies/ One .md file per case study (frontmatter: title, tags, excerpt, pdfUrl, ...)
-    journal/      One .md file per LinkedIn post preview
+    journal/      Original Journal posts — historical seed data, see "Journal CMS" below
     certifications/  One .md file per certification (empty until you add real ones)
   content.config.ts  Schema for the collections above
   data/atlas.ts   Country descriptions + marker coordinates for the Atlas page
-  layouts/        Shared page shell (Layout.astro)
-  pages/          Routes — one file/folder per URL
+  layouts/        Layout.astro (public shell), AdminLayout.astro (Admin Panel shell)
+  lib/            supabaseAdmin.ts (auth + CRUD), journalClient.ts (public reads),
+                  journalPublic.ts (card rendering), journalForm.ts, journalTypes.ts
+  pages/          Routes — one file/folder per URL, including admin/ (see below)
   scripts/site.ts Nav scroll state, mobile menu, scroll-reveal animation
-  styles/global.css  Design tokens + all component styles
+  styles/global.css  Design tokens + all public-site component styles
+  styles/admin.css   Admin Panel-only layout (dashboard, table, editor, login)
+supabase/schema.sql  Journal CMS database schema, RLS policies, and seed data
 legacy/index.html  The original single-file HTML/CSS/JS version, kept for reference
 ```
 
 ## Adding content
 
 - **Case study**: add a new `.md` file to `src/content/case-studies/`, following the frontmatter shape of an existing one. It automatically appears in the grid and gets its own page at `/case-studies/<filename>/`.
-- **Journal post**: add a `.md` file to `src/content/journal/` with `title`, `excerpt`, and the LinkedIn post `url`.
+- **Journal post**: use the [Admin Panel](#journal-cms--admin-panel) — see below. The `.md` files in `src/content/journal/` are historical seed data only (see that section for why).
 - **Certification**: add a `.md` file to `src/content/certifications/` once you have a real one to list.
+
+## Journal CMS + Admin Panel
+
+The Journal is the one part of this site that isn't static Markdown: an admin can create, edit, draft, publish, unpublish and delete posts from a browser-based Admin Panel, and visitors see the change immediately — no commit, no rebuild, no redeploy.
+
+### Why not just Markdown + Git?
+
+GitHub Pages serves static files only — it can't run a server, so it can't authenticate an admin or accept writes at all. Making "publish a post" require editing a `.md` file and pushing to `main` would mean giving CMS access = giving `git push` access, and would mean a 1–2 minute CI build stands between "I hit publish" and "the visitor sees it." Neither is what a CMS is for.
+
+### Architecture
+
+```
+Admin browser ──sign in──► Supabase Auth (hosted)
+Admin browser ──CRUD─────► Supabase Postgres, via its auto-generated REST API
+                            (every request re-checked by Row Level Security)
+Visitor browser ──read───► same REST API, anon key, RLS restricts to
+                            status = 'published' only
+```
+
+**[Supabase](https://supabase.com)** (managed Postgres + Auth + an auto-generated REST API) is the entire backend. There is no custom server anywhere in this repo — the Admin Panel (`/admin/*`) is static HTML, exactly like every other page, shipped by the same GitHub Pages deploy. It's a client-rendered mini-app that talks straight to Supabase over HTTPS; Supabase's own infrastructure is what's actually running 24/7, not anything this repo deploys or operates.
+
+- **Authentication** — [Supabase Auth](https://supabase.com/docs/guides/auth) (email + password). No password ever touches this codebase; `@supabase/supabase-js` handles the login request and holds the resulting session. That SDK is only imported by `/admin/*` pages, so it never ships to a normal visitor's bundle.
+- **Authorization (RBAC)** — enforced in Postgres, not in JavaScript. `supabase/schema.sql` creates an `admin_users` table and Row Level Security policies that require `auth.uid()` to appear in it for any insert/update/delete on `journal_posts`, and restrict `select` to `status = 'published'` for everyone else. A tampered/forged client request still hits these policies — the database itself is the enforcement point. `src/lib/supabaseAdmin.ts`'s `requireAdminOrRedirect()` (used by `AdminLayout.astro` on every admin page) is a **UX convenience only** — it just redirects a non-admin browser to the login page faster than waiting for an RLS rejection.
+- **Storage** — one table, `journal_posts` (see `supabase/schema.sql` for the full schema: `title`, `slug`, `excerpt`, `content`, `external_url`, `category`, `tags`, `cover_image`, `status`, `published_at`, `created_at`, `updated_at`).
+- **Public Journal read** — `src/lib/journalClient.ts` makes a plain `fetch()` against Supabase's REST endpoint with the public anon key — deliberately **not** using `@supabase/supabase-js` here, so the public bundle stays close to its original near-zero-JS footprint. Used by `/journal/` (the listing), `/` (the homepage's 2-post preview), and `/journal/post/?slug=…` (an individual post's page, only reachable for posts that have on-site `content`).
+- **Content is plain text, not Markdown/HTML** — the editor's "Main Content" field is escaped and split into paragraphs by `renderJournalContent()` in `src/lib/journalTypes.ts`. Nothing typed into it can ever produce an HTML tag or attribute, so there's no sanitizer to get wrong and no XSS surface, at the cost of not supporting rich formatting. Given the original Journal entries were link-preview cards with no body copy at all, this matches the actual complexity of the content rather than adding a rich-text editor no one needs yet.
+
+### Setting up your own Supabase project
+
+1. Create a free project at [supabase.com](https://supabase.com).
+2. **Dashboard → SQL Editor → New query** — paste in the entire contents of [`supabase/schema.sql`](supabase/schema.sql) and run it. This creates the tables, RLS policies, and seeds the 5 original Journal posts as published rows.
+3. **Dashboard → Authentication → Users → Add user** — create your admin login (email + password, check "Auto Confirm User"). Copy the new user's UID.
+4. Back in the SQL Editor, run: `insert into public.admin_users (user_id) values ('<uid-from-step-3>');` — this one row is what makes that account an admin. Everyone else who might ever sign up is a plain USER by default.
+5. **Dashboard → Project Settings → API** — copy the **Project URL** and **anon public key**.
+6. Local dev: copy `.env.example` to `.env` and fill in `PUBLIC_SUPABASE_URL` / `PUBLIC_SUPABASE_ANON_KEY`. Deployed site: add the same two as **repo secrets** (Settings → Secrets and variables → Actions) — the deploy workflow already reads them.
+7. Visit `/admin/login/` and sign in.
+
+### Using the Admin Panel
+
+- `/admin/` — dashboard: post counts, recently updated.
+- `/admin/journal/` — list, search, filter by status, publish/unpublish/delete.
+- `/admin/journal/new/` — create a post; Save Draft or Publish.
+- `/admin/journal/edit/?id=<uuid>` — edit, save, toggle publish state, or delete. (A static site can't pre-generate a page per database row with an unknown-at-build-time ID, so edit/new use a query string rather than a path segment like `/admin/journal/<id>/edit` — everything else about them behaves the same.)
+
+A post needs either **Main Content**, an **External LinkedIn URL**, or both — this is enforced both in the editor and by a database constraint, so it can't be bypassed from a raw API call either. If only an external URL is set, the public card behaves exactly like the original design ("View on LinkedIn", opens in a new tab). If content is set (with or without a LinkedIn URL), the card instead links to an on-site article at `/journal/post/?slug=…`.
+
+The Admin Panel intentionally looks different from the public site — same colour/type tokens (`src/styles/admin.css` reuses `global.css`'s custom properties), but no mandala motifs, no Atlas, no scroll-reveal. It's a workspace, not part of the editorial experience; see `src/layouts/AdminLayout.astro`.
+
+### Existing Markdown content
+
+The original 5 posts in `src/content/journal/*.md` are preserved as-is and are what `supabase/schema.sql` seeds into the database. `content.config.ts`'s `journal` collection is kept for that historical/reference purpose only — as of this feature, no page reads from it anymore (`journal.astro`, `index.astro`, and the new `/journal/post/` page all fetch from Supabase instead). This is a deliberate single-source-of-truth choice: once migrated, the database is authoritative, and the `.md` files are frozen seed data, not a live alternate feed.
+
+### Environment variables
+
+| Variable | Exposure | Purpose |
+| --- | --- | --- |
+| `PUBLIC_SUPABASE_URL` | Public (ships to browser) | Supabase project's REST endpoint. |
+| `PUBLIC_SUPABASE_ANON_KEY` | Public (ships to browser) | Supabase's anonymous API key. Safe to expose by design — it authorizes nothing on its own; Row Level Security is what actually gates every read/write. |
+
+There is no server-only secret anywhere in this feature — the `PUBLIC_` prefix is correct here, not a mistake, because both values are meant to be public (same reasoning as the existing `PUBLIC_EMAILJS_*` keys above). The one credential that must never end up in this repo is the admin's Supabase Auth **password** — that only ever lives in Supabase's own systems and the admin's memory.
+
+### Security review
+
+- **Unauthenticated access to `/admin/*`**: the pages load (they're static HTML — GitHub Pages can't gate a route), but render nothing but a "Checking access…" state before client JS redirects to `/admin/login/`; every data call underneath still requires a valid admin session token, enforced by RLS.
+- **Client-side role tampering**: `isCurrentUserAdmin()` and `requireAdminOrRedirect()` are UX only. Deleting them, patching them to always return `true`, or calling `supabaseAdmin.ts`'s functions directly from the console does not grant write access — Postgres re-evaluates `is_admin()` against the real, server-verified `auth.uid()` on every request.
+- **Draft leakage**: the public read policy (`status = 'published'`) is enforced in Postgres itself, not filtered client-side — there's no query shape that returns a draft to an anonymous request.
+- **Object access**: every `journal_posts` row is gated by the same admin-only policy; there's no per-row ownership model to bypass (single admin role, by design — see RBAC section above for how this extends to more roles later).
+- **Content injection**: plain-text content is HTML-escaped before insertion into the DOM (see "Content is plain text" above) — there is no code path that interprets admin-authored text as markup.
+- **Secrets**: confirmed no non-`PUBLIC_` Supabase credential exists in this repo, `.env.example`, or the deploy workflow. The Supabase **service role key** (which bypasses RLS) is never used anywhere in this codebase — intentionally, since nothing here needs it.
 
 ## The Atlas map
 
