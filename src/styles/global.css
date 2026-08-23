@@ -226,22 +226,6 @@
   --motif-glow:drop-shadow(0 0 22px color-mix(in srgb, var(--gold) 35%, transparent));
 }
 
-/* The dark CTA band and its button already invert correctly via the ink/paper
-   token swap above (dark band -> light band, light button -> dark button —
-   same relative contrast in both themes). The one thing that token swap
-   *can't* fix on its own is the two spots that hard-code "dark ink" as the
-   readable colour on a gold/cream surface: in dark mode --charcoal points at
-   a LIGHT colour, so `color:var(--charcoal)` on a gold background would put
-   light text on a light background. Both get the fixed --ink-on-accent
-   token instead — a no-op in light mode (it's the same hex --charcoal
-   already was), a real fix in dark mode. */
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]) .band-dark .btn-solid:hover{color:var(--ink-on-accent);}
-  :root:not([data-theme="light"]) .band-dark :focus-visible{outline-color:var(--ink-on-accent);}
-}
-:root[data-theme="dark"] .band-dark .btn-solid:hover{color:var(--ink-on-accent);}
-:root[data-theme="dark"] .band-dark :focus-visible{outline-color:var(--ink-on-accent);}
-
 /* ============================================================
    RESET & BASE
    ============================================================ */
@@ -472,11 +456,6 @@ section.flush-top{padding-top:0;}
 .btn-line:active{color:var(--charcoal);}
 .btn-line .arrow{transition:transform var(--dur) var(--ease); display:inline-block;}
 .btn-line:hover .arrow{transform:translateX(3px);}
-
-/* On the dark band, invert the tiers */
-.band-dark .btn-solid{background:var(--ivory); color:var(--charcoal); border-color:var(--ivory);}
-.band-dark .btn-solid:hover{background:var(--gold-soft); border-color:var(--gold-soft); color:var(--charcoal);}
-.band-dark :focus-visible{outline-color:var(--gold-soft);}
 
 /* Small inline arrow-link used inside cards */
 .link-arrow{
@@ -844,13 +823,20 @@ a.card:hover .card-media img{transform:scale(1.05);}
 }
 
 /* ============================================================
-   DARK CTA BAND
+   CTA BAND
    ============================================================ */
-.band-dark{background:var(--charcoal); color:var(--ivory); text-align:center;}
-.band-dark .eyebrow{color:var(--gold-soft);}
-.band-dark .eyebrow::before{background:var(--gold-soft);}
-.band-dark h2{color:var(--ivory); font-size:var(--display-2); margin-top:var(--sp-4); max-width:20ch; margin-inline:auto;}
-.band-dark p{color:color-mix(in srgb, var(--ivory) 72%, transparent); max-width:56ch; margin:var(--sp-5) auto 0; font-size:var(--fs-md);}
+/* Follows the theme like every other section now (was previously
+   hardcoded to always sit opposite the page's theme via --charcoal/
+   --ivory). --ivory-2 gives it the same subtle surface separation
+   used for card media and other section backgrounds elsewhere,
+   without breaking light/dark consistency. The .btn-solid inside it
+   needs no override anymore — the sitewide button style already
+   reads correctly against a theme-following background. */
+.band-dark{background:var(--ivory-2); color:var(--charcoal); text-align:center;}
+.band-dark .eyebrow{color:var(--gold-ink);}
+.band-dark .eyebrow::before{background:var(--gold-ink);}
+.band-dark h2{color:var(--charcoal); font-size:var(--display-2); margin-top:var(--sp-4); max-width:20ch; margin-inline:auto;}
+.band-dark p{color:var(--stone); max-width:56ch; margin:var(--sp-5) auto 0; font-size:var(--fs-md);}
 .band-dark .btn-solid{margin-top:var(--sp-7);}
 
 /* ============================================================
