@@ -758,7 +758,9 @@ body.nav-open{overflow:hidden;}
   box-shadow:var(--shadow-lg);
   background:var(--ivory-2);
 }
-.hero-portrait img{width:100%; height:100%; object-fit:cover; transition:transform 1.1s var(--ease);}
+/* contain, not cover: the portrait is a transparent-background cutout, taller/narrower
+   than the 4:5 box — cover would crop the head and feet to fill the width. */
+.hero-portrait img{width:100%; height:100%; object-fit:contain; transition:transform 1.1s var(--ease);}
 .hero-portrait:hover img{transform:scale(1.04);}
 .hero-portrait::after{content:''; position:absolute; inset:0; border:1px solid rgba(255,255,255,.16); border-radius:var(--r-md);}
 
