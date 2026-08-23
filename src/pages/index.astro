@@ -29,7 +29,10 @@ const focusAreas = [
 ];
 ---
 
-<Layout title="Kasturi Lalitha Manogna | Luxury Brand Strategy &amp; Marketing">
+{/* Plain "&" here, not "&amp;" — Astro escapes the value once when it lands in
+    <title>/<meta>, so pre-escaping it produced a literal "&amp;" in the browser tab
+    and in LinkedIn/Slack link previews. */}
+<Layout title="Kasturi Lalitha Manogna | Luxury Brand Strategy & Marketing">
   <div class="hero">
     <div class="container hero-grid">
       <div class="hero-copy reveal">
