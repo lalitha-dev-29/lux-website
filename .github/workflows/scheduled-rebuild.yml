@@ -2,12 +2,25 @@ name: Scheduled Content Rebuild
 
 # Journal and Case Study content is edited in the /admin panel (Supabase),
 # not by pushing code — this rebuild picks up those edits and republishes
-# the static site on a schedule, since GitHub Pages otherwise only rebuilds
-# on a push to main (see deploy.yml). Additive: does not replace or modify
-# the push-triggered deploy.
+# the static site, since GitHub Pages otherwise only rebuilds on a push to
+# main (see deploy.yml). Additive: does not replace or modify the
+# push-triggered deploy.
+#
+# Three ways this fires:
+#   1. `repository_dispatch` (type: content-updated) — fired automatically
+#      by a Supabase Database Webhook on any journal_posts/case_studies
+#      insert/update/delete, so edits go live within ~30-60s with zero
+#      manual steps. This is the primary trigger; see README's "Automatic
+#      rebuild on save" section for the one-time Supabase/GitHub setup.
+#   2. `schedule` — a safety-net cron in case a webhook call is ever missed
+#      (rate limit, transient network failure, webhook temporarily
+#      disabled, etc.) so content can never drift for more than a few hours.
+#   3. `workflow_dispatch` — manual "Run workflow" button for on-demand use.
 on:
+  repository_dispatch:
+    types: [content-updated]
   schedule:
-    - cron: '0 */4 * * *' # every 4 hours
+    - cron: '0 */4 * * *' # safety net — every 4 hours
   workflow_dispatch:
 
 permissions:

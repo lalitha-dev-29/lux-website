@@ -192,7 +192,28 @@ The workflow derives the site's base path from the repo name automatically. If t
 
 ### Scheduled rebuild
 
-`.github/workflows/scheduled-rebuild.yml` reruns the same build + deploy every 4 hours (plus a manual `workflow_dispatch` trigger you can fire from the Actions tab). It exists because Journal and Case Study pages are generated at build time from Supabase (see the CMS section above) — editing content in the Admin Panel doesn't push a commit, so without this, a new or edited entry wouldn't go live until someone happened to push code. It shares `deploy.yml`'s `concurrency: group: pages`, so a push-triggered deploy and a scheduled one can never race and clobber each other's Pages deployment. It needs the same `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY` repo secrets as `deploy.yml` — without them the build fails immediately with a clear error (see `src/lib/buildTimeData.ts`) rather than silently shipping a site with no Journal or Case Study pages.
+`.github/workflows/scheduled-rebuild.yml` reruns the same build + deploy on three triggers (see the comment at the top of that file): an automatic `repository_dispatch` fired by Supabase the instant content changes (set up below), a `schedule` safety-net cron every 4 hours in case a dispatch is ever missed, and a manual `workflow_dispatch` you can fire from the Actions tab. It exists because Journal and Case Study pages are generated at build time from Supabase (see the CMS section above) — editing content in the Admin Panel doesn't push a commit, so without this, a new or edited entry wouldn't go live until someone happened to push code. It shares `deploy.yml`'s `concurrency: group: pages`, so a push-triggered deploy and a rebuild can never race and clobber each other's Pages deployment. It needs the same `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY` repo secrets as `deploy.yml` — without them the build fails immediately with a clear error (see `src/lib/buildTimeData.ts`) rather than silently shipping a site with no Journal or Case Study pages.
+
+#### Automatic rebuild on save
+
+This is what makes an Admin Panel edit go live in ~30–60 seconds with zero manual steps, instead of waiting for the 4-hour safety-net cron. It's a one-time setup with two parts:
+
+**1. Create a GitHub token** — Settings → [Developer settings → Personal access tokens → Fine-grained tokens](https://github.com/settings/personal-access-tokens/new):
+   - Repository access: **Only select repositories** → this repo.
+   - Permissions → Repository permissions → **Contents: Read and write**, **Actions: Read and write**. Nothing else.
+   - Generate it and copy the token — GitHub only shows it once.
+
+**2. Add a Supabase Database Webhook for each table** — Supabase Dashboard → Database → Webhooks → Create a new webhook. Create this twice, once with **Table: `journal_posts`** and once with **Table: `case_studies`** (a webhook watches one table):
+   - Events: check Insert, Update, and Delete.
+   - Type: HTTP Request → Method **POST**.
+   - URL: `https://api.github.com/repos/<owner>/<repo>/dispatches` (use this repo's actual owner/name).
+   - HTTP Headers:
+     - `Authorization: Bearer <the token from step 1>`
+     - `Accept: application/vnd.github+json`
+     - `Content-Type: application/json`
+   - HTTP Body / Payload: `{"event_type": "content-updated"}`
+
+That's it — any insert, update, or delete on either table now pings GitHub's `dispatches` API, which `repository_dispatch: types: [content-updated]` in `scheduled-rebuild.yml` picks up and turns into a rebuild + deploy. The token only has write access to this one repo's contents and Actions runs, nothing account-wide; if you ever need to revoke it, delete it from GitHub's token settings and the webhooks will just start failing loudly (visible in Supabase's webhook logs) rather than silently doing nothing.
 
 ## Contact form email (EmailJS)
 
