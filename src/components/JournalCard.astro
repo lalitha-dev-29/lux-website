@@ -1,0 +1,26 @@
+---
+import { withBase } from '../lib/url';
+import ContentCard from './ContentCard.astro';
+import type { JournalPost } from '../lib/journalTypes';
+
+interface Props {
+  entry: JournalPost;
+  revealClass?: string;
+}
+
+const { entry: post, revealClass = '' } = Astro.props;
+const readingLabel = post.reading_time_minutes ? `${post.reading_time_minutes} min read` : null;
+---
+
+<ContentCard
+  href={withBase(`/journal/${post.slug}/`)}
+  eyebrow={post.category}
+  meta={readingLabel}
+  title={post.title}
+  excerpt={post.excerpt}
+  tags={post.tags}
+  image={post.cover_image}
+  ctaLabel="Read the full post"
+  featured={post.featured}
+  revealClass={revealClass}
+/>

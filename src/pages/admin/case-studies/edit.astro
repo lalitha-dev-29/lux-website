@@ -1,0 +1,255 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import CaseStudyFormFields from '../../../components/admin/CaseStudyFormFields.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Edit Case Study">
+  <div class="admin-section-head">
+    <div>
+      <h1>Edit Case Study</h1>
+      <p class="admin-lede" id="statusLede">Loading…</p>
+    </div>
+  </div>
+
+  <div class="admin-pdf-section" id="pdfSection" hidden>
+    <h2>PDF Attachment</h2>
+    <div class="pdf-current-info" id="pdfCurrentInfo" hidden>
+      <span id="pdfCurrentFilename"></span>
+      <a id="pdfCurrentView" href="#" target="_blank" rel="noopener" class="btn-line">Preview</a>
+      <a id="pdfCurrentDownload" href="#" class="btn-line">Download</a>
+      <button type="button" class="btn-line danger" id="pdfRemoveBtn">Remove</button>
+    </div>
+    <p class="hint" id="pdfEmptyState">No PDF attached yet.</p>
+    <div class="field">
+      <label for="pdfFileInput" id="pdfFileLabel">Upload PDF</label>
+      <input type="file" id="pdfFileInput" accept="application/pdf" />
+      <span class="upload-status" id="pdfUploadStatus"></span>
+    </div>
+  </div>
+
+  <form class="admin-form" id="caseStudyForm" novalidate hidden>
+    <CaseStudyFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+      <p class="form-notice" id="formNotice" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/case-studies/')} class="btn-line">Back to Case Studies</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="toggleStatusBtn"></button>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Case Study</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import {
+      getCaseStudyById,
+      updateCaseStudy,
+      setCaseStudyStatus,
+      deleteCaseStudy,
+      uploadCaseStudyPdf,
+      updateCaseStudyPdf,
+      deleteCaseStudyPdfObject,
+    } from '../../../lib/supabaseAdmin';
+    import { readCaseStudyForm, writeCaseStudyForm, validateCaseStudyForm, toCaseStudyInput } from '../../../lib/caseStudyForm';
+    import { withBase } from '../../../lib/url';
+    import { wireContentFormImages, showExistingContentImages } from '../../../lib/imageUpload';
+    import { initLinksEditor } from '../../../lib/linksForm';
+    import { showToast } from '../../../lib/toast';
+    import type { CaseStudy } from '../../../lib/caseStudyTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('caseStudyForm') as HTMLFormElement;
+    const statusLede = document.getElementById('statusLede')!;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const noticeEl = document.getElementById('formNotice') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const toggleBtn = document.getElementById('toggleStatusBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    const pdfSection = document.getElementById('pdfSection')!;
+    const pdfCurrentInfo = document.getElementById('pdfCurrentInfo')!;
+    const pdfCurrentFilename = document.getElementById('pdfCurrentFilename')!;
+    const pdfCurrentView = document.getElementById('pdfCurrentView') as HTMLAnchorElement;
+    const pdfCurrentDownload = document.getElementById('pdfCurrentDownload') as HTMLAnchorElement;
+    const pdfRemoveBtn = document.getElementById('pdfRemoveBtn') as HTMLButtonElement;
+    const pdfEmptyState = document.getElementById('pdfEmptyState')!;
+    const pdfFileInput = document.getElementById('pdfFileInput') as HTMLInputElement;
+    const pdfFileLabel = document.getElementById('pdfFileLabel')!;
+    const pdfUploadStatus = document.getElementById('pdfUploadStatus')!;
+
+    let current: CaseStudy | null = null;
+    let dirty = false;
+
+    function renderStatus() {
+      if (!current) return;
+      statusLede.textContent = `Status: ${current.status === 'published' ? 'Published' : 'Draft'} · Last updated ${new Date(current.updated_at).toLocaleString()}`;
+      toggleBtn.textContent = current.status === 'published' ? 'Unpublish' : 'Publish';
+    }
+
+    function renderPdfState() {
+      if (!current) return;
+      if (current.pdf_url) {
+        pdfCurrentInfo.hidden = false;
+        pdfEmptyState.hidden = true;
+        pdfCurrentFilename.textContent = current.pdf_filename || 'case-study.pdf';
+        pdfCurrentView.href = current.pdf_url;
+        pdfCurrentDownload.href = current.pdf_url;
+        pdfCurrentDownload.setAttribute('download', current.pdf_filename || 'case-study.pdf');
+        pdfFileLabel.textContent = 'Replace PDF';
+      } else {
+        pdfCurrentInfo.hidden = true;
+        pdfEmptyState.hidden = false;
+        pdfFileLabel.textContent = 'Upload PDF';
+      }
+    }
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No case study specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const entry = await getCaseStudyById(id);
+        if (!entry) {
+          loadError.textContent = 'Case study not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        writeCaseStudyForm(entry);
+        initLinksEditor('caseStudyLinks');
+        wireContentFormImages(`case-studies/${entry.id}`);
+        showExistingContentImages(entry.cover_image, entry.og_image);
+        renderStatus();
+        renderPdfState();
+        pdfSection.hidden = false;
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load case study.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      noticeEl.hidden = true;
+      const values = readCaseStudyForm();
+      const validationError = validateCaseStudyForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateCaseStudy(current.id, toCaseStudyInput(values, current.slug));
+        dirty = false;
+        renderStatus();
+        showToast('Changes saved.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to save changes.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      if (!current) return;
+      const next = current.status === 'published' ? 'draft' : 'published';
+      toggleBtn.disabled = true;
+      try {
+        current = await setCaseStudyStatus(current.id, next);
+        renderStatus();
+        showToast(next === 'published' ? 'Case study published.' : 'Case study unpublished.');
+        errorEl.hidden = true;
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to update status.';
+        errorEl.hidden = false;
+      } finally {
+        toggleBtn.disabled = false;
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.title}"? This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteCaseStudy(current.id);
+        dirty = false;
+        window.location.href = withBase('/admin/case-studies/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    pdfFileInput.addEventListener('change', async () => {
+      if (!current) return;
+      const file = pdfFileInput.files?.[0];
+      if (!file) return;
+      pdfUploadStatus.textContent = 'Uploading…';
+      const previousUrl = current.pdf_url;
+      try {
+        const uploaded = await uploadCaseStudyPdf(current.id, file);
+        current = await updateCaseStudyPdf(current.id, { pdf_url: uploaded.url, pdf_filename: uploaded.filename });
+        renderPdfState();
+        pdfUploadStatus.textContent = '';
+        showToast('PDF uploaded.');
+        if (previousUrl) await deleteCaseStudyPdfObject(previousUrl);
+      } catch (err) {
+        pdfUploadStatus.textContent = err instanceof Error ? err.message : 'Upload failed.';
+        showToast('PDF upload failed.', 'error');
+      } finally {
+        pdfFileInput.value = '';
+      }
+    });
+
+    pdfRemoveBtn.addEventListener('click', async () => {
+      if (!current || !current.pdf_url) return;
+      if (!confirm('Remove the attached PDF? This cannot be undone.')) return;
+      pdfRemoveBtn.disabled = true;
+      const previousUrl = current.pdf_url;
+      try {
+        current = await updateCaseStudyPdf(current.id, { pdf_url: null, pdf_filename: null });
+        renderPdfState();
+        showToast('PDF removed.');
+        await deleteCaseStudyPdfObject(previousUrl);
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to remove PDF.', 'error');
+      } finally {
+        pdfRemoveBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

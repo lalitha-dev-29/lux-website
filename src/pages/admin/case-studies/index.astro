@@ -3,17 +3,17 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { withBase } from '../../../lib/url';
 ---
 
-<AdminLayout title="Journal">
+<AdminLayout title="Case Studies">
   <div class="admin-section-head">
     <div>
-      <h1>Journal</h1>
-      <p class="admin-lede">Create, edit, publish and manage Journal posts.</p>
+      <h1>Case Studies</h1>
+      <p class="admin-lede">Create, edit, publish and manage Case Studies.</p>
     </div>
-    <a href={withBase('/admin/journal/new/')} class="btn-solid">New Post</a>
+    <a href={withBase('/admin/case-studies/new/')} class="btn-solid">New Case Study</a>
   </div>
 
   <div class="admin-toolbar">
-    <input type="search" id="searchInput" placeholder="Search by title or excerpt…" aria-label="Search Journal posts" />
+    <input type="search" id="searchInput" placeholder="Search by title or excerpt…" aria-label="Search Case Studies" />
     <select id="statusFilter" aria-label="Filter by status">
       <option value="all">All statuses</option>
       <option value="published">Published</option>
@@ -24,60 +24,61 @@ import { withBase } from '../../../lib/url';
   <div class="admin-table-wrap">
     <table class="admin-table">
       <thead>
-        <tr><th>Title</th><th>Status</th><th>Featured</th><th>Updated</th><th></th></tr>
+        <tr><th>Title</th><th>Status</th><th>Featured</th><th>PDF</th><th>Updated</th><th></th></tr>
       </thead>
-      <tbody id="postRows">
-        <tr><td colspan="5" class="admin-empty">Loading…</td></tr>
+      <tbody id="rows">
+        <tr><td colspan="6" class="admin-empty">Loading…</td></tr>
       </tbody>
     </table>
   </div>
 
   <script>
     import {
-      listAllJournalPosts,
-      setJournalPostStatus,
-      deleteJournalPost,
+      listAllCaseStudies,
+      setCaseStudyStatus,
+      deleteCaseStudy,
     } from '../../../lib/supabaseAdmin';
     import { withBase } from '../../../lib/url';
     import { escapeHtml } from '../../../lib/html';
     import { showToast } from '../../../lib/toast';
-    import type { JournalPost } from '../../../lib/journalTypes';
+    import type { CaseStudy } from '../../../lib/caseStudyTypes';
 
-    let allPosts: JournalPost[] = [];
+    let all: CaseStudy[] = [];
 
-    const rows = document.getElementById('postRows')!;
+    const rows = document.getElementById('rows')!;
     const searchInput = document.getElementById('searchInput') as HTMLInputElement;
     const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
 
     function render() {
       const query = searchInput.value.trim().toLowerCase();
       const status = statusFilter.value;
-      const filtered = allPosts.filter((p) => {
-        const matchesStatus = status === 'all' || p.status === status;
+      const filtered = all.filter((c) => {
+        const matchesStatus = status === 'all' || c.status === status;
         const matchesQuery =
-          !query || p.title.toLowerCase().includes(query) || p.excerpt.toLowerCase().includes(query);
+          !query || c.title.toLowerCase().includes(query) || c.excerpt.toLowerCase().includes(query);
         return matchesStatus && matchesQuery;
       });
 
       if (filtered.length === 0) {
-        rows.innerHTML = '<tr><td colspan="5" class="admin-empty">No matching Journal posts.</td></tr>';
+        rows.innerHTML = '<tr><td colspan="6" class="admin-empty">No matching Case Studies.</td></tr>';
         return;
       }
 
       rows.innerHTML = filtered
         .map(
-          (p) => `
-        <tr data-id="${p.id}">
-          <td class="title-cell"><a href="${withBase(`/admin/journal/edit/?id=${p.id}`)}">${escapeHtml(p.title)}</a></td>
-          <td><span class="badge badge-${p.status}">${p.status}</span></td>
-          <td>${p.featured ? '<span class="badge badge-featured">Featured</span>' : '—'}</td>
-          <td>${new Date(p.updated_at).toLocaleDateString()}</td>
+          (c) => `
+        <tr data-id="${c.id}">
+          <td class="title-cell"><a href="${withBase(`/admin/case-studies/edit/?id=${c.id}`)}">${escapeHtml(c.title)}</a></td>
+          <td><span class="badge badge-${c.status}">${c.status}</span></td>
+          <td>${c.featured ? '<span class="badge badge-featured">Featured</span>' : '—'}</td>
+          <td>${c.pdf_url ? '<span class="badge badge-published">Attached</span>' : '—'}</td>
+          <td>${new Date(c.updated_at).toLocaleDateString()}</td>
           <td class="actions-cell">
-            <button type="button" class="toggle-status-btn" data-id="${p.id}" data-next="${p.status === 'published' ? 'draft' : 'published'}">
-              ${p.status === 'published' ? 'Unpublish' : 'Publish'}
+            <button type="button" class="toggle-status-btn" data-id="${c.id}" data-next="${c.status === 'published' ? 'draft' : 'published'}">
+              ${c.status === 'published' ? 'Unpublish' : 'Publish'}
             </button>
-            <a href="${withBase(`/admin/journal/edit/?id=${p.id}`)}">Edit</a>
-            <button type="button" class="danger delete-btn" data-id="${p.id}" data-title="${escapeHtml(p.title)}">Delete</button>
+            <a href="${withBase(`/admin/case-studies/edit/?id=${c.id}`)}">Edit</a>
+            <button type="button" class="danger delete-btn" data-id="${c.id}" data-title="${escapeHtml(c.title)}">Delete</button>
           </td>
         </tr>`
         )
@@ -86,10 +87,10 @@ import { withBase } from '../../../lib/url';
 
     async function load() {
       try {
-        allPosts = await listAllJournalPosts();
+        all = await listAllCaseStudies();
         render();
       } catch (err) {
-        rows.innerHTML = `<tr><td colspan="5" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+        rows.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
       }
     }
 
@@ -102,10 +103,10 @@ import { withBase } from '../../../lib/url';
         const next = toggleBtn.dataset.next as 'draft' | 'published';
         toggleBtn.disabled = true;
         try {
-          const updated = await setJournalPostStatus(id, next);
-          allPosts = allPosts.map((p) => (p.id === id ? updated : p));
+          const updated = await setCaseStudyStatus(id, next);
+          all = all.map((c) => (c.id === id ? updated : c));
           render();
-          showToast(next === 'published' ? 'Post published.' : 'Post unpublished.');
+          showToast(next === 'published' ? 'Case study published.' : 'Case study unpublished.');
         } catch (err) {
           showToast(err instanceof Error ? err.message : 'Failed to update status.', 'error');
           toggleBtn.disabled = false;
@@ -120,10 +121,10 @@ import { withBase } from '../../../lib/url';
         if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
         deleteBtn.disabled = true;
         try {
-          await deleteJournalPost(id);
-          allPosts = allPosts.filter((p) => p.id !== id);
+          await deleteCaseStudy(id);
+          all = all.filter((c) => c.id !== id);
           render();
-          showToast('Post deleted.');
+          showToast('Case study deleted.');
         } catch (err) {
           showToast(err instanceof Error ? err.message : 'Failed to delete.', 'error');
           deleteBtn.disabled = false;

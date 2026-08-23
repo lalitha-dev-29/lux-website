@@ -1,0 +1,34 @@
+---
+// Repeatable platform + URL rows, shared by JournalFormFields and CaseStudyFormFields.
+// DOM read/write logic lives in src/lib/linksForm.ts (initLinksEditor/readLinks/writeLinks).
+interface Props {
+  id: string;
+}
+const { id } = Astro.props;
+---
+
+<div class="field links-editor" id={id}>
+  <label>External Links</label>
+  <p class="hint">
+    Optional. Add a link to where this also lives elsewhere — LinkedIn, Medium, GitHub, etc. Only platforms with a link are
+    shown on the published page.
+  </p>
+  <div class="link-rows"></div>
+  <button type="button" class="btn-line add-link-btn">+ Add Link</button>
+  <template>
+    <div class="link-row">
+      <select class="link-platform" aria-label="Link platform">
+        <option value="linkedin">LinkedIn</option>
+        <option value="medium">Medium</option>
+        <option value="substack">Substack</option>
+        <option value="github">GitHub</option>
+        <option value="website">Website</option>
+        <option value="research_paper">Research Paper</option>
+        <option value="other">Other</option>
+      </select>
+      <input type="url" class="link-url" placeholder="https://…" aria-label="Link URL" />
+      <input type="text" class="link-label" placeholder="Label" aria-label="Custom label" hidden />
+      <button type="button" class="link-remove" aria-label="Remove this link">✕</button>
+    </div>
+  </template>
+</div>

@@ -1,8 +1,10 @@
 import { defineCollection, z } from 'astro:content';
 import { glob } from 'astro/loaders';
 
-/* Add a new case study by adding a Markdown file to src/content/case-studies/.
-   Set pdfUrl to attach a real PDF, e.g. "/assets/case-studies/hermes.pdf" */
+/* Frozen historical archive — case studies are now managed via the Admin Panel and
+   read from Supabase at build time (see supabase/case_study_cms.sql and
+   src/lib/buildTimeData.ts). Nothing reads this collection anymore; it's kept for
+   reference/seed provenance only, same as the `journal` collection below. */
 const caseStudies = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/case-studies' }),
   schema: z.object({

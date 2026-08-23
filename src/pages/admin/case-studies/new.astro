@@ -1,22 +1,22 @@
 ---
 import AdminLayout from '../../../layouts/AdminLayout.astro';
-import JournalFormFields from '../../../components/admin/JournalFormFields.astro';
+import CaseStudyFormFields from '../../../components/admin/CaseStudyFormFields.astro';
 import { withBase } from '../../../lib/url';
 ---
 
-<AdminLayout title="New Journal Post">
-  <h1>New Journal Post</h1>
-  <p class="admin-lede">Save as a draft to keep working, or publish right away.</p>
+<AdminLayout title="New Case Study">
+  <h1>New Case Study</h1>
+  <p class="admin-lede">Save as a draft to keep working, or publish right away. You can attach a PDF after saving.</p>
 
-  <form class="admin-form" id="journalForm" novalidate>
-    <JournalFormFields />
+  <form class="admin-form" id="caseStudyForm" novalidate>
+    <CaseStudyFormFields />
 
     <div aria-live="polite" aria-atomic="true">
       <p class="form-error" id="formError" hidden></p>
     </div>
 
     <div class="admin-form-actions">
-      <a href={withBase('/admin/journal/')} class="btn-line">Cancel</a>
+      <a href={withBase('/admin/case-studies/')} class="btn-line">Cancel</a>
       <div class="spacer"></div>
       <button type="button" class="btn-line" id="saveDraftBtn">Save Draft</button>
       <button type="button" class="btn-solid" id="publishBtn">Publish</button>
@@ -24,22 +24,21 @@ import { withBase } from '../../../lib/url';
   </form>
 
   <script>
-    import { createJournalPost } from '../../../lib/supabaseAdmin';
-    import { readJournalForm, validateJournalForm, toJournalPostInput } from '../../../lib/journalForm';
+    import { createCaseStudy } from '../../../lib/supabaseAdmin';
+    import { readCaseStudyForm, validateCaseStudyForm, toCaseStudyInput } from '../../../lib/caseStudyForm';
     import { withBase } from '../../../lib/url';
     import { wireContentFormImages } from '../../../lib/imageUpload';
     import { initLinksEditor } from '../../../lib/linksForm';
     import { showToast } from '../../../lib/toast';
 
-    const form = document.getElementById('journalForm') as HTMLFormElement;
+    const form = document.getElementById('caseStudyForm') as HTMLFormElement;
     const errorEl = document.getElementById('formError') as HTMLParagraphElement;
     const draftBtn = document.getElementById('saveDraftBtn') as HTMLButtonElement;
     const publishBtn = document.getElementById('publishBtn') as HTMLButtonElement;
 
-    // Uploaded images need a storage path before the post has a real id.
     const draftId = crypto.randomUUID();
-    wireContentFormImages(`journal/${draftId}`);
-    initLinksEditor('journalLinks');
+    wireContentFormImages(`case-studies/${draftId}`);
+    initLinksEditor('caseStudyLinks');
 
     let dirty = false;
     form.addEventListener('input', () => {
@@ -51,8 +50,8 @@ import { withBase } from '../../../lib/url';
 
     async function submit(status: 'draft' | 'published') {
       errorEl.hidden = true;
-      const values = readJournalForm();
-      const validationError = validateJournalForm(values);
+      const values = readCaseStudyForm();
+      const validationError = validateCaseStudyForm(values);
       if (validationError) {
         errorEl.textContent = validationError;
         errorEl.hidden = false;
@@ -66,10 +65,10 @@ import { withBase } from '../../../lib/url';
       busyBtn.textContent = 'Saving…';
 
       try {
-        const post = await createJournalPost(toJournalPostInput(values), status);
+        const entry = await createCaseStudy(toCaseStudyInput(values), status);
         dirty = false;
-        showToast(status === 'published' ? 'Post published.' : 'Draft saved.');
-        window.location.href = withBase(`/admin/journal/edit/?id=${post.id}`);
+        showToast(status === 'published' ? 'Case study published.' : 'Draft saved.');
+        window.location.href = withBase(`/admin/case-studies/edit/?id=${entry.id}`);
       } catch (err) {
         errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
         errorEl.hidden = false;

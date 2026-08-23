@@ -1,9 +1,9 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import CaseStudyCard from '../../components/CaseStudyCard.astro';
+import { fetchAllPublishedCaseStudies } from '../../lib/buildTimeData';
 
-const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.order - b.data.order);
+const caseStudies = await fetchAllPublishedCaseStudies();
 ---
 
 <Layout title="Case Studies | Kasturi Lalitha Manogna">
@@ -37,11 +37,15 @@ const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.o
   <section class="tight">
     <div class="container">
       <h2 class="visually-hidden">All case studies</h2>
-      <div class="grid-3">
-        {caseStudies.map((entry, i) => (
-          <CaseStudyCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
-        ))}
-      </div>
+      {caseStudies.length > 0 ? (
+        <div class="grid-3">
+          {caseStudies.map((entry, i) => (
+            <CaseStudyCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
+          ))}
+        </div>
+      ) : (
+        <p class="journal-status">No case studies published yet — check back soon.</p>
+      )}
     </div>
   </section>
 

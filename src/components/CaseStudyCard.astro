@@ -1,26 +1,27 @@
 ---
 import { withBase } from '../lib/url';
-import type { CollectionEntry } from 'astro:content';
+import ContentCard from './ContentCard.astro';
+import type { CaseStudy } from '../lib/caseStudyTypes';
 
 interface Props {
-  entry: CollectionEntry<'caseStudies'>;
+  entry: CaseStudy;
   revealClass?: string;
 }
 
-const { entry, revealClass = '' } = Astro.props;
-const c = entry.data;
+const { entry: c, revealClass = '' } = Astro.props;
+const readingLabel = c.reading_time_minutes ? `${c.reading_time_minutes} min read` : null;
 ---
 
-<a href={withBase(`/case-studies/${entry.id}/`)} class={`card case-card reveal ${revealClass}`}>
-  <div class="card-media">
-    <img src={c.img} alt="" loading="lazy" width="800" height="600" />
-    <span class="card-tag">Coming Soon</span>
-  </div>
-  <div class="card-body">
-    <div class="card-meta">{c.cat} <span class="dot" aria-hidden="true"></span> <span class="read">{c.time}</span></div>
-    <h3>{c.title}</h3>
-    <p class="excerpt">{c.excerpt}</p>
-    <div class="tags">{c.tags.map((t) => <span>{t}</span>)}</div>
-    <span class="link-arrow card-cta">Read case study <span class="arrow" aria-hidden="true">→</span></span>
-  </div>
-</a>
+<ContentCard
+  href={withBase(`/case-studies/${c.slug}/`)}
+  eyebrow={c.category}
+  meta={readingLabel}
+  title={c.title}
+  excerpt={c.excerpt}
+  tags={c.tags}
+  image={c.cover_image}
+  ctaLabel="Read case study"
+  featured={c.featured}
+  badge="Coming Soon"
+  revealClass={revealClass}
+/>

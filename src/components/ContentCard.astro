@@ -1,0 +1,55 @@
+---
+// Generic listing card shared by Journal and Case Studies (via the
+// JournalCard/CaseStudyCard wrappers below). Keeps one markup/CSS surface
+// for both content types instead of two near-identical implementations.
+interface Props {
+  href: string;
+  eyebrow?: string | null;
+  title: string;
+  excerpt: string;
+  tags?: string[];
+  image?: string | null;
+  meta?: string | null;
+  ctaLabel: string;
+  featured?: boolean;
+  badge?: string | null;
+  revealClass?: string;
+}
+
+const {
+  href,
+  eyebrow,
+  title,
+  excerpt,
+  tags = [],
+  image,
+  meta,
+  ctaLabel,
+  featured = false,
+  badge,
+  revealClass = '',
+} = Astro.props;
+---
+
+<a href={href} class={`card case-card reveal ${featured ? 'card-featured' : ''} ${revealClass}`}>
+  <div class="card-media">
+    {image ? (
+      <img src={image} alt="" loading="lazy" width="800" height="600" />
+    ) : (
+      <div class="card-media-empty" aria-hidden="true"></div>
+    )}
+    {featured && <span class="card-tag card-tag-featured">Featured</span>}
+    {!featured && badge && <span class="card-tag">{badge}</span>}
+  </div>
+  <div class="card-body">
+    <div class="card-meta">
+      {eyebrow}
+      {eyebrow && meta && <span class="dot" aria-hidden="true"></span>}
+      {meta && <span class="read">{meta}</span>}
+    </div>
+    <h3>{title}</h3>
+    <p class="excerpt">{excerpt}</p>
+    {tags.length > 0 && <div class="tags">{tags.map((t) => <span>{t}</span>)}</div>}
+    <span class="link-arrow card-cta">{ctaLabel} <span class="arrow" aria-hidden="true">→</span></span>
+  </div>
+</a>

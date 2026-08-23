@@ -1,0 +1,21 @@
+---
+import { linkLabel } from '../lib/contentLinks';
+import { safeUrlScheme } from '../lib/html';
+import type { ContentLink } from '../lib/contentLinks';
+
+interface Props {
+  links: ContentLink[];
+}
+const { links } = Astro.props;
+---
+
+{links.length > 0 && (
+  <div class="external-links">
+    {links.map((link) => (
+      <a href={safeUrlScheme(link.url)} target="_blank" rel="noopener" class="btn-line external-link">
+        {linkLabel(link)}<span class="arrow" aria-hidden="true">→</span>
+        <span class="visually-hidden"> (opens in a new tab)</span>
+      </a>
+    ))}
+  </div>
+)}
