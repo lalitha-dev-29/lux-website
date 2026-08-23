@@ -1,0 +1,46 @@
+name: Scheduled Content Rebuild
+
+# Journal and Case Study content is edited in the /admin panel (Supabase),
+# not by pushing code — this rebuild picks up those edits and republishes
+# the static site on a schedule, since GitHub Pages otherwise only rebuilds
+# on a push to main (see deploy.yml). Additive: does not replace or modify
+# the push-triggered deploy.
+on:
+  schedule:
+    - cron: '0 */4 * * *' # every 4 hours
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Shares deploy.yml's concurrency group so a push-triggered deploy and a
+# scheduled one can never race and clobber each other's Pages deployment.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: withastro/action@v3
+        with:
+          node-version: 22
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io
+          PUBLIC_EMAILJS_SERVICE_ID: ${{ secrets.PUBLIC_EMAILJS_SERVICE_ID }}
+          PUBLIC_EMAILJS_TEMPLATE_ID: ${{ secrets.PUBLIC_EMAILJS_TEMPLATE_ID }}
+          PUBLIC_EMAILJS_PUBLIC_KEY: ${{ secrets.PUBLIC_EMAILJS_PUBLIC_KEY }}
+          PUBLIC_RECAPTCHA_SITE_KEY: ${{ secrets.PUBLIC_RECAPTCHA_SITE_KEY }}
+          # Required — Journal and Case Study pages are generated at build
+          # time from Supabase. If these are missing, the build now fails
+          # loudly (see src/lib/buildTimeData.ts) instead of silently
+          # shipping a site with no Journal/Case Study pages.
+          PUBLIC_SUPABASE_URL: ${{ secrets.PUBLIC_SUPABASE_URL }}
+          PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PUBLIC_SUPABASE_ANON_KEY }}
+      - uses: actions/deploy-pages@v4
+        id: deployment

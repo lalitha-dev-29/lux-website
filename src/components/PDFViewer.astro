@@ -1,0 +1,76 @@
+---
+interface Props {
+  pdfUrl: string | null;
+  pdfFilename?: string | null;
+  title: string;
+}
+const { pdfUrl, pdfFilename, title } = Astro.props;
+const downloadName = pdfFilename || `${title}.pdf`;
+---
+
+{pdfUrl ? (
+  <div class="pdf-viewer reveal" id="pdfViewer" data-pdf-url={pdfUrl} data-pdf-title={title}>
+    <div class="pdf-viewer-actions">
+      <a class="btn-line" href={pdfUrl} target="_blank" rel="noopener">
+        Open in New Tab<span class="visually-hidden"> (opens in a new tab)</span>
+      </a>
+      <a class="btn-solid" href={pdfUrl} download={downloadName}>Download PDF</a>
+    </div>
+
+    <div class="pdf-viewer-frame" id="pdfViewerFrame" tabindex="-1">
+      <button type="button" class="pdf-load-btn" id="pdfLoadBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <path d="M14 2v6h6"></path>
+        </svg>
+        Load PDF Preview
+      </button>
+
+      <div class="pdf-toolbar" id="pdfToolbar" hidden>
+        <div class="pdf-toolbar-group">
+          <button type="button" id="pdfPrevBtn" aria-label="Previous page">‹</button>
+          <span class="pdf-page-indicator">
+            <label for="pdfPageInput" class="visually-hidden">Page number</label>
+            <input type="number" id="pdfPageInput" min="1" value="1" />
+            <span aria-hidden="true">/ <span id="pdfPageCount">–</span></span>
+          </span>
+          <button type="button" id="pdfNextBtn" aria-label="Next page">›</button>
+        </div>
+        <div class="pdf-toolbar-group">
+          <button type="button" id="pdfZoomOutBtn" aria-label="Zoom out">−</button>
+          <span id="pdfZoomLabel" aria-hidden="true">100%</span>
+          <button type="button" id="pdfZoomInBtn" aria-label="Zoom in">+</button>
+          <button type="button" id="pdfFitWidthBtn">Fit Width</button>
+          <button type="button" id="pdfFitPageBtn">Fit Page</button>
+        </div>
+        <div class="pdf-toolbar-group">
+          <button type="button" id="pdfFullscreenBtn" aria-label="Enter fullscreen">Fullscreen</button>
+        </div>
+      </div>
+
+      <div class="pdf-canvas-wrap" id="pdfCanvasWrap" hidden>
+        <p class="pdf-status" id="pdfStatus" role="status" aria-live="polite"></p>
+        <canvas id="pdfCanvas" role="img" aria-label={`${title} — PDF preview`}></canvas>
+      </div>
+
+      <button type="button" class="pdf-exit-fullscreen-btn" id="pdfExitFullscreenBtn" hidden>
+        <span aria-hidden="true">✕</span> Exit Fullscreen
+      </button>
+    </div>
+
+    <p class="pdf-mobile-fallback" id="pdfMobileFallback" hidden>
+      This PDF couldn't be displayed inline. <a href={pdfUrl} target="_blank" rel="noopener">Open it in a new tab</a> instead.
+    </p>
+  </div>
+) : (
+  <div class="case-pdf-empty reveal">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+    <p>No PDF attached to this case study yet.</p>
+  </div>
+)}
+
+<script>
+  import { initPdfViewer } from '../scripts/pdfViewer';
+  const root = document.getElementById('pdfViewer');
+  if (root) initPdfViewer(root);
+</script>

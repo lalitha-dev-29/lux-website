@@ -1,0 +1,27 @@
+---
+interface Props {
+  category?: string | null;
+  author?: string | null;
+  publishedAt?: string | null;
+  readingTimeMinutes?: number | null;
+}
+const { category, author, publishedAt, readingTimeMinutes } = Astro.props;
+
+const parts = [
+  category,
+  author,
+  publishedAt ? new Date(publishedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : null,
+  readingTimeMinutes ? `${readingTimeMinutes} min read` : null,
+].filter(Boolean) as string[];
+---
+
+{parts.length > 0 && (
+  <div class="card-meta content-metadata">
+    {parts.map((part, i) => (
+      <>
+        {i > 0 && <span class="dot" aria-hidden="true"></span>}
+        <span>{part}</span>
+      </>
+    ))}
+  </div>
+)}

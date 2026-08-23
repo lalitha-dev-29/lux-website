@@ -8,12 +8,24 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
+  /** Absolute or site-relative image URL for social share previews. Omit to skip the og:image tag entirely. */
+  ogImage?: string;
+  /** Overrides the auto-derived canonical URL (Astro.url under the configured site/base). Rarely needed. */
+  canonical?: string;
+  /** 'article' for Journal/Case Study detail pages, 'website' (default) everywhere else. */
+  ogType?: 'website' | 'article';
 }
 
 const {
   title,
   description = 'Kasturi Lalitha Manogna, an emerging luxury marketer focused on brand strategy, consumer behaviour and culture. Case studies on Louis Vuitton, Hermes, Chanel, Cartier and Dior.',
+  ogImage,
+  canonical,
+  ogType = 'website',
 } = Astro.props;
+
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toString();
+const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined;
 ---
 
 <!DOCTYPE html>
@@ -26,7 +38,16 @@ const {
   <meta name="theme-color" content="#F7F4EC" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#17140D" media="(prefers-color-scheme: dark)" />
   <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
+  <link rel="canonical" href={canonicalUrl} />
   <title>{title}</title>
+  <meta property="og:type" content={ogType} />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonicalUrl} />
+  {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+  <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link

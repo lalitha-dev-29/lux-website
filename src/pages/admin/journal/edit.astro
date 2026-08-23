@@ -44,6 +44,9 @@ import { withBase } from '../../../lib/url';
     } from '../../../lib/supabaseAdmin';
     import { readJournalForm, writeJournalForm, validateJournalForm, toJournalPostInput } from '../../../lib/journalForm';
     import { withBase } from '../../../lib/url';
+    import { wireContentFormImages, showExistingContentImages } from '../../../lib/imageUpload';
+    import { initLinksEditor } from '../../../lib/linksForm';
+    import { showToast } from '../../../lib/toast';
     import type { JournalPost } from '../../../lib/journalTypes';
 
     const params = new URLSearchParams(window.location.search);
@@ -81,11 +84,10 @@ import { withBase } from '../../../lib/url';
           return;
         }
         current = post;
-        writeJournalForm({
-          title: post.title,
-          excerpt: post.excerpt,
-          external_url: post.external_url ?? '',
-        });
+        writeJournalForm(post);
+        initLinksEditor('journalLinks');
+        wireContentFormImages(`journal/${post.id}`);
+        showExistingContentImages(post.cover_image, post.og_image);
         renderStatus();
         form.hidden = false;
       } catch (err) {
@@ -118,11 +120,11 @@ import { withBase } from '../../../lib/url';
         current = await updateJournalPost(current.id, toJournalPostInput(values, current.slug));
         dirty = false;
         renderStatus();
-        noticeEl.textContent = 'Changes saved.';
-        noticeEl.hidden = false;
+        showToast('Changes saved.');
       } catch (err) {
         errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
         errorEl.hidden = false;
+        showToast('Failed to save changes.', 'error');
       } finally {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Changes';
@@ -136,8 +138,7 @@ import { withBase } from '../../../lib/url';
       try {
         current = await setJournalPostStatus(current.id, next);
         renderStatus();
-        noticeEl.textContent = next === 'published' ? 'Post published.' : 'Post unpublished.';
-        noticeEl.hidden = false;
+        showToast(next === 'published' ? 'Post published.' : 'Post unpublished.');
         errorEl.hidden = true;
       } catch (err) {
         errorEl.textContent = err instanceof Error ? err.message : 'Failed to update status.';

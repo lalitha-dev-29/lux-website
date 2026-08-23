@@ -1,10 +1,13 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
 import CaseStudyCard from '../components/CaseStudyCard.astro';
+import JournalCard from '../components/JournalCard.astro';
 import { withBase } from '../lib/url';
+import { fetchAllPublishedCaseStudies, fetchAllPublishedJournalPosts } from '../lib/buildTimeData';
 
-const caseStudies = (await getCollection('caseStudies')).sort((a, b) => a.data.order - b.data.order).slice(0, 3);
+const allCaseStudies = await fetchAllPublishedCaseStudies();
+const caseStudies = allCaseStudies.slice(0, 3);
+const journalPreview = (await fetchAllPublishedJournalPosts()).slice(0, 2);
 
 const focusAreas = [
   {
@@ -155,9 +158,15 @@ const focusAreas = [
         <span class="eyebrow">The Journal</span>
         <h2>Some Recent Thinking</h2>
       </div>
-      <div class="grid-2" id="journalPreviewGrid">
-        <p class="journal-status" id="journalPreviewLoading">Loading posts…</p>
-      </div>
+      {journalPreview.length > 0 ? (
+        <div class="grid-2">
+          {journalPreview.map((post, i) => (
+            <JournalCard entry={post} revealClass={i === 1 ? 'reveal-delay-1' : ''} />
+          ))}
+        </div>
+      ) : (
+        <p class="journal-status">No posts yet — check back soon.</p>
+      )}
       <div class="view-all reveal">
         <a href={withBase('/journal/')} class="btn-line">Read More Articles <span class="arrow" aria-hidden="true">→</span></a>
       </div>
@@ -173,18 +182,3 @@ const focusAreas = [
     </div>
   </section>
 </Layout>
-
-<script>
-  import { fetchPublishedJournalPosts } from '../lib/journalClient';
-  import { renderJournalPreviewCard } from '../lib/journalPublic';
-
-  const grid = document.getElementById('journalPreviewGrid')!;
-
-  fetchPublishedJournalPosts().then((posts) => {
-    if (!posts || posts.length === 0) {
-      grid.innerHTML = '<p class="journal-status">No posts yet — check back soon.</p>';
-      return;
-    }
-    grid.innerHTML = posts.slice(0, 2).map(renderJournalPreviewCard).join('');
-  });
-</script>

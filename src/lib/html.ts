@@ -36,3 +36,17 @@ export function safeUrl(value: string): string {
   if (/^(https?|mailto):/i.test(trimmed)) return escapeHtml(trimmed);
   return '#';
 }
+
+/**
+ * Same scheme validation as safeUrl(), but WITHOUT HTML-entity escaping —
+ * for use inside .astro template attribute expressions (`href={...}`),
+ * where Astro already HTML-escapes the value itself. Wrapping an
+ * already-escaped string in another layer of Astro escaping would corrupt
+ * it (e.g. a literal "&" surviving as the text "&amp;" on the page).
+ */
+export function safeUrlScheme(value: string): string {
+  const trimmed = value.trim();
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+  if (/^(https?|mailto):/i.test(trimmed)) return trimmed;
+  return '#';
+}

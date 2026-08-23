@@ -1,65 +1,75 @@
 ---
-import { getCollection, render } from 'astro:content';
 import Layout from '../../layouts/Layout.astro';
 import { withBase } from '../../lib/url';
+import { fetchAllPublishedCaseStudies, fetchAllPublishedJournalPosts } from '../../lib/buildTimeData';
+import { renderMarkdown } from '../../lib/markdown';
+import ContentMetadata from '../../components/ContentMetadata.astro';
+import ExternalLinks from '../../components/ExternalLinks.astro';
+import RelatedContent from '../../components/RelatedContent.astro';
+import PDFViewer from '../../components/PDFViewer.astro';
 
 export async function getStaticPaths() {
-  const caseStudies = await getCollection('caseStudies');
+  const [caseStudies, journalPosts] = await Promise.all([
+    fetchAllPublishedCaseStudies(),
+    fetchAllPublishedJournalPosts(),
+  ]);
   return caseStudies.map((entry) => ({
-    params: { slug: entry.id },
-    props: { entry },
+    params: { slug: entry.slug },
+    props: { entry, caseStudies, journalPosts },
   }));
 }
 
-const { entry } = Astro.props;
-const c = entry.data;
-const { Content } = await render(entry);
+const { entry: c, caseStudies, journalPosts } = Astro.props;
+const contentHtml = renderMarkdown(c.content);
 ---
 
-<Layout title={`${c.title} | Case Studies | Kasturi Lalitha Manogna`} description={c.excerpt}>
+<Layout
+  title={`${c.title} | Case Studies | Kasturi Lalitha Manogna`}
+  description={c.seo_description || c.excerpt}
+  ogImage={c.og_image || c.cover_image || undefined}
+  ogType="article"
+>
   <section class="tight case-detail-head">
     <div class="container">
       <a href={withBase('/case-studies/')} class="btn-line case-back reveal"><span class="arrow" aria-hidden="true">←</span> All Case Studies</a>
       <div class="reveal">
-        <div class="card-meta">{c.cat} <span class="dot" aria-hidden="true"></span> <span class="read">{c.time}</span></div>
+        <ContentMetadata category={c.category} author={c.author} publishedAt={c.published_at} readingTimeMinutes={c.reading_time_minutes} />
         <h1 class="case-detail-title">{c.title}</h1>
-        <div class="tags" style="margin-top:var(--sp-5);">{c.tags.map((t) => <span>{t}</span>)}</div>
+        {c.tags.length > 0 && <div class="tags" style="margin-top:var(--sp-5);">{c.tags.map((t) => <span>{t}</span>)}</div>}
       </div>
     </div>
   </section>
 
-  <section class="tight flush-top">
-    <div class="container">
-      <div class="case-detail-media reveal">
-        <img src={c.img} alt="" width="1600" height="800" />
+  {c.cover_image && (
+    <section class="tight flush-top">
+      <div class="container">
+        <div class="case-detail-media reveal">
+          <img src={c.cover_image} alt="" width="1600" height="800" />
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  )}
 
   <section class="tight">
     <div class="container">
-      <div class="prose reveal">
-        <Content />
-      </div>
+      {contentHtml && <div class="prose reveal" set:html={contentHtml} />}
+      <ExternalLinks links={c.links} />
     </div>
   </section>
 
   <section class="tight flush-top">
     <div class="container">
-      {c.pdfUrl ? (
-        <>
-          <h2 class="visually-hidden">Full case study document</h2>
-          <iframe class="case-pdf-frame reveal" src={c.pdfUrl} title={`${c.title} — full case study PDF`}></iframe>
-          <div class="view-all reveal">
-            <a class="btn-solid" href={c.pdfUrl} download>Download PDF</a>
-          </div>
-        </>
-      ) : (
-        <div class="case-pdf-empty reveal">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
-          <p>No PDF attached yet. Set <code>pdfUrl</code> in this case study's frontmatter to make it readable and downloadable here.</p>
-        </div>
-      )}
+      <h2 class="visually-hidden">Full case study document</h2>
+      <PDFViewer pdfUrl={c.pdf_url} pdfFilename={c.pdf_filename} title={c.title} />
     </div>
   </section>
+
+  <RelatedContent
+    currentSlug={c.slug}
+    currentKind="case-study"
+    currentTags={c.tags}
+    currentCategory={c.category}
+    journalPosts={journalPosts}
+    caseStudies={caseStudies}
+  />
 </Layout>

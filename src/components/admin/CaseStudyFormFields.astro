@@ -1,25 +1,25 @@
 ---
-// Shared field markup for src/pages/admin/journal/new.astro and edit.astro.
-// Values are populated/read by each page's own script (src/lib/journalForm.ts)
-// and the image-upload widgets are wired by that script too, via
-// src/lib/imageUpload.ts (needs a storage-path prefix the page controls).
+// Shared field markup for src/pages/admin/case-studies/new.astro and edit.astro.
+// Structural mirror of JournalFormFields.astro. PDF upload/replace/remove lives
+// separately in edit.astro (a case study needs to exist before a PDF can be
+// attached to it).
 import LinksEditor from './LinksEditor.astro';
 ---
 
 <div class="field">
   <label for="fTitle">Title</label>
   <input id="fTitle" name="title" type="text" required maxlength="200" />
-  <p class="hint">The headline — shown on the listing card, at the top of the post, and as the browser tab/search result title.</p>
+  <p class="hint">The headline — shown on the listing card, at the top of the case study, and as the browser tab/search result title.</p>
 </div>
 
 <div class="field">
   <label for="fExcerpt">Excerpt</label>
   <textarea id="fExcerpt" name="excerpt" required maxlength="400" rows="3"></textarea>
-  <p class="hint">A short summary shown on the Journal listing card, and as the search/share description if no SEO Description is set below.</p>
+  <p class="hint">A short summary shown on the Case Studies listing card, and as the search/share description if no SEO Description is set below.</p>
 </div>
 
 <div class="field">
-  <label for="fContent">Article Content</label>
+  <label for="fContent">Case Study Content</label>
   <div class="content-toolbar">
     <button type="button" class="btn-line insert-image-btn" id="insertImageBtn">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="10" r="1.5"></circle><path d="M21 16.5 15.5 11 5 20"></path></svg>
@@ -30,10 +30,23 @@ import LinksEditor from './LinksEditor.astro';
   </div>
   <textarea id="fContent" name="content" required rows="14"></textarea>
   <p class="hint">
-    The full post body, shown on this post's own page at /journal/&lt;slug&gt;/. Supports Markdown — headings, bold/italic,
-    links, lists. Click "Insert Image" (above, not a text field) to upload a photo and drop it into the text at your cursor.
-    Reading time is calculated automatically from this text.
+    The full write-up, shown on this case study's own page at /case-studies/&lt;slug&gt;/, above the PDF viewer (if a PDF is
+    attached). Supports Markdown — headings, bold/italic, links, lists. Click "Insert Image" (above, not a text field) to
+    upload a photo and drop it into the text at your cursor. Reading time is calculated automatically from this text.
   </p>
+</div>
+
+<div class="field-row">
+  <div class="field">
+    <label for="fCategory">Category</label>
+    <input id="fCategory" name="category" type="text" required placeholder="e.g. HERMÈS" />
+    <p class="hint">The eyebrow label shown above the title — usually the brand name.</p>
+  </div>
+  <div class="field">
+    <label for="fOrderIndex">Display Order</label>
+    <input id="fOrderIndex" name="order_index" type="number" step="1" value="0" />
+    <p class="hint">Lower numbers appear first on the Case Studies listing and homepage.</p>
+  </div>
 </div>
 
 <div class="field-row">
@@ -43,16 +56,10 @@ import LinksEditor from './LinksEditor.astro';
     <p class="hint">Shown in the byline under the title.</p>
   </div>
   <div class="field">
-    <label for="fCategory">Category</label>
-    <input id="fCategory" name="category" type="text" placeholder="e.g. Brand Strategy" />
-    <p class="hint">One topic label shown next to the byline. Optional.</p>
+    <label for="fTags">Tags</label>
+    <input id="fTags" name="tags" type="text" placeholder="Comma separated, e.g. Heritage, Culture" />
+    <p class="hint">Shown as pills on the card and detail page, and used to automatically surface related content elsewhere on the site.</p>
   </div>
-</div>
-
-<div class="field">
-  <label for="fTags">Tags</label>
-  <input id="fTags" name="tags" type="text" placeholder="Comma separated, e.g. Luxury Strategy, Gen Z" />
-  <p class="hint">Shown as pills on the card and post page, and used to automatically surface related content elsewhere on the site.</p>
 </div>
 
 <div class="field">
@@ -64,34 +71,34 @@ import LinksEditor from './LinksEditor.astro';
     <img id="fCoverImagePreview" class="image-preview" alt="Cover image preview" hidden />
     <button type="button" class="btn-line" id="fCoverImageRemove" hidden>Remove</button>
   </div>
-  <p class="hint">The main photo — shown on the listing card and at the top of the post. JPG, PNG, WebP, GIF or SVG only (not HEIC/HEIF — iPhone photos may need converting first).</p>
+  <p class="hint">The main photo — shown on the listing card and at the top of the case study. JPG, PNG, WebP, GIF or SVG only (not HEIC/HEIF — iPhone photos may need converting first).</p>
 </div>
 
-{/* Hidden per user request — stays in the DOM, always unchecked, so journalForm.ts's
-    read/write logic doesn't need to change. No post is ever marked featured this way. */}
+{/* Hidden per user request — stays in the DOM, always unchecked, so caseStudyForm.ts's
+    read/write logic doesn't need to change. No case study is ever marked featured this way. */}
 <div class="field field-checkbox" hidden>
   <label for="fFeatured">
     <input id="fFeatured" name="featured" type="checkbox" />
-    Feature this post on the Journal listing
+    Feature this case study on the listing
   </label>
-  <p class="hint">Featured posts are visually highlighted on the /journal/ listing page.</p>
+  <p class="hint">Featured case studies are visually highlighted on the /case-studies/ listing page.</p>
 </div>
 
-<LinksEditor id="journalLinks" />
+<LinksEditor id="caseStudyLinks" />
 
 {/* Hidden per user request — SEO title/description/OG image still work automatically,
     falling back to the Title/Excerpt/Cover Image (see src/layouts/Layout.astro and
-    src/pages/journal/[slug].astro). The fields stay in the DOM (just not shown) so
-    journalForm.ts's read/write logic doesn't need to change. */}
+    src/pages/case-studies/[slug].astro). The fields stay in the DOM (just not shown) so
+    caseStudyForm.ts's read/write logic doesn't need to change. */}
 <fieldset class="field-group" hidden>
   <legend>SEO &amp; Sharing</legend>
   <p class="hint" style="margin-top:0; margin-bottom:var(--sp-5);">
-    Optional — controls how this post looks in Google search results and when the link is shared on LinkedIn, Slack, etc.
+    Optional — controls how this case study looks in Google search results and when the link is shared on LinkedIn, Slack, etc.
     Leave any of these blank and they fall back automatically to the Title, Excerpt and Cover Image above.
   </p>
   <div class="field">
     <label for="fSeoTitle">SEO Title</label>
-    <input id="fSeoTitle" name="seo_title" type="text" maxlength="70" placeholder="Defaults to the post title" />
+    <input id="fSeoTitle" name="seo_title" type="text" maxlength="70" placeholder="Defaults to the case study title" />
     <p class="hint">The page's browser-tab/search-result title, if you want it worded differently from the on-page Title.</p>
   </div>
   <div class="field">
@@ -108,6 +115,6 @@ import LinksEditor from './LinksEditor.astro';
       <img id="fOgImagePreview" class="image-preview" alt="Social share image preview" hidden />
       <button type="button" class="btn-line" id="fOgImageRemove" hidden>Remove</button>
     </div>
-    <p class="hint">The image shown in link-preview cards when this post's URL is shared. Defaults to the Cover Image if left blank.</p>
+    <p class="hint">The image shown in link-preview cards when this case study's URL is shared. Defaults to the Cover Image if left blank.</p>
   </div>
 </fieldset>

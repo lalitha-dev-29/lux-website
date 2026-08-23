@@ -5,59 +5,71 @@ import { withBase } from '../../lib/url';
 
 <AdminLayout title="Dashboard">
   <h1>Dashboard</h1>
-  <p class="admin-lede">A quick look at Journal content.</p>
+  <p class="admin-lede">A quick look at Journal and Case Study content.</p>
 
   <div class="admin-stats" id="statsGrid">
-    <div class="admin-stat"><span class="num" id="statTotal">—</span><span class="label">Total Posts</span></div>
-    <div class="admin-stat"><span class="num" id="statPublished">—</span><span class="label">Published</span></div>
-    <div class="admin-stat"><span class="num" id="statDraft">—</span><span class="label">Drafts</span></div>
+    <div class="admin-stat"><span class="num" id="statJournalTotal">—</span><span class="label">Journal Posts</span></div>
+    <div class="admin-stat"><span class="num" id="statJournalPublished">—</span><span class="label">Journal Published</span></div>
+    <div class="admin-stat"><span class="num" id="statCaseStudyTotal">—</span><span class="label">Case Studies</span></div>
+    <div class="admin-stat"><span class="num" id="statCaseStudyPublished">—</span><span class="label">Case Studies Published</span></div>
   </div>
 
   <div class="admin-section-head">
     <h2>Recently Updated</h2>
-    <a href={withBase('/admin/journal/')} class="btn-line">View All Journal<span class="arrow" aria-hidden="true">→</span></a>
+    <div>
+      <a href={withBase('/admin/journal/')} class="btn-line">View Journal<span class="arrow" aria-hidden="true">→</span></a>
+      <a href={withBase('/admin/case-studies/')} class="btn-line">View Case Studies<span class="arrow" aria-hidden="true">→</span></a>
+    </div>
   </div>
   <div class="admin-table-wrap">
     <table class="admin-table">
       <thead>
-        <tr><th>Title</th><th>Status</th><th>Updated</th></tr>
+        <tr><th>Title</th><th>Type</th><th>Status</th><th>Updated</th></tr>
       </thead>
       <tbody id="recentRows">
-        <tr><td colspan="3" class="admin-empty">Loading…</td></tr>
+        <tr><td colspan="4" class="admin-empty">Loading…</td></tr>
       </tbody>
     </table>
   </div>
 
   <script>
-    import { listAllJournalPosts } from '../../lib/supabaseAdmin';
+    import { listAllJournalPosts, listAllCaseStudies } from '../../lib/supabaseAdmin';
     import { withBase } from '../../lib/url';
     import { escapeHtml } from '../../lib/html';
 
     document.addEventListener('admin:ready', async () => {
       const rows = document.getElementById('recentRows')!;
       try {
-        const posts = await listAllJournalPosts();
-        document.getElementById('statTotal')!.textContent = String(posts.length);
-        document.getElementById('statPublished')!.textContent = String(posts.filter((p) => p.status === 'published').length);
-        document.getElementById('statDraft')!.textContent = String(posts.filter((p) => p.status === 'draft').length);
+        const [posts, caseStudies] = await Promise.all([listAllJournalPosts(), listAllCaseStudies()]);
 
-        const recent = posts.slice(0, 5);
+        document.getElementById('statJournalTotal')!.textContent = String(posts.length);
+        document.getElementById('statJournalPublished')!.textContent = String(posts.filter((p) => p.status === 'published').length);
+        document.getElementById('statCaseStudyTotal')!.textContent = String(caseStudies.length);
+        document.getElementById('statCaseStudyPublished')!.textContent = String(caseStudies.filter((c) => c.status === 'published').length);
+
+        const combined = [
+          ...posts.map((p) => ({ id: p.id, title: p.title, status: p.status, updated_at: p.updated_at, type: 'Journal', editHref: `/admin/journal/edit/?id=${p.id}` })),
+          ...caseStudies.map((c) => ({ id: c.id, title: c.title, status: c.status, updated_at: c.updated_at, type: 'Case Study', editHref: `/admin/case-studies/edit/?id=${c.id}` })),
+        ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+        const recent = combined.slice(0, 8);
         if (recent.length === 0) {
-          rows.innerHTML = '<tr><td colspan="3" class="admin-empty">No Journal posts yet.</td></tr>';
+          rows.innerHTML = '<tr><td colspan="4" class="admin-empty">No content yet.</td></tr>';
           return;
         }
         rows.innerHTML = recent
           .map(
-            (p) => `
+            (item) => `
           <tr>
-            <td class="title-cell"><a href="${withBase(`/admin/journal/edit/?id=${p.id}`)}">${escapeHtml(p.title)}</a></td>
-            <td><span class="badge badge-${p.status}">${p.status}</span></td>
-            <td>${new Date(p.updated_at).toLocaleDateString()}</td>
+            <td class="title-cell"><a href="${withBase(item.editHref)}">${escapeHtml(item.title)}</a></td>
+            <td>${item.type}</td>
+            <td><span class="badge badge-${item.status}">${item.status}</span></td>
+            <td>${new Date(item.updated_at).toLocaleDateString()}</td>
           </tr>`
           )
           .join('');
       } catch (err) {
-        rows.innerHTML = `<tr><td colspan="3" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+        rows.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
       }
     });
   </script>

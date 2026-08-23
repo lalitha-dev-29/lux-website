@@ -824,8 +824,11 @@ a.card:hover .card-media img{transform:scale(1.05);}
 .card h3{font-size:var(--display-4); margin-top:var(--sp-3); line-height:1.25;}
 .card .subtitle{font-family:var(--font-display); font-style:italic; color:var(--stone); font-size:var(--fs-md); margin-top:var(--sp-1);}
 .card p.excerpt{font-size:var(--fs-base); color:var(--stone); margin-top:var(--sp-3); line-height:1.72;}
-.card .tags{display:flex; gap:var(--sp-2); flex-wrap:wrap; margin-top:var(--sp-5);}
-.card .tags span{
+/* Also used unscoped on Journal/Case Study detail pages, outside a .card — the
+   .card variant only adds the extra top margin a card body needs. */
+.tags{display:flex; gap:var(--sp-2); flex-wrap:wrap;}
+.card .tags{margin-top:var(--sp-5);}
+.tags span{
   font-size:var(--fs-2xs); letter-spacing:.05em; color:var(--stone);
   border:1px solid var(--line); border-radius:999px; padding:5px 11px;
   background:var(--ivory);
@@ -1225,6 +1228,101 @@ footer{border-top:1px solid var(--line); padding-block:var(--sp-8); margin-top:v
 }
 .footer-note + .footer-note{margin-top:var(--sp-2);}
 .footer-note.tagline{font-size:var(--fs-sm);}
+
+/* ============================================================
+   CONTENT CARDS — featured state, missing-image fallback
+   ============================================================ */
+.card-media-empty{
+  width:100%; height:100%; min-height:180px;
+  background:linear-gradient(135deg, var(--ivory-2), var(--ivory-3));
+}
+.card-tag-featured{background:var(--gold-ink); color:var(--ink-on-accent, var(--ivory));}
+.card-featured{box-shadow:0 0 0 1px var(--gold-ink), var(--shadow-sm);}
+.content-metadata{flex-wrap:wrap; row-gap:var(--sp-1);}
+
+/* ============================================================
+   EXTERNAL LINKS (Journal / Case Study detail)
+   ============================================================ */
+.external-links{display:flex; flex-wrap:wrap; gap:var(--sp-3); margin-top:var(--sp-6);}
+.external-link{display:inline-flex; align-items:center; gap:var(--sp-2);}
+
+/* ============================================================
+   READING PROGRESS (Journal detail)
+   ============================================================ */
+.reading-progress{
+  position:fixed; top:0; left:0; z-index:60;
+  height:2px; width:0; background:var(--gold-ink);
+}
+.reading-progress-animated{transition:width var(--dur-fast) linear;}
+@media (prefers-reduced-motion: reduce){
+  .reading-progress{transition:none;}
+}
+
+/* ============================================================
+   PDF VIEWER (Case Study detail)
+   ============================================================ */
+.pdf-viewer{margin-top:var(--sp-6);}
+.pdf-viewer-actions{display:flex; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-5);}
+.pdf-viewer-frame{
+  position:relative;
+  border:1px solid var(--line); border-radius:var(--r-md); background:var(--ivory-2);
+  min-height:200px;
+  display:flex; flex-direction:column; align-items:stretch;
+}
+.pdf-load-btn{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--sp-3);
+  min-height:220px; width:100%; color:var(--stone); font-size:var(--fs-sm);
+  letter-spacing:.05em; text-transform:uppercase;
+}
+.pdf-load-btn svg{width:32px; height:32px; opacity:.7;}
+.pdf-load-btn:hover{color:var(--gold-ink);}
+
+.pdf-toolbar{
+  display:flex; flex-wrap:wrap; gap:var(--sp-4); align-items:center; justify-content:space-between;
+  padding:var(--sp-3) var(--sp-4); border-bottom:1px solid var(--line); background:var(--card);
+  border-radius:var(--r-md) var(--r-md) 0 0;
+}
+.pdf-toolbar-group{display:flex; align-items:center; gap:var(--sp-2); flex-wrap:wrap;}
+.pdf-toolbar-group button{
+  min-height:36px; min-width:36px; display:inline-flex; align-items:center; justify-content:center;
+  border:1px solid var(--line-strong); border-radius:var(--r-sm); color:var(--stone-mute);
+  font-size:var(--fs-sm); padding-inline:var(--sp-2);
+}
+.pdf-toolbar-group button:hover{border-color:var(--gold-ink); color:var(--gold-ink);}
+.pdf-page-indicator{display:inline-flex; align-items:center; gap:var(--sp-1); font-size:var(--fs-sm); color:var(--stone);}
+.pdf-page-indicator input{
+  width:52px; min-height:36px; text-align:center; border:1px solid var(--line-strong); border-radius:var(--r-sm);
+  background:var(--card); color:var(--charcoal); font-size:var(--fs-sm);
+}
+
+.pdf-canvas-wrap{
+  overflow:auto; padding:var(--sp-5); display:flex; flex-direction:column; align-items:center; gap:var(--sp-3);
+  max-height:80vh;
+}
+.pdf-canvas-wrap canvas{max-width:100%; height:auto; box-shadow:var(--shadow-md); border-radius:2px;}
+.pdf-status{font-size:var(--fs-sm); color:var(--stone); min-height:1.4em;}
+
+.pdf-exit-fullscreen-btn{
+  display:none; align-items:center; gap:var(--sp-2);
+  position:absolute; top:var(--sp-3); right:var(--sp-3); z-index:2;
+  min-height:40px; padding-inline:var(--sp-4);
+  border:1px solid var(--line-strong); border-radius:var(--r-sm); background:var(--card); color:var(--charcoal);
+}
+.pdf-viewer-frame.pdf-fullscreen{
+  position:fixed; inset:0; z-index:200; border-radius:0; background:var(--ivory);
+  max-height:none;
+}
+.pdf-viewer-frame.pdf-fullscreen .pdf-canvas-wrap{max-height:calc(100vh - 64px);}
+.pdf-viewer-frame.pdf-fullscreen .pdf-exit-fullscreen-btn{display:inline-flex;}
+
+.pdf-mobile-fallback{margin-top:var(--sp-4); font-size:var(--fs-sm); color:var(--stone);}
+
+@media (max-width: 640px){
+  .pdf-toolbar{gap:var(--sp-2); padding:var(--sp-2) var(--sp-3);}
+  .pdf-toolbar-group button{min-width:32px; min-height:32px; font-size:var(--fs-xs);}
+  .pdf-toolbar-group .btn-line, #pdfFitPageBtn, #pdfFitWidthBtn{display:none;}
+  .pdf-canvas-wrap{padding:var(--sp-3); max-height:60vh;}
+}
 
 /* ============================================================
    RESPONSIVE  (mobile-first: each breakpoint enhances upward)

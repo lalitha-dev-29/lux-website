@@ -1,0 +1,44 @@
+---
+import { getRelatedItems } from '../lib/relatedContent';
+import ContentCard from './ContentCard.astro';
+import type { JournalPost } from '../lib/journalTypes';
+import type { CaseStudy } from '../lib/caseStudyTypes';
+
+interface Props {
+  currentSlug: string;
+  currentKind: 'journal' | 'case-study';
+  currentTags: string[];
+  currentCategory: string | null;
+  journalPosts: JournalPost[];
+  caseStudies: CaseStudy[];
+}
+
+const { currentSlug, currentKind, currentTags, currentCategory, journalPosts, caseStudies } = Astro.props;
+const items = getRelatedItems({ currentSlug, currentKind, currentTags, currentCategory, journalPosts, caseStudies });
+---
+
+{items.length > 0 && (
+  <section class="tight flush-top">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Related</span>
+        <h2>You Might Also Like</h2>
+      </div>
+      <div class="grid-3">
+        {items.map((item, i) => (
+          <ContentCard
+            href={item.href}
+            eyebrow={item.eyebrow}
+            meta={item.meta}
+            title={item.title}
+            excerpt={item.excerpt}
+            tags={item.tags}
+            image={item.image}
+            ctaLabel={item.kind === 'journal' ? 'Read the full post' : 'Read case study'}
+            revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''}
+          />
+        ))}
+      </div>
+    </div>
+  </section>
+)}
