@@ -84,11 +84,7 @@ import { withBase } from '../../../lib/url';
         writeJournalForm({
           title: post.title,
           excerpt: post.excerpt,
-          content: post.content ?? '',
           external_url: post.external_url ?? '',
-          category: post.category ?? '',
-          tags: post.tags.join(', '),
-          cover_image: post.cover_image ?? '',
         });
         renderStatus();
         form.hidden = false;

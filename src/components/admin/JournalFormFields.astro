@@ -11,28 +11,7 @@
 </div>
 
 <div class="field">
-  <label for="fContent">Main Content</label>
-  <textarea id="fContent" name="content" rows="10"></textarea>
-  <p class="hint">Optional. Plain text — separate paragraphs with a blank line. Leave empty for a LinkedIn-only preview card.</p>
-</div>
-
-<div class="field">
-  <label for="fExternalUrl">External LinkedIn URL</label>
-  <input id="fExternalUrl" name="external_url" type="url" placeholder="https://www.linkedin.com/…" />
-  <p class="hint">Required if Main Content is left empty.</p>
-</div>
-
-<div class="field">
-  <label for="fCategory">Category</label>
-  <input id="fCategory" name="category" type="text" maxlength="60" />
-</div>
-
-<div class="field">
-  <label for="fTags">Tags</label>
-  <input id="fTags" name="tags" type="text" placeholder="comma, separated, tags" />
-</div>
-
-<div class="field">
-  <label for="fCoverImage">Cover Image URL</label>
-  <input id="fCoverImage" name="cover_image" type="url" placeholder="/assets/journal/…" />
+  <label for="fExternalUrl">LinkedIn Post URL</label>
+  <input id="fExternalUrl" name="external_url" type="url" required placeholder="https://www.linkedin.com/…" />
+  <p class="hint">Where the card links to.</p>
 </div>
