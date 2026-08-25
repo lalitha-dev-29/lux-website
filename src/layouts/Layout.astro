@@ -4,6 +4,10 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import { withBase } from '../lib/url';
 import '../styles/global.css';
+// TEMPORARY — dark-blue background exploration branch only. Remove this
+// import + its usage below (and the matching CSS block in global.css) once
+// a final shade is picked. See BgVariantPicker.astro for details.
+import BgVariantPicker from '../components/dev/BgVariantPicker.astro';
 
 interface Props {
   title: string;
@@ -73,6 +77,19 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined
       /* localStorage unavailable — fall back to prefers-color-scheme */
     }
   </script>
+  <!-- TEMPORARY — dark-blue background exploration branch only. Restores
+       the picked swatch before first paint so reloads don't flash back to
+       baseline. Remove alongside BgVariantPicker.astro. -->
+  <script is:inline>
+    try {
+      var bgv = localStorage.getItem('lmk-bg-variant-temp');
+      if (bgv && bgv !== 'baseline') {
+        document.documentElement.setAttribute('data-bg-variant', bgv);
+      }
+    } catch (e) {
+      /* localStorage unavailable — defaults to baseline */
+    }
+  </script>
   <!--
     Scroll-reveal is opt-IN, set synchronously here so there's no flash.
     Content is visible by default in CSS; this class is what enables the
@@ -101,6 +118,7 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined
     <slot />
   </main>
   <Footer />
+  <BgVariantPicker />
   <script src="../scripts/site.ts"></script>
 </body>
 </html>

@@ -227,6 +227,26 @@
 }
 
 /* ============================================================
+   EXPERIMENTAL: DARK-BLUE BACKGROUND EXPLORATION (TEMPORARY)
+   Preview-only page-background swatches for the dark-mode background
+   colour. Only `--ivory` (the single token `body{background}` reads) is
+   overridden per swatch, so cards/borders/text/motifs are identical across
+   every option and the background is the only variable under test.
+   Requires BOTH data-theme="dark" AND data-bg-variant="…" (set together by
+   BgVariantPicker.astro) so this can never affect anyone who isn't using
+   the picker, and never touches light mode.
+   To remove: delete this block, delete BgVariantPicker.astro, and remove
+   its <BgVariantPicker /> usage + import from Layout.astro.
+   ============================================================ */
+:root[data-theme="dark"][data-bg-variant="navy"]{--ivory:#0A0E1A;}
+:root[data-theme="dark"][data-bg-variant="midnight"]{--ivory:#0D1B2E;}
+:root[data-theme="dark"][data-bg-variant="royal"]{--ivory:#141B3D;}
+:root[data-theme="dark"][data-bg-variant="blueblack"]{--ivory:#060911;}
+:root[data-theme="dark"][data-bg-variant="desaturated"]{--ivory:#1C222C;}
+:root[data-theme="dark"][data-bg-variant="brighter"]{--ivory:#1F2E52;}
+:root[data-theme="dark"][data-bg-variant="bluegrey"]{--ivory:#262B36;}
+
+/* ============================================================
    RESET & BASE
    ============================================================ */
 *,*::before,*::after{box-sizing:border-box;}

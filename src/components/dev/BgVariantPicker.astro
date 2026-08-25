@@ -1,0 +1,187 @@
+---
+/**
+ * TEMPORARY — dark-blue background exploration.
+ * A floating swatch picker, visible only in dark mode, for comparing
+ * candidate page-background colours against the current baseline.
+ * Selection persists to localStorage (key below) independent of the real
+ * theme choice, and only ever sets `data-bg-variant` on <html> — see the
+ * matching CSS block in src/styles/global.css.
+ *
+ * To remove: delete this file, its <BgVariantPicker /> usage + import in
+ * Layout.astro, and the "EXPERIMENTAL" CSS block in global.css.
+ */
+const VARIANTS = [
+  { id: 'baseline', label: 'Baseline (current)', swatch: '#17140D' },
+  { id: 'navy', label: 'Very Dark Navy', swatch: '#0A0E1A' },
+  { id: 'midnight', label: 'Deep Midnight Blue', swatch: '#0D1B2E' },
+  { id: 'royal', label: 'Dark Royal Blue', swatch: '#141B3D' },
+  { id: 'blueblack', label: 'Blue-Black', swatch: '#060911' },
+  { id: 'desaturated', label: 'Deep Desaturated Blue', swatch: '#1C222C' },
+  { id: 'brighter', label: 'Slightly Brighter Dark Blue', swatch: '#1F2E52' },
+  { id: 'bluegrey', label: 'Subtle Blue-Grey', swatch: '#262B36' },
+];
+---
+
+<div class="bg-variant-picker" id="bgVariantPicker">
+  <p class="bg-variant-picker__title">Dark BG test <span>(temp — dev only)</span></p>
+  <div class="bg-variant-picker__list" role="radiogroup" aria-label="Dark mode background colour test">
+    {VARIANTS.map((v) => (
+      <button
+        type="button"
+        class="bg-variant-picker__opt"
+        data-variant={v.id}
+        role="radio"
+        aria-checked="false"
+      >
+        <span class="bg-variant-picker__swatch" style={`background:${v.swatch}`}></span>
+        <span class="bg-variant-picker__label">{v.label}</span>
+      </button>
+    ))}
+  </div>
+</div>
+
+<style>
+  .bg-variant-picker {
+    display: none;
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 9999;
+    width: 240px;
+    padding: 12px;
+    border-radius: 10px;
+    background: rgba(20, 20, 20, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(6px);
+    font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  }
+
+  /* Visible only when dark mode is active — explicit choice or OS default. */
+  :root[data-theme="dark"] .bg-variant-picker {
+    display: block;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .bg-variant-picker {
+      display: block;
+    }
+  }
+
+  .bg-variant-picker__title {
+    margin: 0 0 8px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #f2ecdd;
+  }
+  .bg-variant-picker__title span {
+    display: block;
+    font-weight: 400;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    color: #a79e86;
+    font-size: 10px;
+    margin-top: 2px;
+  }
+
+  .bg-variant-picker__list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .bg-variant-picker__opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+  .bg-variant-picker__opt:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .bg-variant-picker__opt[aria-checked="true"] {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: #e0b563;
+  }
+
+  .bg-variant-picker__swatch {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
+    border-radius: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+  }
+  .bg-variant-picker__opt[aria-checked="true"] .bg-variant-picker__swatch {
+    box-shadow: 0 0 0 2px rgba(224, 181, 99, 0.9);
+  }
+
+  .bg-variant-picker__label {
+    font-size: 12.5px;
+    color: #f2ecdd;
+    line-height: 1.3;
+  }
+</style>
+
+<script>
+  const STORAGE_KEY = 'lmk-bg-variant-temp';
+  const panel = document.getElementById('bgVariantPicker');
+
+  if (panel) {
+    const buttons = Array.from(
+      panel.querySelectorAll<HTMLButtonElement>('.bg-variant-picker__opt')
+    );
+
+    function applyVariant(id: string, persist: boolean) {
+      const html = document.documentElement;
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      if (!prefersReducedMotion) html.classList.add('theme-transition');
+
+      if (id === 'baseline') {
+        html.removeAttribute('data-bg-variant');
+      } else {
+        html.setAttribute('data-bg-variant', id);
+      }
+
+      buttons.forEach((btn) => {
+        btn.setAttribute('aria-checked', String(btn.dataset.variant === id));
+      });
+
+      if (persist) {
+        try {
+          localStorage.setItem(STORAGE_KEY, id);
+        } catch {
+          /* localStorage unavailable — selection still applies for this load */
+        }
+      }
+
+      if (!prefersReducedMotion) {
+        window.setTimeout(() => html.classList.remove('theme-transition'), 260);
+      }
+    }
+
+    let stored = 'baseline';
+    try {
+      stored = localStorage.getItem(STORAGE_KEY) || 'baseline';
+    } catch {
+      /* default to baseline */
+    }
+    applyVariant(stored, false);
+
+    buttons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        applyVariant(btn.dataset.variant || 'baseline', true);
+      });
+    });
+  }
+</script>
