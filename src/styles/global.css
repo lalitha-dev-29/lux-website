@@ -1024,6 +1024,10 @@ body.atlas-fullscreen-open{overflow:hidden;}
 .atlas-house{padding:var(--sp-4) 0; border-bottom:1px solid var(--line);}
 .atlas-house:first-of-type{border-top:1px solid var(--line); margin-top:var(--sp-5);}
 .atlas-house .maison{font-family:var(--font-display); font-size:var(--display-4);}
+.atlas-house a.maison{
+  display:block; color:inherit; text-decoration:none;
+}
+.atlas-house a.maison:hover, .atlas-house a.maison:focus-visible{text-decoration:underline;}
 .atlas-house .cat{
   font-size:var(--fs-2xs); letter-spacing:.13em; text-transform:uppercase;
   color:var(--stone); margin-top:2px;

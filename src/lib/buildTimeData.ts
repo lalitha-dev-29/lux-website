@@ -140,7 +140,7 @@ export async function fetchAllAtlasCategories(): Promise<AtlasCategory[]> {
 export interface AtlasMapPanelData {
   heading: string;
   description: string;
-  brands: { name: string; cat: string }[];
+  brands: { name: string; cat: string; website: string | null }[];
 }
 
 /**
@@ -166,7 +166,11 @@ export async function buildAtlasMapData(): Promise<Record<string, AtlasMapPanelD
     if (!country.map_id) continue; // shouldn't happen for published rows (DB check constraint), guarded defensively
     const countryBrands = brands
       .filter((b) => b.country_id === country.id)
-      .map((b) => ({ name: b.name, cat: (b.category_id && categoryNameById.get(b.category_id)) || 'Uncategorized' }));
+      .map((b) => ({
+        name: b.name,
+        cat: (b.category_id && categoryNameById.get(b.category_id)) || 'Uncategorized',
+        website: b.website_url,
+      }));
 
     result[country.map_id] = {
       heading: country.heading,
