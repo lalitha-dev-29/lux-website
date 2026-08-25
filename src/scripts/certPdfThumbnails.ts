@@ -33,8 +33,11 @@ export function initCertPdfThumbnails(): void {
       const pdfjsLib = await pdfjsPromise;
       const pdfDoc = await pdfjsLib.getDocument({ url }).promise;
       const page = await pdfDoc.getPage(1);
+      // Fit (not fill) the thumbnail box on both axes, matching the card's
+      // object-fit:contain — a page render that's already fully visible,
+      // not one deliberately oversized to be cropped by the container.
       const baseViewport = page.getViewport({ scale: 1 });
-      const scale = Math.min(el.clientWidth / baseViewport.width, (el.clientHeight * 2) / baseViewport.height);
+      const scale = Math.min(el.clientWidth / baseViewport.width, el.clientHeight / baseViewport.height);
       const viewport = page.getViewport({ scale: Math.max(scale, 0.3) });
 
       const canvas = document.createElement('canvas');

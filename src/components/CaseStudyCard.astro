@@ -22,6 +22,6 @@ const readingLabel = c.reading_time_minutes ? `${c.reading_time_minutes} min rea
   image={c.cover_image}
   ctaLabel="Read case study"
   featured={c.featured}
-  badge="Coming Soon"
+  badge={c.coming_soon ? 'Coming Soon' : null}
   revealClass={revealClass}
 />

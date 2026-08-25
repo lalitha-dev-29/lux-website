@@ -14,6 +14,7 @@ export interface CaseStudy {
   order_index: number;
   reading_time_minutes: number | null;
   featured: boolean;
+  coming_soon: boolean;
   status: CaseStudyStatus;
   pdf_url: string | null;
   pdf_filename: string | null;
@@ -30,6 +31,6 @@ export interface CaseStudy {
 
 /** Fields the public site is allowed to render — never expose more than this to anon requests. */
 export const PUBLIC_CASE_STUDY_FIELDS =
-  'id,slug,title,excerpt,content,category,tags,cover_image,order_index,reading_time_minutes,featured,pdf_url,pdf_filename,pdf_page_count,seo_title,seo_description,og_image,author,links,published_at' as const;
+  'id,slug,title,excerpt,content,category,tags,cover_image,order_index,reading_time_minutes,featured,coming_soon,pdf_url,pdf_filename,pdf_page_count,seo_title,seo_description,og_image,author,links,published_at' as const;
 
 export { slugify } from './slugify';

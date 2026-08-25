@@ -92,6 +92,14 @@
      cream accent surface, which stays light-ish in both themes. */
   --ink-on-accent:#19170F;
 
+  /* Fixed light paper, does NOT swap — the counterpart to --ink-on-accent
+     above, for text on a fixed-dark surface that also doesn't invert with
+     the page theme (the semi-transparent dark badge chip on card
+     thumbnails, e.g. "Coming Soon" — its own background is always dark
+     regardless of site theme, so --ivory would go dark-on-dark and vanish
+     the instant the page is in dark mode). */
+  --paper-on-dark:#F7F4EC;
+
   /* The Atlas map is deliberately a fixed dark "chalkboard" surface — like a
      code block or an embedded map, its own artwork doesn't invert with the
      page theme. Fixed, not swapped, for the same reason --ink-on-accent
@@ -747,13 +755,16 @@ a.card:hover{transform:translateY(-4px); box-shadow:var(--shadow-lg); border-col
 a.card:active{transform:translateY(-1px); box-shadow:var(--shadow-md);}
 a.card:focus-visible{outline:var(--focus-ring); outline-offset:var(--focus-offset);}
 
+/* `aspect-ratio` keeps a uniform grid cell so cards line up; `object-fit:contain`
+   (not `cover`) means an uploaded image of any ratio always shows in full,
+   letterboxed on the container's own background rather than cropped. */
 .card-media{position:relative; aspect-ratio:4/3; overflow:hidden; background:var(--ivory-2);}
-.card-media img{width:100%; height:100%; object-fit:cover; transition:transform .9s var(--ease);}
+.card-media img{width:100%; height:100%; object-fit:contain; transition:transform .9s var(--ease);}
 a.card:hover .card-media img{transform:scale(1.05);}
 
 .card-tag{
   position:absolute; top:var(--sp-3); left:var(--sp-3);
-  background:rgba(25,23,15,.80); color:var(--ivory);
+  background:rgba(25,23,15,.80); color:var(--paper-on-dark);
   font-size:var(--fs-2xs); letter-spacing:.14em; text-transform:uppercase;
   padding:6px 11px; border-radius:var(--r-sm);
   backdrop-filter:blur(6px);
@@ -1038,12 +1049,20 @@ a.card:hover .card-media img{transform:scale(1.05);}
 .case-detail-head{padding-bottom:0;}
 .case-back{margin-bottom:var(--sp-6);}
 .case-detail-title{font-size:var(--display-2); margin-top:var(--sp-4); line-height:1.08;}
+/* No fixed aspect-ratio here on purpose — a hero banner has to work for a
+   wide landscape cover AND a tall portrait one. The image sizes itself
+   intrinsically (max-width/max-height, both auto otherwise) so it always
+   renders in full, at its own ratio, capped so a very tall image doesn't
+   dominate the page; `overflow:hidden` only rounds the letterbox
+   background's corners, it never has anything to actually clip. */
 .case-detail-media{
-  aspect-ratio:16/8; overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  overflow:hidden;
   border:1px solid var(--line); border-radius:var(--r-md); background:var(--ivory-2);
   box-shadow:var(--shadow-md);
+  max-height:min(70vh, 640px);
 }
-.case-detail-media img{width:100%; height:100%; object-fit:cover;}
+.case-detail-media img{display:block; width:auto; height:auto; max-width:100%; max-height:min(70vh, 640px); object-fit:contain;}
 .case-pdf-frame{
   width:100%; height:80vh; display:block;
   border:1px solid var(--line); border-radius:var(--r-md); background:var(--ivory-2);
@@ -1252,6 +1271,9 @@ footer{border-top:1px solid var(--line); padding-block:var(--sp-8); margin-top:v
    PDF VIEWER (Case Study detail)
    ============================================================ */
 .pdf-viewer{margin-top:var(--sp-6);}
+/* Locks background scroll during the CSS-only pseudo-fullscreen fallback
+   (see pdfViewer.ts) — same convention as body.nav-open. */
+body.pdf-pseudo-fullscreen-open{overflow:hidden;}
 .pdf-viewer-actions{display:flex; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-5);}
 .pdf-viewer-frame{
   position:relative;
@@ -1259,14 +1281,6 @@ footer{border-top:1px solid var(--line); padding-block:var(--sp-8); margin-top:v
   min-height:200px;
   display:flex; flex-direction:column; align-items:stretch;
 }
-.pdf-load-btn{
-  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:var(--sp-3);
-  min-height:220px; width:100%; color:var(--stone); font-size:var(--fs-sm);
-  letter-spacing:.05em; text-transform:uppercase;
-}
-.pdf-load-btn svg{width:32px; height:32px; opacity:.7;}
-.pdf-load-btn:hover{color:var(--gold-ink);}
-
 .pdf-toolbar{
   display:flex; flex-wrap:wrap; gap:var(--sp-4); align-items:center; justify-content:space-between;
   padding:var(--sp-3) var(--sp-4); border-bottom:1px solid var(--line); background:var(--card);
@@ -1279,11 +1293,23 @@ footer{border-top:1px solid var(--line); padding-block:var(--sp-8); margin-top:v
   font-size:var(--fs-sm); padding-inline:var(--sp-2);
 }
 .pdf-toolbar-group button:hover{border-color:var(--gold-ink); color:var(--gold-ink);}
+.pdf-toolbar-group button[aria-pressed="true"]{
+  border-color:var(--gold-ink); color:var(--gold-ink); background:var(--gold-wash);
+}
 .pdf-page-indicator{display:inline-flex; align-items:center; gap:var(--sp-1); font-size:var(--fs-sm); color:var(--stone);}
 .pdf-page-indicator input{
   width:52px; min-height:36px; text-align:center; border:1px solid var(--line-strong); border-radius:var(--r-sm);
   background:var(--card); color:var(--charcoal); font-size:var(--fs-sm);
 }
+
+.pdf-zoom-input{display:inline-flex; align-items:center; gap:var(--sp-1); font-size:var(--fs-sm); color:var(--stone);}
+.pdf-zoom-input input{
+  width:52px; min-height:36px; text-align:center; border:1px solid var(--line-strong); border-radius:var(--r-sm);
+  background:var(--card); color:var(--charcoal); font-size:var(--fs-sm);
+}
+/* Chrome/Safari's spinner arrows add width the zoom field doesn't need at this size. */
+.pdf-zoom-input input::-webkit-inner-spin-button,
+.pdf-zoom-input input::-webkit-outer-spin-button{margin:0; -webkit-appearance:none;}
 
 .pdf-canvas-wrap{
   overflow:auto; padding:var(--sp-5); display:flex; flex-direction:column; align-items:center; gap:var(--sp-3);
@@ -1292,6 +1318,13 @@ footer{border-top:1px solid var(--line); padding-block:var(--sp-8); margin-top:v
 .pdf-canvas-wrap canvas{max-width:100%; height:auto; box-shadow:var(--shadow-md); border-radius:2px;}
 .pdf-status{font-size:var(--fs-sm); color:var(--stone); min-height:1.4em;}
 
+/* Continuous-scroll mode: every page rendered as its own canvas, stacked the
+   same way pdf-canvas-wrap already stacks its (page-mode) single canvas —
+   the shared `.pdf-canvas-wrap canvas` rule above already styles each one
+   identically to the single-page view. */
+.pdf-scroll-pages{display:flex; flex-direction:column; align-items:center; gap:var(--sp-5); width:100%;}
+.pdf-scroll-pages canvas{scroll-margin-top:var(--sp-5);}
+
 .pdf-exit-fullscreen-btn{
   display:none; align-items:center; gap:var(--sp-2);
   position:absolute; top:var(--sp-3); right:var(--sp-3); z-index:2;
@@ -1299,13 +1332,21 @@ footer{border-top:1px solid var(--line); padding-block:var(--sp-8); margin-top:v
   border:1px solid var(--line-strong); border-radius:var(--r-sm); background:var(--card); color:var(--charcoal);
 }
 .pdf-viewer-frame.pdf-fullscreen{
-  position:fixed; inset:0; z-index:200; border-radius:0; background:var(--ivory);
+  /* Above the site header (z-index:1000) and the mobile nav overlay
+     (1300) — pseudo-fullscreen (see pdfViewer.ts) needs to cover them the
+     same way real OS-level fullscreen would. Below .skip-link (2000) on
+     purpose: that accessibility affordance stays reachable over anything. */
+  position:fixed; inset:0; z-index:1900; border-radius:0; background:var(--ivory);
   max-height:none;
 }
 .pdf-viewer-frame.pdf-fullscreen .pdf-canvas-wrap{max-height:calc(100vh - 64px);}
 .pdf-viewer-frame.pdf-fullscreen .pdf-exit-fullscreen-btn{display:inline-flex;}
 
 .pdf-mobile-fallback{margin-top:var(--sp-4); font-size:var(--fs-sm); color:var(--stone);}
+.pdf-mobile-fallback-btn{
+  background:none; border:0; padding:0; font:inherit; color:inherit;
+  text-decoration:underline; text-underline-offset:2px; cursor:pointer;
+}
 
 @media (max-width: 640px){
   .pdf-toolbar{gap:var(--sp-2); padding:var(--sp-2) var(--sp-3);}

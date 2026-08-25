@@ -24,10 +24,10 @@ import { withBase } from '../../../lib/url';
   <div class="admin-table-wrap">
     <table class="admin-table">
       <thead>
-        <tr><th>Title</th><th>Status</th><th>Featured</th><th>PDF</th><th>Updated</th><th></th></tr>
+        <tr><th>Title</th><th>Status</th><th>Coming Soon</th><th>Featured</th><th>PDF</th><th>Updated</th><th></th></tr>
       </thead>
       <tbody id="rows">
-        <tr><td colspan="6" class="admin-empty">Loading…</td></tr>
+        <tr><td colspan="7" class="admin-empty">Loading…</td></tr>
       </tbody>
     </table>
   </div>
@@ -60,7 +60,7 @@ import { withBase } from '../../../lib/url';
       });
 
       if (filtered.length === 0) {
-        rows.innerHTML = '<tr><td colspan="6" class="admin-empty">No matching Case Studies.</td></tr>';
+        rows.innerHTML = '<tr><td colspan="7" class="admin-empty">No matching Case Studies.</td></tr>';
         return;
       }
 
@@ -70,6 +70,7 @@ import { withBase } from '../../../lib/url';
         <tr data-id="${c.id}">
           <td class="title-cell"><a href="${withBase(`/admin/case-studies/edit/?id=${c.id}`)}">${escapeHtml(c.title)}</a></td>
           <td><span class="badge badge-${c.status}">${c.status}</span></td>
+          <td>${c.coming_soon ? '<span class="badge badge-featured">Coming Soon</span>' : '—'}</td>
           <td>${c.featured ? '<span class="badge badge-featured">Featured</span>' : '—'}</td>
           <td>${c.pdf_url ? '<span class="badge badge-published">Attached</span>' : '—'}</td>
           <td>${new Date(c.updated_at).toLocaleDateString()}</td>
@@ -90,7 +91,7 @@ import { withBase } from '../../../lib/url';
         all = await listAllCaseStudies();
         render();
       } catch (err) {
-        rows.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+        rows.innerHTML = `<tr><td colspan="7" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
       }
     }
 

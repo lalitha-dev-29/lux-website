@@ -14,6 +14,7 @@ export interface CaseStudyFormValues {
   order_index: string;
   author: string;
   featured: boolean;
+  coming_soon: boolean;
   seo_title: string;
   seo_description: string;
   og_image: string;
@@ -33,6 +34,7 @@ export function readCaseStudyForm(): CaseStudyFormValues {
     order_index: val('fOrderIndex').trim(),
     author: val('fAuthor').trim(),
     featured: checked('fFeatured'),
+    coming_soon: checked('fComingSoon'),
     seo_title: val('fSeoTitle').trim(),
     seo_description: val('fSeoDescription').trim(),
     og_image: val('fOgImage').trim(),
@@ -50,6 +52,7 @@ export function writeCaseStudyForm(values: {
   order_index: number;
   author: string;
   featured: boolean;
+  coming_soon: boolean;
   seo_title: string | null;
   seo_description: string | null;
   og_image: string | null;
@@ -72,6 +75,8 @@ export function writeCaseStudyForm(values: {
   set('fOgImage', values.og_image ?? '');
   const featuredEl = document.getElementById('fFeatured') as HTMLInputElement | null;
   if (featuredEl) featuredEl.checked = values.featured;
+  const comingSoonEl = document.getElementById('fComingSoon') as HTMLInputElement | null;
+  if (comingSoonEl) comingSoonEl.checked = values.coming_soon;
   writeLinks('caseStudyLinks', values.links);
 }
 
@@ -97,6 +102,7 @@ export function toCaseStudyInput(values: CaseStudyFormValues, existingSlug?: str
     order_index: Number(values.order_index) || 0,
     author: values.author || 'Kasturi Lalitha Manogna',
     featured: values.featured,
+    coming_soon: values.coming_soon,
     reading_time_minutes: calculateReadingTime(values.content),
     seo_title: values.seo_title || null,
     seo_description: values.seo_description || null,

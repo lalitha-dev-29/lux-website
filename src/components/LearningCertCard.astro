@@ -61,7 +61,7 @@ const dialogId = `certDialog-${c.id}`;
     {c.file_type === 'image' ? (
       <img src={c.file_url} alt={`${c.name} certificate`} class="cert-dialog-image" />
     ) : (
-      <PDFViewer pdfUrl={c.file_url} pdfFilename={c.file_name} title={c.name} />
+      <PDFViewer pdfUrl={c.file_url} title={c.name} />
     )}
   </div>
 </dialog>

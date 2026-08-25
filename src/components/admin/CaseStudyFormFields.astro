@@ -74,6 +74,14 @@ import LinksEditor from './LinksEditor.astro';
   <p class="hint">The main photo — shown on the listing card and at the top of the case study. JPG, PNG, WebP, GIF or SVG only (not HEIC/HEIF — iPhone photos may need converting first).</p>
 </div>
 
+<div class="field field-checkbox">
+  <label for="fComingSoon">
+    <input id="fComingSoon" name="coming_soon" type="checkbox" />
+    Show a "Coming Soon" tag on this case study's card
+  </label>
+  <p class="hint">Unchecked by default. When checked, a "Coming Soon" badge appears on this case study's card wherever it's listed (Case Studies page, homepage).</p>
+</div>
+
 {/* Hidden per user request — stays in the DOM, always unchecked, so caseStudyForm.ts's
     read/write logic doesn't need to change. No case study is ever marked featured this way. */}
 <div class="field field-checkbox" hidden>

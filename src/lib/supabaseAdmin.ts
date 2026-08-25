@@ -209,6 +209,7 @@ export interface CaseStudyInput {
   reading_time_minutes: number | null;
   author: string;
   featured: boolean;
+  coming_soon: boolean;
   seo_title: string | null;
   seo_description: string | null;
   og_image: string | null;
