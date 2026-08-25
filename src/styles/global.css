@@ -228,10 +228,16 @@
 
 /* ============================================================
    EXPERIMENTAL: DARK-BLUE BACKGROUND EXPLORATION (TEMPORARY)
-   Preview-only page-background swatches for the dark-mode background
-   colour. Only `--ivory` (the single token `body{background}` reads) is
-   overridden per swatch, so cards/borders/text/motifs are identical across
-   every option and the background is the only variable under test.
+   Preview-only swatches for the dark-mode background colour. Each swatch
+   sets `--ivory` (the token `body{background}` reads); the shared rule
+   below then re-derives every other dark surface — card, CTA band, hairline
+   borders, and the comparison panel itself — from that same `--ivory` via
+   color-mix, so the whole page (not just the page background) adopts the
+   tested colour as one coherent set instead of pairing a blue background
+   with the baseline's fixed warm-neutral surfaces.
+   Baseline is untouched: it never sets data-bg-variant (see
+   BgVariantPicker.astro), so it keeps the exact hand-tuned dark-mode
+   values defined earlier in this file.
    Requires BOTH data-theme="dark" AND data-bg-variant="…" (set together by
    BgVariantPicker.astro) so this can never affect anyone who isn't using
    the picker, and never touches light mode.
@@ -245,6 +251,15 @@
 :root[data-theme="dark"][data-bg-variant="desaturated"]{--ivory:#1C222C;}
 :root[data-theme="dark"][data-bg-variant="brighter"]{--ivory:#1F2E52;}
 :root[data-theme="dark"][data-bg-variant="bluegrey"]{--ivory:#262B36;}
+
+:root[data-theme="dark"][data-bg-variant]{
+  --ivory-2:color-mix(in srgb, var(--ivory) 93%, white 7%);
+  --ivory-3:color-mix(in srgb, var(--ivory) 86%, white 14%);
+  --card:color-mix(in srgb, var(--ivory) 90%, white 10%);
+  --white:color-mix(in srgb, var(--ivory) 90%, white 10%);
+  --line:color-mix(in srgb, var(--ivory) 82%, white 18%);
+  --line-strong:color-mix(in srgb, var(--ivory) 76%, white 24%);
+}
 
 /* ============================================================
    RESET & BASE

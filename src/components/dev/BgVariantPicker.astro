@@ -50,11 +50,15 @@ const VARIANTS = [
     width: 240px;
     padding: 12px;
     border-radius: 10px;
-    background: rgba(20, 20, 20, 0.92);
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    box-shadow: 0 12px 32px -12px rgba(0, 0, 0, 0.6);
+    /* Same surface tokens the rest of the page uses, so the panel itself
+       shifts to whichever swatch is active instead of staying a fixed
+       neutral box that clashes with the tested background. */
+    background: var(--card);
+    border: 1px solid var(--line-strong);
+    box-shadow: var(--shadow-lg);
     backdrop-filter: blur(6px);
     font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+    transition: background-color 0.3s ease, border-color 0.3s ease;
   }
 
   /* Visible only when dark mode is active — explicit choice or OS default. */
@@ -73,14 +77,14 @@ const VARIANTS = [
     font-weight: 600;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: #f2ecdd;
+    color: var(--charcoal);
   }
   .bg-variant-picker__title span {
     display: block;
     font-weight: 400;
     letter-spacing: 0.02em;
     text-transform: none;
-    color: #a79e86;
+    color: var(--stone-mute);
     font-size: 10px;
     margin-top: 2px;
   }
@@ -107,11 +111,11 @@ const VARIANTS = [
     transition: background-color 0.15s ease, border-color 0.15s ease;
   }
   .bg-variant-picker__opt:hover {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--ivory-3);
   }
   .bg-variant-picker__opt[aria-checked="true"] {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: #e0b563;
+    background: var(--ivory-3);
+    border-color: var(--gold-ink);
   }
 
   .bg-variant-picker__swatch {
@@ -119,15 +123,15 @@ const VARIANTS = [
     width: 20px;
     height: 20px;
     border-radius: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.25);
+    border: 1px solid var(--line-strong);
   }
   .bg-variant-picker__opt[aria-checked="true"] .bg-variant-picker__swatch {
-    box-shadow: 0 0 0 2px rgba(224, 181, 99, 0.9);
+    box-shadow: 0 0 0 2px var(--gold-ink);
   }
 
   .bg-variant-picker__label {
     font-size: 12.5px;
-    color: #f2ecdd;
+    color: var(--charcoal);
     line-height: 1.3;
   }
 </style>
