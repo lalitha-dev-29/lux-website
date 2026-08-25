@@ -17,14 +17,17 @@ name: Scheduled Content Rebuild
 #      actual admin save — see that file's exception handling.
 #   2. `schedule` — a safety-net cron in case a webhook call is ever missed
 #      (rate limit, transient network failure, an expired GitHub token,
-#      etc.), so content can never drift for more than ~15 minutes even if
-#      trigger #1 silently fails.
+#      etc.), so content can never drift for more than ~5 minutes even if
+#      trigger #1 silently fails. 5 minutes is GitHub Actions' own minimum
+#      supported schedule interval — this is as tight as this mechanism can
+#      go (see "Automatic rebuild on save" in the README for what a real
+#      active-retry alternative would look like, if ever needed).
 #   3. `workflow_dispatch` — manual "Run workflow" button for on-demand use.
 on:
   repository_dispatch:
     types: [content-updated]
   schedule:
-    - cron: '*/15 * * * *' # safety net — every 15 minutes
+    - cron: '*/5 * * * *' # safety net — every 5 minutes (GitHub's minimum interval)
   workflow_dispatch:
 
 permissions:
