@@ -24,7 +24,7 @@ import { withBase } from '../../../../lib/url';
   <div class="admin-table-wrap">
     <table class="admin-table">
       <thead>
-        <tr><th>Order</th><th></th><th>Name</th><th>Institution</th><th>Date</th><th>Credential ID</th><th></th></tr>
+        <tr><th>Order</th><th></th><th>Name</th><th>Institution</th><th>Date</th><th>Description</th><th></th></tr>
       </thead>
       <tbody id="rows">
         <tr><td colspan="7" class="admin-empty">Loading…</td></tr>
@@ -77,7 +77,7 @@ import { withBase } from '../../../../lib/url';
           <td class="title-cell"><a href="${withBase(`/admin/learning/certifications/edit/?id=${item.id}`)}">${escapeHtml(item.name)}</a></td>
           <td>${escapeHtml(item.issuing_institution)}</td>
           <td>${escapeHtml(formatCertDate(item))}</td>
-          <td><code>${escapeHtml(item.credential_id)}</code></td>
+          <td>${item.description ? escapeHtml(item.description.slice(0, 80)) + (item.description.length > 80 ? '…' : '') : '<span class="hint">No description</span>'}</td>
           <td class="actions-cell">
             <a href="${safeUrl(item.certificate_link)}" target="_blank" rel="noopener">View</a>
             <a href="${withBase(`/admin/learning/certifications/edit/?id=${item.id}`)}">Edit</a>

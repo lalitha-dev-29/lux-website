@@ -492,7 +492,7 @@ export interface CertificationInput {
   file_url: string;
   file_type: CertFileType;
   file_name: string | null;
-  credential_id: string;
+  description: string | null;
   certificate_link: string;
   order_index: number;
 }

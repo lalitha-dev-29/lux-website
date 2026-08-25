@@ -26,22 +26,38 @@ as $$
 declare
   token text;
 begin
-  select decrypted_secret into token
-  from vault.decrypted_secrets
-  where name = 'github_dispatch_token';
+  -- This whole body is wrapped so a notification failure (expired/missing
+  -- GitHub token, a pg_net hiccup, GitHub API being briefly unavailable)
+  -- can NEVER fail or roll back the actual insert/update/delete that fired
+  -- this trigger — this function runs AFTER the real write, in the same
+  -- transaction, so an uncaught exception here would otherwise discard the
+  -- admin's save along with it. Anything missed here is still picked up by
+  -- the 15-minute cron safety net in
+  -- .github/workflows/scheduled-rebuild.yml, and a persistent failure
+  -- (e.g. an expired token) still surfaces via the RAISE WARNING below in
+  -- Supabase's Postgres logs (Dashboard -> Logs -> Postgres Logs).
+  begin
+    select decrypted_secret into token
+    from vault.decrypted_secrets
+    where name = 'github_dispatch_token';
 
-  if token is not null then
-    perform net.http_post(
-      url := 'https://api.github.com/repos/lalitha-dev-29/lux-website/dispatches',
-      headers := jsonb_build_object(
-        'Authorization', 'Bearer ' || token,
-        'Accept', 'application/vnd.github+json',
-        'Content-Type', 'application/json',
-        'User-Agent', 'supabase-content-webhook'
-      ),
-      body := jsonb_build_object('event_type', 'content-updated')
-    );
-  end if;
+    if token is not null then
+      perform net.http_post(
+        url := 'https://api.github.com/repos/lalitha-dev-29/lux-website/dispatches',
+        headers := jsonb_build_object(
+          'Authorization', 'Bearer ' || token,
+          'Accept', 'application/vnd.github+json',
+          'Content-Type', 'application/json',
+          'User-Agent', 'supabase-content-webhook'
+        ),
+        body := jsonb_build_object('event_type', 'content-updated')
+      );
+    else
+      raise warning 'notify_content_updated: github_dispatch_token secret not found in Vault — rebuild will only happen via the cron safety net.';
+    end if;
+  exception when others then
+    raise warning 'notify_content_updated failed (save was NOT affected): %', sqlerrm;
+  end;
   return null;
 end;
 $$;

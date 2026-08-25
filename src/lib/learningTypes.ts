@@ -50,7 +50,7 @@ export interface LearningCertification {
   file_url: string;
   file_type: CertFileType;
   file_name: string | null;
-  credential_id: string;
+  description: string | null;
   certificate_link: string;
   order_index: number;
   created_at: string;
@@ -58,7 +58,7 @@ export interface LearningCertification {
 }
 
 export const PUBLIC_CERTIFICATION_FIELDS =
-  'id,name,issuer_portal,issuing_institution,cert_month,cert_year,file_url,file_type,file_name,credential_id,certificate_link,order_index' as const;
+  'id,name,issuer_portal,issuing_institution,cert_month,cert_year,file_url,file_type,file_name,description,certificate_link,order_index' as const;
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',

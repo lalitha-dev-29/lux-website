@@ -8,19 +8,23 @@ name: Scheduled Content Rebuild
 #
 # Three ways this fires:
 #   1. `repository_dispatch` (type: content-updated) — fired automatically
-#      by a Supabase Database Webhook on any journal_posts/case_studies
-#      insert/update/delete, so edits go live within ~30-60s with zero
-#      manual steps. This is the primary trigger; see README's "Automatic
-#      rebuild on save" section for the one-time Supabase/GitHub setup.
+#      by a Postgres trigger (supabase/auto_rebuild_webhook.sql) on any
+#      admin-editable table's insert/update/delete, so edits go live within
+#      ~30-60s with zero manual steps. This is the primary trigger; see
+#      README's "Automatic rebuild on save" section for the one-time
+#      Supabase/GitHub setup. The trigger function never lets a failure
+#      here (expired token, transient GitHub/pg_net issue) block the
+#      actual admin save — see that file's exception handling.
 #   2. `schedule` — a safety-net cron in case a webhook call is ever missed
-#      (rate limit, transient network failure, webhook temporarily
-#      disabled, etc.) so content can never drift for more than a few hours.
+#      (rate limit, transient network failure, an expired GitHub token,
+#      etc.), so content can never drift for more than ~15 minutes even if
+#      trigger #1 silently fails.
 #   3. `workflow_dispatch` — manual "Run workflow" button for on-demand use.
 on:
   repository_dispatch:
     types: [content-updated]
   schedule:
-    - cron: '0 */4 * * *' # safety net — every 4 hours
+    - cron: '*/15 * * * *' # safety net — every 15 minutes
   workflow_dispatch:
 
 permissions:

@@ -37,7 +37,7 @@ const dialogId = `certDialog-${c.id}`;
       {c.issuing_institution}{c.issuer_portal ? ` · ${c.issuer_portal}` : ''} <span class="date">· {formatCertDate(c)}</span>
     </div>
     <h3>{c.name}</h3>
-    <div class="cert-id"><span>Credential ID</span><code>{c.credential_id}</code></div>
+    {c.description && <p class="excerpt">{c.description}</p>}
     <div class="cert-actions">
       <button type="button" class="link-arrow" data-open-dialog={dialogId}>
         View Certificate<span class="arrow" aria-hidden="true">→</span>

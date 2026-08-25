@@ -6,22 +6,20 @@ export interface CertificationFormValues {
   issuing_institution: string;
   cert_month: string;
   cert_year: string;
-  credential_id: string;
+  description: string;
   certificate_link: string;
   order_index: string;
 }
 
-const CREDENTIAL_ID_PATTERN = /^[A-Za-z0-9._ -]+$/;
-
 export function readCertificationForm(): CertificationFormValues {
-  const val = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLSelectElement).value;
+  const val = (id: string) => (document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement).value;
   return {
     name: val('fCertName').trim(),
     issuer_portal: val('fIssuerPortal').trim(),
     issuing_institution: val('fIssuingInstitution').trim(),
     cert_month: val('fCertMonth'),
     cert_year: val('fCertYear').trim(),
-    credential_id: val('fCredentialId').trim(),
+    description: val('fDescription').trim(),
     certificate_link: val('fCertificateLink').trim(),
     order_index: val('fOrderIndex').trim(),
   };
@@ -33,12 +31,12 @@ export function writeCertificationForm(values: {
   issuing_institution: string;
   cert_month: number;
   cert_year: number;
-  credential_id: string;
+  description: string | null;
   certificate_link: string;
   order_index: number;
 }): void {
   const set = (id: string, v: string) => {
-    const el = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
+    const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null;
     if (el) el.value = v;
   };
   set('fCertName', values.name);
@@ -46,7 +44,7 @@ export function writeCertificationForm(values: {
   set('fIssuingInstitution', values.issuing_institution);
   set('fCertMonth', String(values.cert_month));
   set('fCertYear', String(values.cert_year));
-  set('fCredentialId', values.credential_id);
+  set('fDescription', values.description ?? '');
   set('fCertificateLink', values.certificate_link);
   set('fOrderIndex', String(values.order_index));
 }
@@ -65,10 +63,7 @@ export function validateCertificationForm(values: CertificationFormValues): stri
   if (!values.issuing_institution) return 'Certificate Issuing Institution is required.';
   if (!values.cert_month || !values.cert_year) return 'Certification Date (month and year) is required.';
   if (!/^\d{4}$/.test(values.cert_year)) return 'Certification Date year must be a 4-digit year.';
-  if (!values.credential_id) return 'Credential ID is required.';
-  if (!CREDENTIAL_ID_PATTERN.test(values.credential_id)) {
-    return 'Credential ID may only contain letters, numbers, spaces, hyphens, underscores and periods.';
-  }
+  if (!values.description) return 'Description is required.';
   if (!values.certificate_link) return 'Certificate Link is required.';
   if (!isValidHttpUrl(values.certificate_link)) return 'Please enter a valid certificate link (starting with https:// or http://).';
   return null;
@@ -84,7 +79,7 @@ export function toCertificationMetadata(
     issuing_institution: values.issuing_institution,
     cert_month: Number(values.cert_month),
     cert_year: Number(values.cert_year),
-    credential_id: values.credential_id,
+    description: values.description || null,
     certificate_link: values.certificate_link,
     order_index: values.order_index ? Number(values.order_index) : fallbackOrder,
   };
