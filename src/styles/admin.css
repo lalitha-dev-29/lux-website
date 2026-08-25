@@ -77,6 +77,12 @@ body.admin{overflow-x:visible;}
   margin-bottom:var(--sp-4); flex-wrap:wrap;
 }
 .admin-section-head h2{font-size:var(--fs-lg); font-family:var(--font-display); font-weight:500;}
+/* More than one action in the head's right-hand slot (the Dashboard has
+   two). Without this they butt up edge to edge — and since .btn-line draws
+   its own underline, the pair reads as a single run-on control. Scoped to
+   its own class rather than `.admin-section-head > div`, which elsewhere
+   is the heading + lede stack and must stay block-flow. */
+.admin-head-actions{display:flex; align-items:baseline; gap:var(--sp-5); flex-wrap:wrap;}
 
 /* --- toolbar (search + filter + new) --- */
 .admin-toolbar{

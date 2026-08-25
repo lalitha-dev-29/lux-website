@@ -1351,7 +1351,8 @@ body.pdf-pseudo-fullscreen-open{overflow:hidden;}
 @media (max-width: 640px){
   .pdf-toolbar{gap:var(--sp-2); padding:var(--sp-2) var(--sp-3);}
   .pdf-toolbar-group button{min-width:32px; min-height:32px; font-size:var(--fs-xs);}
-  .pdf-toolbar-group .btn-line, #pdfFitPageBtn, #pdfFitWidthBtn{display:none;}
+  .pdf-toolbar-group .btn-line,
+  [data-pdf="fitPageBtn"], [data-pdf="fitWidthBtn"]{display:none;}
   .pdf-canvas-wrap{padding:var(--sp-3); max-height:60vh;}
 }
 

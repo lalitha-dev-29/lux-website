@@ -4,60 +4,77 @@ interface Props {
   title: string;
 }
 const { pdfUrl, title } = Astro.props;
+
+/*
+ * The Learning page renders one of these per Certification that has a PDF,
+ * so nothing inside may carry a hardcoded id — a page with three PDF
+ * certificates would emit three elements called "pdfZoomInput", and every
+ * `<label for>` in the document would resolve to the first one, sending
+ * assistive tech (and label clicks) to a different viewer's control than
+ * the one the reader is looking at.
+ *
+ * Everything the script needs is addressed by `data-pdf` instead, looked up
+ * within this instance's root. Only the two controls that a <label for>
+ * actually has to name get a real id, and those are made unique per
+ * instance.
+ */
+const uid = `pdf${Math.random().toString(36).slice(2, 9)}`;
+const pageInputId = `${uid}PageInput`;
+const zoomInputId = `${uid}ZoomInput`;
 ---
 
 {pdfUrl ? (
   <div class="pdf-viewer reveal" data-pdf-url={pdfUrl} data-pdf-title={title}>
     <div class="pdf-viewer-actions">
-      <button type="button" class="btn-line" id="pdfOpenNewTabBtn">
+      <button type="button" class="btn-line" data-pdf="openNewTabBtn">
         Open in New Tab<span class="visually-hidden"> (opens in a new tab)</span>
       </button>
     </div>
 
-    <div class="pdf-viewer-frame" id="pdfViewerFrame" tabindex="-1">
-      <div class="pdf-toolbar" id="pdfToolbar" hidden>
+    <div class="pdf-viewer-frame" data-pdf="frame" tabindex="-1">
+      <div class="pdf-toolbar" data-pdf="toolbar" hidden>
         <div class="pdf-toolbar-group" role="group" aria-label="View mode">
-          <button type="button" id="pdfViewPageBtn" aria-pressed="false">Page</button>
-          <button type="button" id="pdfViewScrollBtn" aria-pressed="true">Scroll</button>
+          <button type="button" data-pdf="viewPageBtn" aria-pressed="false">Page</button>
+          <button type="button" data-pdf="viewScrollBtn" aria-pressed="true">Scroll</button>
         </div>
-        <div class="pdf-toolbar-group" id="pdfPageNavGroup" hidden>
-          <button type="button" id="pdfPrevBtn" aria-label="Previous page">‹</button>
+        <div class="pdf-toolbar-group" data-pdf="pageNavGroup" hidden>
+          <button type="button" data-pdf="prevBtn" aria-label="Previous page">‹</button>
           <span class="pdf-page-indicator">
-            <label for="pdfPageInput" class="visually-hidden">Page number</label>
-            <input type="number" id="pdfPageInput" min="1" value="1" />
-            <span aria-hidden="true">/ <span id="pdfPageCount">–</span></span>
+            <label for={pageInputId} class="visually-hidden">Page number</label>
+            <input type="number" id={pageInputId} data-pdf="pageInput" min="1" value="1" />
+            <span aria-hidden="true">/ <span data-pdf="pageCount">–</span></span>
           </span>
-          <button type="button" id="pdfNextBtn" aria-label="Next page">›</button>
+          <button type="button" data-pdf="nextBtn" aria-label="Next page">›</button>
         </div>
         <div class="pdf-toolbar-group">
-          <button type="button" id="pdfZoomOutBtn" aria-label="Zoom out">−</button>
+          <button type="button" data-pdf="zoomOutBtn" aria-label="Zoom out">−</button>
           <span class="pdf-zoom-input">
-            <label for="pdfZoomInput" class="visually-hidden">Zoom percentage</label>
-            <input type="number" id="pdfZoomInput" min="25" max="400" step="5" value="100" />
+            <label for={zoomInputId} class="visually-hidden">Zoom percentage</label>
+            <input type="number" id={zoomInputId} data-pdf="zoomInput" min="25" max="400" step="5" value="100" />
             <span aria-hidden="true">%</span>
           </span>
-          <button type="button" id="pdfZoomInBtn" aria-label="Zoom in">+</button>
-          <button type="button" id="pdfFitWidthBtn">Fit Width</button>
-          <button type="button" id="pdfFitPageBtn" hidden>Fit Page</button>
+          <button type="button" data-pdf="zoomInBtn" aria-label="Zoom in">+</button>
+          <button type="button" data-pdf="fitWidthBtn">Fit Width</button>
+          <button type="button" data-pdf="fitPageBtn" hidden>Fit Page</button>
         </div>
         <div class="pdf-toolbar-group">
-          <button type="button" id="pdfFullscreenBtn" aria-label="Enter fullscreen">Fullscreen</button>
+          <button type="button" data-pdf="fullscreenBtn" aria-label="Enter fullscreen">Fullscreen</button>
         </div>
       </div>
 
-      <div class="pdf-canvas-wrap" id="pdfCanvasWrap" hidden>
-        <p class="pdf-status" id="pdfStatus" role="status" aria-live="polite"></p>
-        <canvas id="pdfCanvas" role="img" aria-label={`${title} — PDF preview`} hidden></canvas>
-        <div class="pdf-scroll-pages" id="pdfScrollPages"></div>
+      <div class="pdf-canvas-wrap" data-pdf="canvasWrap" hidden>
+        <p class="pdf-status" data-pdf="status" role="status" aria-live="polite"></p>
+        <canvas data-pdf="canvas" role="img" aria-label={`${title} — PDF preview`} hidden></canvas>
+        <div class="pdf-scroll-pages" data-pdf="scrollPages"></div>
       </div>
 
-      <button type="button" class="pdf-exit-fullscreen-btn" id="pdfExitFullscreenBtn" hidden>
+      <button type="button" class="pdf-exit-fullscreen-btn" data-pdf="exitFullscreenBtn" hidden>
         <span aria-hidden="true">✕</span> Exit Fullscreen
       </button>
     </div>
 
-    <p class="pdf-mobile-fallback" id="pdfMobileFallback" hidden>
-      This PDF couldn't be displayed inline. <button type="button" class="pdf-mobile-fallback-btn" id="pdfMobileOpenBtn">Open it in a new tab</button> instead.
+    <p class="pdf-mobile-fallback" data-pdf="mobileFallback" hidden>
+      This PDF couldn't be displayed inline. <button type="button" class="pdf-mobile-fallback-btn" data-pdf="mobileOpenBtn">Open it in a new tab</button> instead.
     </p>
   </div>
 ) : (
