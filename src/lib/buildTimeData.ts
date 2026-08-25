@@ -140,7 +140,7 @@ export async function fetchAllAtlasCategories(): Promise<AtlasCategory[]> {
 export interface AtlasMapPanelData {
   heading: string;
   description: string;
-  brands: { name: string; cat: string; website: string | null }[];
+  brands: { name: string; cat: string; website: string | null; founder: string | null; foundedYear: number | null }[];
 }
 
 /**
@@ -170,6 +170,8 @@ export async function buildAtlasMapData(): Promise<Record<string, AtlasMapPanelD
         name: b.name,
         cat: (b.category_id && categoryNameById.get(b.category_id)) || 'Uncategorized',
         website: b.website_url,
+        founder: b.founder,
+        foundedYear: b.founded_year,
       }));
 
     result[country.map_id] = {

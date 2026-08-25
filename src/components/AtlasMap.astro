@@ -4,7 +4,14 @@ import { mapCentroids } from '../data/mapCentroids';
 
 interface Props {
   /** Keyed by map_id — the exact SVG data-name a country is linked to in the Admin → Atlas CMS. */
-  countries: Record<string, { heading: string; description: string; brands: { name: string; cat: string; website: string | null }[] }>;
+  countries: Record<
+    string,
+    {
+      heading: string;
+      description: string;
+      brands: { name: string; cat: string; website: string | null; founder: string | null; foundedYear: number | null }[];
+    }
+  >;
 }
 
 const { countries } = Astro.props;
@@ -108,7 +115,15 @@ const countryNames = Object.keys(countries);
                 const nameHtml = h.website
                   ? `<a class="maison" href="${escapeAttr(h.website)}" target="_blank" rel="noopener noreferrer">${h.name}</a>`
                   : `<div class="maison">${h.name}</div>`;
-                return `<div class="atlas-house">${nameHtml}<div class="cat">${h.cat}</div></div>`;
+                const founded = h.foundedYear && h.founder
+                  ? `Founded ${h.foundedYear} by ${h.founder}`
+                  : h.foundedYear
+                    ? `Founded ${h.foundedYear}`
+                    : h.founder
+                      ? `Founded by ${h.founder}`
+                      : '';
+                const foundedHtml = founded ? `<div class="founded">${founded}</div>` : '';
+                return `<div class="atlas-house">${nameHtml}<div class="cat">${h.cat}</div>${foundedHtml}</div>`;
               })
               .join('')
           : '';

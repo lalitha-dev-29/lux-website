@@ -6,12 +6,8 @@ export interface AtlasBrandFormValues {
   name: string;
   founded_year: string;
   founder: string;
-  description: string;
   positioning: string;
   website_url: string;
-  instagram_url: string;
-  logo_url: string;
-  image_url: string;
   research_notes: string;
   display_order: string;
 }
@@ -24,12 +20,8 @@ export function readAtlasBrandForm(): AtlasBrandFormValues {
     name: val('fName').trim(),
     founded_year: val('fFoundedYear').trim(),
     founder: val('fFounder').trim(),
-    description: val('fDescription').trim(),
     positioning: val('fPositioning').trim(),
     website_url: val('fWebsiteUrl').trim(),
-    instagram_url: val('fInstagramUrl').trim(),
-    logo_url: val('fLogo').trim(),
-    image_url: val('fImage').trim(),
     research_notes: val('fResearchNotes').trim(),
     display_order: val('fDisplayOrder').trim(),
   };
@@ -41,12 +33,8 @@ export function writeAtlasBrandForm(values: {
   name: string;
   founded_year: number | null;
   founder: string | null;
-  description: string | null;
   positioning: string | null;
   website_url: string | null;
-  instagram_url: string | null;
-  logo_url: string | null;
-  image_url: string | null;
   research_notes: string | null;
   display_order: number;
 }): void {
@@ -59,12 +47,8 @@ export function writeAtlasBrandForm(values: {
   set('fName', values.name);
   set('fFoundedYear', values.founded_year !== null ? String(values.founded_year) : '');
   set('fFounder', values.founder ?? '');
-  set('fDescription', values.description ?? '');
   set('fPositioning', values.positioning ?? '');
   set('fWebsiteUrl', values.website_url ?? '');
-  set('fInstagramUrl', values.instagram_url ?? '');
-  set('fLogo', values.logo_url ?? '');
-  set('fImage', values.image_url ?? '');
   set('fResearchNotes', values.research_notes ?? '');
   set('fDisplayOrder', String(values.display_order));
 }
@@ -83,12 +67,8 @@ export function toAtlasBrandInput(values: AtlasBrandFormValues): AtlasBrandInput
     name: values.name,
     founded_year: values.founded_year ? Number(values.founded_year) : null,
     founder: values.founder || null,
-    description: values.description || null,
     positioning: values.positioning || null,
     website_url: values.website_url || null,
-    instagram_url: values.instagram_url || null,
-    logo_url: values.logo_url || null,
-    image_url: values.image_url || null,
     research_notes: values.research_notes || null,
     display_order: Number(values.display_order) || 0,
   };

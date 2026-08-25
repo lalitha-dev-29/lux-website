@@ -761,12 +761,8 @@ export interface AtlasBrandInput {
   name: string;
   founded_year: number | null;
   founder: string | null;
-  description: string | null;
   positioning: string | null;
   website_url: string | null;
-  instagram_url: string | null;
-  logo_url: string | null;
-  image_url: string | null;
   research_notes: string | null;
   display_order: number;
 }

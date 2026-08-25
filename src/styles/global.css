@@ -1032,6 +1032,9 @@ body.atlas-fullscreen-open{overflow:hidden;}
   font-size:var(--fs-2xs); letter-spacing:.13em; text-transform:uppercase;
   color:var(--stone); margin-top:2px;
 }
+.atlas-house .founded{
+  font-size:var(--fs-2xs); color:var(--stone); margin-top:4px;
+}
 .atlas-empty{color:var(--stone); font-size:var(--fs-base); line-height:1.75;}
 .atlas-scrim{
   position:fixed; inset:0; background:rgba(25,23,15,.45);

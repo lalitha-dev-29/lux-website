@@ -30,7 +30,6 @@ import { withBase } from '../../../../lib/url';
     import { createAtlasBrand, listAllAtlasCountries, listAllAtlasCategories } from '../../../../lib/supabaseAdmin';
     import { readAtlasBrandForm, validateAtlasBrandForm, toAtlasBrandInput } from '../../../../lib/atlasBrandForm';
     import { withBase } from '../../../../lib/url';
-    import { wireSingleImageField } from '../../../../lib/imageUpload';
     import { showToast } from '../../../../lib/toast';
     import { escapeHtml } from '../../../../lib/html';
 
@@ -39,23 +38,6 @@ import { withBase } from '../../../../lib/url';
     const draftBtn = document.getElementById('saveDraftBtn') as HTMLButtonElement;
     const publishBtn = document.getElementById('publishBtn') as HTMLButtonElement;
     const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
-
-    const draftId = crypto.randomUUID();
-    const prefix = `atlas/brand/${draftId}`;
-    wireSingleImageField(prefix, {
-      fileInput: byId('fLogoFile'),
-      hiddenInput: byId('fLogo'),
-      preview: byId('fLogoPreview'),
-      removeBtn: byId('fLogoRemove'),
-      status: byId('fLogoStatus'),
-    });
-    wireSingleImageField(prefix, {
-      fileInput: byId('fImageFile'),
-      hiddenInput: byId('fImage'),
-      preview: byId('fImagePreview'),
-      removeBtn: byId('fImageRemove'),
-      status: byId('fImageStatus'),
-    });
 
     let dirty = false;
     form.addEventListener('input', () => {
