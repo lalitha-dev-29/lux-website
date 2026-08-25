@@ -234,6 +234,32 @@ a.cert-thumb-pdf{
   font-size:var(--fs-2xs); letter-spacing:.08em; color:var(--gold-ink); font-weight:600;
 }
 
+/* --- in-page tabs (Atlas country editor: Details / Brands / Preview) --- */
+.admin-tabs{
+  display:flex; flex-wrap:wrap; gap:var(--sp-6);
+  margin-bottom:var(--sp-6); padding-bottom:var(--sp-4); border-bottom:1px solid var(--line);
+}
+.admin-tab{
+  font-size:var(--fs-xs); letter-spacing:var(--tracking-label); text-transform:uppercase;
+  color:var(--stone-mute); padding-bottom:var(--sp-2); border-bottom:2px solid transparent;
+}
+.admin-tab:hover{color:var(--charcoal);}
+.admin-tab[aria-selected="true"]{color:var(--gold-ink); border-bottom-color:var(--gold-ink);}
+
+/* --- Atlas country editor: Preview tab box, reusing the public panel's own
+   .country-tag/.atlas-house/.maison/.cat/.atlas-empty content classes (see
+   global.css's ATLAS section) so this can never visually drift from the
+   real public slide-over panel — just placed in a static box instead of a
+   fixed, sliding one. --- */
+.admin-preview-box{
+  max-width:440px; border:1px solid var(--line); border-radius:var(--r-md);
+  background:var(--ivory); padding:var(--sp-6) clamp(20px,5vw,34px) var(--sp-7);
+}
+.admin-preview-hint{margin-bottom:var(--sp-4);}
+
+/* --- Atlas country editor: Brands tab embedded table --- */
+.admin-subsection{margin-top:var(--sp-7);}
+
 /* --- PDF attachment section --- */
 .admin-pdf-section{
   border:1px solid var(--line); border-radius:var(--r-md); padding:var(--sp-5); margin-bottom:var(--sp-7);

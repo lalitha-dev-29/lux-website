@@ -1,0 +1,83 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../components/admin/AtlasSubNav.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Atlas">
+  <h1>Atlas</h1>
+  <p class="admin-lede">Manage the countries, brands and research that appear in The Luxury Atlas.</p>
+  <AtlasSubNav />
+
+  <div class="admin-stats" id="statsGrid">
+    <div class="admin-stat"><span class="num" id="statCountriesTotal">—</span><span class="label">Total Countries</span></div>
+    <div class="admin-stat"><span class="num" id="statCountriesPublished">—</span><span class="label">Published</span></div>
+    <div class="admin-stat"><span class="num" id="statCountriesDraft">—</span><span class="label">Draft</span></div>
+    <div class="admin-stat"><span class="num" id="statBrandsTotal">—</span><span class="label">Total Brands</span></div>
+    <div class="admin-stat"><span class="num" id="statResearchEntries">—</span><span class="label">Research Entries</span></div>
+  </div>
+
+  <div class="admin-section-head">
+    <h2>Recently Updated</h2>
+    <div class="admin-head-actions">
+      <a href={withBase('/admin/atlas/countries/')} class="btn-line">View Countries<span class="arrow" aria-hidden="true">→</span></a>
+      <a href={withBase('/admin/atlas/brands/')} class="btn-line">View Brands<span class="arrow" aria-hidden="true">→</span></a>
+    </div>
+  </div>
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Name</th><th>Type</th><th>Status</th><th>Updated</th></tr>
+      </thead>
+      <tbody id="recentRows">
+        <tr><td colspan="4" class="admin-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    import { listAllAtlasCountries, listAllAtlasBrands } from '../../../lib/supabaseAdmin';
+    import { withBase } from '../../../lib/url';
+    import { escapeHtml } from '../../../lib/html';
+
+    document.addEventListener('admin:ready', async () => {
+      const rows = document.getElementById('recentRows')!;
+      try {
+        const [countries, brands] = await Promise.all([listAllAtlasCountries(), listAllAtlasBrands()]);
+
+        document.getElementById('statCountriesTotal')!.textContent = String(countries.length);
+        document.getElementById('statCountriesPublished')!.textContent = String(countries.filter((c) => c.status === 'published').length);
+        document.getElementById('statCountriesDraft')!.textContent = String(countries.filter((c) => c.status === 'draft').length);
+        document.getElementById('statBrandsTotal')!.textContent = String(brands.length);
+        document.getElementById('statResearchEntries')!.textContent = String(
+          countries.filter((c) => c.research_content && c.research_content.trim().length > 0).length
+        );
+
+        if (countries.length === 0) {
+          rows.innerHTML = `<tr><td colspan="4" class="admin-empty">Your Atlas is empty. Start by adding the first country and its research. <br /><a class="btn-line" style="margin-top:var(--sp-3); display:inline-block;" href="${withBase('/admin/atlas/countries/new/')}">+ Add Country</a></td></tr>`;
+          return;
+        }
+
+        const combined = [
+          ...countries.map((c) => ({ id: c.id, title: c.name, status: c.status, updated_at: c.updated_at, type: 'Country', editHref: `/admin/atlas/countries/edit/?id=${c.id}` })),
+          ...brands.map((b) => ({ id: b.id, title: b.name, status: b.status, updated_at: b.updated_at, type: 'Brand', editHref: `/admin/atlas/brands/edit/?id=${b.id}` })),
+        ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+
+        const recent = combined.slice(0, 8);
+        rows.innerHTML = recent
+          .map(
+            (item) => `
+          <tr>
+            <td class="title-cell"><a href="${withBase(item.editHref)}">${escapeHtml(item.title)}</a></td>
+            <td>${item.type}</td>
+            <td><span class="badge badge-${item.status}">${item.status}</span></td>
+            <td>${new Date(item.updated_at).toLocaleDateString()}</td>
+          </tr>`
+          )
+          .join('');
+      } catch (err) {
+        rows.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+      }
+    });
+  </script>
+</AdminLayout>

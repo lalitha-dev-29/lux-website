@@ -1,0 +1,136 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Atlas — Categories">
+  <h1>Atlas</h1>
+  <p class="admin-lede">Manage the countries, brands and research that appear in The Luxury Atlas.</p>
+  <AtlasSubNav />
+
+  <div class="admin-section-head">
+    <div>
+      <h2>Categories</h2>
+      <p class="admin-lede" style="margin-bottom:0;">Luxury sectors used to group brands (Leather Goods, Jewellery, etc.).</p>
+    </div>
+    <a href={withBase('/admin/atlas/categories/new/')} class="btn-solid">+ Add Category</a>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Order</th><th>Name</th><th>Brands</th><th></th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="4" class="admin-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    import { listAllAtlasCategories, listAllAtlasBrands, deleteAtlasCategory, reorderAtlasCategories } from '../../../../lib/supabaseAdmin';
+    import { withBase } from '../../../../lib/url';
+    import { escapeHtml } from '../../../../lib/html';
+    import { showToast } from '../../../../lib/toast';
+    import type { AtlasCategory } from '../../../../lib/atlasTypes';
+
+    let all: AtlasCategory[] = [];
+    let brandCounts = new Map<string, number>();
+
+    const rows = document.getElementById('rows')!;
+
+    function render() {
+      if (all.length === 0) {
+        rows.innerHTML =
+          '<tr><td colspan="4" class="admin-empty">Your Atlas has no categories yet. Start by adding the first one. <br /><a class="btn-line" style="margin-top:var(--sp-3); display:inline-block;" href="' +
+          withBase('/admin/atlas/categories/new/') +
+          '">+ Add Category</a></td></tr>';
+        return;
+      }
+
+      rows.innerHTML = all
+        .map(
+          (c, i) => `
+        <tr data-id="${c.id}">
+          <td class="reorder-cell">
+            <button type="button" class="move-up-btn" data-id="${c.id}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+            <button type="button" class="move-down-btn" data-id="${c.id}" aria-label="Move down" ${i === all.length - 1 ? 'disabled' : ''}>↓</button>
+          </td>
+          <td class="title-cell"><a href="${withBase(`/admin/atlas/categories/edit/?id=${c.id}`)}">${escapeHtml(c.name)}</a></td>
+          <td>${brandCounts.get(c.id) ?? 0}</td>
+          <td class="actions-cell">
+            <a href="${withBase(`/admin/atlas/categories/edit/?id=${c.id}`)}">Edit</a>
+            <button type="button" class="danger delete-btn" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Delete</button>
+          </td>
+        </tr>`
+        )
+        .join('');
+    }
+
+    async function load() {
+      try {
+        const [categories, brands] = await Promise.all([listAllAtlasCategories(), listAllAtlasBrands()]);
+        all = categories;
+        brandCounts = new Map();
+        for (const b of brands) {
+          if (!b.category_id) continue;
+          brandCounts.set(b.category_id, (brandCounts.get(b.category_id) ?? 0) + 1);
+        }
+        render();
+      } catch (err) {
+        rows.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+      }
+    }
+
+    async function persistReorder() {
+      try {
+        await reorderAtlasCategories(all.map((c) => c.id));
+        showToast('Order updated.');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to reorder.', 'error');
+      }
+    }
+
+    rows.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      const upBtn = target.closest('.move-up-btn') as HTMLButtonElement | null;
+      const downBtn = target.closest('.move-down-btn') as HTMLButtonElement | null;
+      if (upBtn || downBtn) {
+        const id = (upBtn || downBtn)!.dataset.id!;
+        const idx = all.findIndex((c) => c.id === id);
+        const swapWith = upBtn ? idx - 1 : idx + 1;
+        if (idx === -1 || swapWith < 0 || swapWith >= all.length) return;
+        [all[idx], all[swapWith]] = [all[swapWith], all[idx]];
+        render();
+        await persistReorder();
+        return;
+      }
+
+      const deleteBtn = target.closest('.delete-btn') as HTMLButtonElement | null;
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.id!;
+        const name = deleteBtn.dataset.name!;
+        const count = brandCounts.get(id) ?? 0;
+        const warning =
+          count > 0
+            ? `${count} brand${count === 1 ? '' : 's'} currently use "${name}" — they'll show as uncategorized. `
+            : '';
+        if (!confirm(`${warning}Delete "${name}"? This cannot be undone.`)) return;
+        deleteBtn.disabled = true;
+        try {
+          await deleteAtlasCategory(id);
+          all = all.filter((c) => c.id !== id);
+          render();
+          showToast('Category deleted.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to delete.', 'error');
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

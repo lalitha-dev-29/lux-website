@@ -1,13 +1,37 @@
 ---
 import countryPaths from '../data/world-map-paths.svg?raw';
-import { centroids, countries } from '../data/atlas';
+import { mapCentroids } from '../data/mapCentroids';
 
-const atlasData = { centroids, countries };
+interface Props {
+  /** Keyed by map_id — the exact SVG data-name a country is linked to in the Admin → Atlas CMS. */
+  countries: Record<string, { heading: string; description: string; brands: { name: string; cat: string }[] }>;
+}
+
+const { countries } = Astro.props;
+
+// Marker (x,y) positions are a fixed property of the map artwork, not admin
+// data — looked up here rather than threaded through as a prop. See
+// scripts/generate-atlas-centroids.mjs.
+const atlasData = { centroids: mapCentroids, countries };
 const countryNames = Object.keys(countries);
 ---
 
 <div class="atlas-map-wrap reveal" id="atlasMapWrap">
-  <svg id="worldMapSvg" viewBox="0 0 960 500" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="World map. Countries with research on file are highlighted in gold; use the country buttons below the map to open each one.">
+  <div class="atlas-map-controls">
+    <button type="button" class="atlas-map-control-btn atlas-fullscreen-btn" id="atlasFullscreenBtn" aria-pressed="false" aria-label="Enter fullscreen">
+      <svg class="icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"></path><path d="M21 8V5a2 2 0 0 0-2-2h-3"></path><path d="M3 16v3a2 2 0 0 0 2 2h3"></path><path d="M16 21h3a2 2 0 0 0 2-2v-3"></path></svg>
+      <svg class="icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M8 3v3a2 2 0 0 1-2 2H3"></path><path d="M21 8h-3a2 2 0 0 1-2-2V3"></path><path d="M3 16h3a2 2 0 0 1 2 2v3"></path><path d="M16 21v-3a2 2 0 0 1 2-2h3"></path></svg>
+    </button>
+    <div class="atlas-zoom-controls" role="group" aria-label="Zoom map">
+      <button type="button" class="atlas-map-control-btn" id="atlasZoomInBtn" aria-label="Zoom in">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+      <button type="button" class="atlas-map-control-btn" id="atlasZoomOutBtn" aria-label="Zoom out" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      </button>
+    </div>
+  </div>
+  <svg id="worldMapSvg" viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="World map. Countries with research on file are highlighted in gold; use the country buttons below the map to open each one, or the zoom buttons to see closely-clustered countries.">
     <rect class="ocean" x="0" y="0" width="960" height="500"></rect>
     <g class="countries" id="countriesGroup" set:html={countryPaths}></g>
     <g class="markers" id="atlasMarkers"></g>
@@ -57,10 +81,15 @@ const countryNames = Object.keys(countries);
   const atlasPanelList = document.getElementById('atlasPanelList');
   const closeBtn = document.getElementById('atlasPanelClose');
   const chips = Array.from(document.querySelectorAll('.atlas-chip'));
+  const fullscreenBtn = document.getElementById('atlasFullscreenBtn');
+  const zoomInBtn = document.getElementById('atlasZoomInBtn');
+  const zoomOutBtn = document.getElementById('atlasZoomOutBtn');
+  const svg = document.getElementById('worldMapSvg');
 
   let activeHotspot = null;
   let lastFocused = null;
   let openedAt = 0;
+  let pseudoFullscreen = false;
 
   function renderPanel(country) {
     const data = atlasData.countries[country];
@@ -77,7 +106,7 @@ const countryNames = Object.keys(countries);
               )
               .join('')
           : '';
-      atlasPanelList.innerHTML = `<p class="atlas-empty">${data.description}</p>${brands}`;
+      atlasPanelList.innerHTML = `<div class="atlas-empty prose">${data.description}</div>${brands}`;
     } else {
       atlasPanelTitle.textContent = country;
       atlasPanelList.innerHTML = `<p class="atlas-empty">Research for ${country} is coming soon. Check back as the atlas grows.</p>`;
@@ -201,4 +230,184 @@ const countryNames = Object.keys(countries);
       }
     }
   });
+
+  /* --- fullscreen: native Fullscreen API, falling back to a CSS-only
+     expanded view when it's unavailable or a Permissions Policy silently
+     drops the request (embedded/managed browser contexts). Mirrors the
+     PDF viewer's fullscreen approach (src/scripts/pdfViewer.ts). Clicking a
+     country still opens the same slide-over panel while fullscreen — it's
+     a separate fixed element with a higher z-index (see global.css). */
+  const NATIVE_FULLSCREEN_TIMEOUT_MS = 400;
+
+  function setFullscreenUi(isFullscreen) {
+    fullscreenBtn.setAttribute('aria-pressed', String(isFullscreen));
+    fullscreenBtn.setAttribute('aria-label', isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+  }
+
+  function enterPseudoFullscreen() {
+    pseudoFullscreen = true;
+    wrap.classList.add('atlas-fullscreen');
+    document.body.classList.add('atlas-fullscreen-open');
+    setFullscreenUi(true);
+    resetView();
+  }
+
+  function exitPseudoFullscreen() {
+    pseudoFullscreen = false;
+    wrap.classList.remove('atlas-fullscreen');
+    document.body.classList.remove('atlas-fullscreen-open');
+    setFullscreenUi(false);
+    resetView();
+  }
+
+  fullscreenBtn.addEventListener('click', () => {
+    if (pseudoFullscreen) {
+      exitPseudoFullscreen();
+      return;
+    }
+    if (document.fullscreenElement === wrap) {
+      document.exitFullscreen();
+      return;
+    }
+    if (!document.fullscreenEnabled || !wrap.requestFullscreen) {
+      enterPseudoFullscreen();
+      return;
+    }
+
+    let settled = false;
+    const fallbackTimer = window.setTimeout(() => {
+      if (!settled && !document.fullscreenElement) enterPseudoFullscreen();
+    }, NATIVE_FULLSCREEN_TIMEOUT_MS);
+    wrap.requestFullscreen().then(
+      () => {
+        settled = true;
+        window.clearTimeout(fallbackTimer);
+      },
+      () => {
+        settled = true;
+        window.clearTimeout(fallbackTimer);
+        enterPseudoFullscreen();
+      }
+    );
+  });
+
+  document.addEventListener('fullscreenchange', () => {
+    const isFullscreen = document.fullscreenElement === wrap;
+    if (isFullscreen && pseudoFullscreen) {
+      pseudoFullscreen = false;
+      document.body.classList.remove('atlas-fullscreen-open');
+    }
+    wrap.classList.toggle('atlas-fullscreen', isFullscreen);
+    setFullscreenUi(isFullscreen);
+    resetView();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pseudoFullscreen) exitPseudoFullscreen();
+  });
+
+  /* --- zoom + pan: adjusts the SVG's own viewBox rather than a CSS
+     transform, so borders/markers stay crisp vector geometry at any zoom
+     level (no raster scaling involved). Panning only engages once zoomed
+     in past the default view; a drag that moves the pointer more than a
+     few pixels suppresses the click that would otherwise open a country's
+     panel, so panning and clicking a country never fight each other.
+
+     The base extent is always the map's true 960x500 content — filling the
+     screen in fullscreen is handled entirely by CSS/SVG (the svg element is
+     sized to 100% of the fixed, viewport-covering wrap, with
+     preserveAspectRatio="xMidYMid meet" so the whole map is always shown,
+     never cropped; any leftover letterbox margin is invisible because the
+     wrap's background and the ocean rect share the same theme colour). No
+     JS aspect-ratio math is needed for that part, which keeps this robust
+     across browsers/timings — it was previously computed dynamically here
+     and that turned out to be fragile. */
+  const CONTENT_W = 960;
+  const CONTENT_H = 500;
+  const CONTENT_CX = CONTENT_W / 2;
+  const CONTENT_CY = CONTENT_H / 2;
+  const MIN_SCALE = 1;
+  const MAX_SCALE = 6;
+  const ZOOM_STEP = 1.5;
+  const DRAG_THRESHOLD_PX = 4;
+
+  let scale = MIN_SCALE;
+  let centerX = CONTENT_CX;
+  let centerY = CONTENT_CY;
+  let isPanning = false;
+  let panStart = null;
+  let dragMoved = false;
+
+  function applyViewBox() {
+    const halfW = CONTENT_W / 2 / scale;
+    const halfH = CONTENT_H / 2 / scale;
+    centerX = Math.min(Math.max(centerX, halfW), CONTENT_W - halfW);
+    centerY = Math.min(Math.max(centerY, halfH), CONTENT_H - halfH);
+    svg.setAttribute('viewBox', `${centerX - halfW} ${centerY - halfH} ${halfW * 2} ${halfH * 2}`);
+    zoomInBtn.disabled = scale >= MAX_SCALE;
+    zoomOutBtn.disabled = scale <= MIN_SCALE;
+    wrap.classList.toggle('pannable', scale > MIN_SCALE);
+  }
+
+  function resetView() {
+    scale = MIN_SCALE;
+    centerX = CONTENT_CX;
+    centerY = CONTENT_CY;
+    applyViewBox();
+  }
+
+  function zoomBy(factor) {
+    scale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
+    applyViewBox();
+  }
+
+  zoomInBtn.addEventListener('click', () => zoomBy(ZOOM_STEP));
+  zoomOutBtn.addEventListener('click', () => zoomBy(1 / ZOOM_STEP));
+
+  wrap.addEventListener('pointerdown', (e) => {
+    if (scale <= MIN_SCALE) return;
+    if (e.target.closest('.atlas-map-controls')) return;
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isPanning = true;
+    dragMoved = false;
+    panStart = { x: e.clientX, y: e.clientY, centerX, centerY };
+    wrap.setPointerCapture(e.pointerId);
+    wrap.classList.add('panning');
+  });
+
+  wrap.addEventListener('pointermove', (e) => {
+    if (!isPanning || !panStart) return;
+    const dx = e.clientX - panStart.x;
+    const dy = e.clientY - panStart.y;
+    if (Math.abs(dx) > DRAG_THRESHOLD_PX || Math.abs(dy) > DRAG_THRESHOLD_PX) dragMoved = true;
+    const rect = wrap.getBoundingClientRect();
+    const vb = svg.viewBox.baseVal;
+    centerX = panStart.centerX - dx * (vb.width / rect.width);
+    centerY = panStart.centerY - dy * (vb.height / rect.height);
+    applyViewBox();
+  });
+
+  function endPan(e) {
+    if (!isPanning) return;
+    isPanning = false;
+    panStart = null;
+    wrap.classList.remove('panning');
+    if (e && wrap.hasPointerCapture(e.pointerId)) wrap.releasePointerCapture(e.pointerId);
+  }
+  wrap.addEventListener('pointerup', endPan);
+  wrap.addEventListener('pointercancel', endPan);
+
+  /* Capture phase runs before the .country path's own click listener, so a
+     drag-that-just-ended can stop the click before it ever reaches the
+     path element and opens the panel. */
+  wrap.addEventListener(
+    'click',
+    (e) => {
+      if (!dragMoved) return;
+      dragMoved = false;
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    true
+  );
 </script>

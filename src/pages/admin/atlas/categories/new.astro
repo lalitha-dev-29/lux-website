@@ -1,0 +1,79 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import CategoryFormFields from '../../../../components/admin/CategoryFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Atlas Category">
+  <h1>Atlas</h1>
+  <AtlasSubNav />
+  <h2>New Category</h2>
+  <p class="admin-lede">Add a new luxury sector used to group brands.</p>
+
+  <form class="admin-form" id="categoryForm" novalidate>
+    <CategoryFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/atlas/categories/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Create Category</button>
+    </div>
+  </form>
+
+  <script>
+    import { createAtlasCategory, listAllAtlasCategories } from '../../../../lib/supabaseAdmin';
+    import { readAtlasCategoryForm, validateAtlasCategoryForm, toAtlasCategoryInput } from '../../../../lib/atlasCategoryForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+
+    const form = document.getElementById('categoryForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    document.addEventListener('admin:ready', async () => {
+      try {
+        const existing = await listAllAtlasCategories();
+        (document.getElementById('fDisplayOrder') as HTMLInputElement).value = String(existing.length + 1);
+      } catch {
+        // Non-fatal — the default of 0 still works, the admin can adjust it.
+      }
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      const values = readAtlasCategoryForm();
+      const validationError = validateAtlasCategoryForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await createAtlasCategory(toAtlasCategoryInput(values));
+        dirty = false;
+        showToast('Category added.');
+        window.location.href = withBase('/admin/atlas/categories/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Create Category';
+      }
+    });
+  </script>
+</AdminLayout>

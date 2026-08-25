@@ -11,6 +11,7 @@ import type {
   LearningCertification,
   CertFileType,
 } from './learningTypes';
+import type { AtlasCategory, AtlasCountry, AtlasCountryStatus, AtlasBrand, AtlasBrandStatus } from './atlasTypes';
 
 /**
  * Admin-only Supabase client. This module (and the @supabase/supabase-js
@@ -601,4 +602,234 @@ export async function deleteCertificateFileObject(fileUrl: string): Promise<void
   if (idx === -1) return;
   const path = fileUrl.slice(idx + marker.length);
   await getSupabaseClient().storage.from('learning-certificates').remove([path]);
+}
+
+// ---------------------------------------------------------------------------
+// Atlas — Categories, Countries, Brands. Country images (featured_image_url)
+// and Brand images (logo_url/image_url) reuse the same content-images
+// Storage bucket/uploadContentImage() helper as Journal/Case Study, under an
+// `atlas/country/<id>` or `atlas/brand/<id>` path prefix.
+// ---------------------------------------------------------------------------
+
+export interface AtlasCategoryInput {
+  name: string;
+  display_order: number;
+}
+
+export async function listAllAtlasCategories(): Promise<AtlasCategory[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_categories')
+    .select('*')
+    .order('display_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as AtlasCategory[];
+}
+
+export async function getAtlasCategoryById(id: string): Promise<AtlasCategory | null> {
+  const { data, error } = await getSupabaseClient().from('atlas_categories').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as AtlasCategory | null;
+}
+
+export async function createAtlasCategory(input: AtlasCategoryInput): Promise<AtlasCategory> {
+  const { data, error } = await getSupabaseClient().from('atlas_categories').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return data as AtlasCategory;
+}
+
+export async function updateAtlasCategory(id: string, input: AtlasCategoryInput): Promise<AtlasCategory> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_categories')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AtlasCategory;
+}
+
+export async function deleteAtlasCategory(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('atlas_categories').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderAtlasCategories(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) => getSupabaseClient().from('atlas_categories').update({ display_order: i + 1 }).eq('id', id))
+  );
+}
+
+export interface AtlasCountryInput {
+  name: string;
+  map_id: string | null;
+  country_code: string | null;
+  short_description: string | null;
+  heading: string;
+  research_content: string | null;
+  featured_image_url: string | null;
+  display_order: number;
+  is_featured: boolean;
+}
+
+export async function listAllAtlasCountries(): Promise<AtlasCountry[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_countries')
+    .select('*')
+    .order('display_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as AtlasCountry[];
+}
+
+export async function getAtlasCountryById(id: string): Promise<AtlasCountry | null> {
+  const { data, error } = await getSupabaseClient().from('atlas_countries').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as AtlasCountry | null;
+}
+
+export async function createAtlasCountry(input: AtlasCountryInput, status: AtlasCountryStatus): Promise<AtlasCountry> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_countries')
+    .insert({ ...input, status, published_at: status === 'published' ? new Date().toISOString() : null })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AtlasCountry;
+}
+
+export async function updateAtlasCountry(id: string, input: AtlasCountryInput): Promise<AtlasCountry> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_countries')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AtlasCountry;
+}
+
+export async function setAtlasCountryStatus(id: string, status: AtlasCountryStatus): Promise<AtlasCountry> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_countries')
+    .update({
+      status,
+      published_at: status === 'published' ? new Date().toISOString() : undefined,
+    })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AtlasCountry;
+}
+
+export async function deleteAtlasCountry(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('atlas_countries').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderAtlasCountries(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) => getSupabaseClient().from('atlas_countries').update({ display_order: i + 1 }).eq('id', id))
+  );
+}
+
+/** Clones a country's scalar fields as a new Draft (name suffixed " (Copy)", map_id cleared since it must stay
+ *  unique per country). Does NOT duplicate the source country's brands, to avoid silently doubling brand data. */
+export async function duplicateAtlasCountry(id: string): Promise<AtlasCountry> {
+  const source = await getAtlasCountryById(id);
+  if (!source) throw new Error('Country not found.');
+  const all = await listAllAtlasCountries();
+  const maxOrder = all.reduce((max, c) => Math.max(max, c.display_order), 0);
+  return createAtlasCountry(
+    {
+      name: `${source.name} (Copy)`,
+      map_id: null,
+      country_code: source.country_code,
+      short_description: source.short_description,
+      heading: source.heading,
+      research_content: source.research_content,
+      featured_image_url: source.featured_image_url,
+      display_order: maxOrder + 1,
+      is_featured: false,
+    },
+    'draft'
+  );
+}
+
+export interface AtlasBrandInput {
+  country_id: string;
+  category_id: string | null;
+  name: string;
+  founded_year: number | null;
+  founder: string | null;
+  description: string | null;
+  positioning: string | null;
+  website_url: string | null;
+  instagram_url: string | null;
+  logo_url: string | null;
+  image_url: string | null;
+  research_notes: string | null;
+  display_order: number;
+}
+
+export async function listAllAtlasBrands(): Promise<AtlasBrand[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_brands')
+    .select('*')
+    .order('display_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as AtlasBrand[];
+}
+
+export async function listAtlasBrandsByCountry(countryId: string): Promise<AtlasBrand[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_brands')
+    .select('*')
+    .eq('country_id', countryId)
+    .order('display_order', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as AtlasBrand[];
+}
+
+export async function getAtlasBrandById(id: string): Promise<AtlasBrand | null> {
+  const { data, error } = await getSupabaseClient().from('atlas_brands').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as AtlasBrand | null;
+}
+
+export async function createAtlasBrand(input: AtlasBrandInput, status: AtlasBrandStatus = 'draft'): Promise<AtlasBrand> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_brands')
+    .insert({ ...input, status })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AtlasBrand;
+}
+
+export async function updateAtlasBrand(id: string, input: AtlasBrandInput): Promise<AtlasBrand> {
+  const { data, error } = await getSupabaseClient()
+    .from('atlas_brands')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as AtlasBrand;
+}
+
+export async function setAtlasBrandStatus(id: string, status: AtlasBrandStatus): Promise<AtlasBrand> {
+  const { data, error } = await getSupabaseClient().from('atlas_brands').update({ status }).eq('id', id).select().single();
+  if (error) throw new Error(error.message);
+  return data as AtlasBrand;
+}
+
+export async function deleteAtlasBrand(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('atlas_brands').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderAtlasBrandsWithinCountry(countryId: string, orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) => getSupabaseClient().from('atlas_brands').update({ display_order: i + 1 }).eq('id', id).eq('country_id', countryId))
+  );
 }

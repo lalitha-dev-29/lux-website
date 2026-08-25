@@ -1,0 +1,192 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import BrandFormFields from '../../../../components/admin/BrandFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Edit Atlas Brand">
+  <h1>Atlas</h1>
+  <AtlasSubNav />
+  <div class="admin-section-head">
+    <div>
+      <h2>Edit Brand</h2>
+      <p class="admin-lede" id="statusLede">Loading…</p>
+    </div>
+  </div>
+
+  <form class="admin-form" id="brandForm" novalidate hidden>
+    <BrandFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/atlas/brands/')} class="btn-line">Back to Brands</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="toggleStatusBtn"></button>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Brand</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import { getAtlasBrandById, updateAtlasBrand, setAtlasBrandStatus, deleteAtlasBrand, listAllAtlasCountries, listAllAtlasCategories } from '../../../../lib/supabaseAdmin';
+    import { readAtlasBrandForm, writeAtlasBrandForm, validateAtlasBrandForm, toAtlasBrandInput } from '../../../../lib/atlasBrandForm';
+    import { withBase } from '../../../../lib/url';
+    import { wireSingleImageField, showExistingImage } from '../../../../lib/imageUpload';
+    import { showToast } from '../../../../lib/toast';
+    import { escapeHtml } from '../../../../lib/html';
+    import type { AtlasBrand } from '../../../../lib/atlasTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('brandForm') as HTMLFormElement;
+    const statusLede = document.getElementById('statusLede')!;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const toggleBtn = document.getElementById('toggleStatusBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+    const byId = <T extends HTMLElement>(elId: string) => document.getElementById(elId) as T;
+
+    let current: AtlasBrand | null = null;
+    let dirty = false;
+
+    function renderStatus() {
+      if (!current) return;
+      statusLede.textContent = `Status: ${current.status === 'published' ? 'Published' : 'Draft'}`;
+      toggleBtn.textContent = current.status === 'published' ? 'Unpublish' : 'Publish';
+    }
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No brand specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const [entry, countries, categories] = await Promise.all([
+          getAtlasBrandById(id),
+          listAllAtlasCountries(),
+          listAllAtlasCategories(),
+        ]);
+        if (!entry) {
+          loadError.textContent = 'Brand not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+
+        const countrySelect = byId<HTMLSelectElement>('fCountry');
+        countrySelect.innerHTML = countries.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        const categorySelect = byId<HTMLSelectElement>('fCategory');
+        categorySelect.innerHTML =
+          '<option value="">Uncategorized</option>' +
+          categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+
+        writeAtlasBrandForm(entry);
+
+        const prefix = `atlas/brand/${entry.id}`;
+        wireSingleImageField(prefix, {
+          fileInput: byId('fLogoFile'),
+          hiddenInput: byId('fLogo'),
+          preview: byId('fLogoPreview'),
+          removeBtn: byId('fLogoRemove'),
+          status: byId('fLogoStatus'),
+        });
+        wireSingleImageField(prefix, {
+          fileInput: byId('fImageFile'),
+          hiddenInput: byId('fImage'),
+          preview: byId('fImagePreview'),
+          removeBtn: byId('fImageRemove'),
+          status: byId('fImageStatus'),
+        });
+        showExistingImage(entry.logo_url, byId('fLogoPreview'), byId('fLogoRemove'));
+        showExistingImage(entry.image_url, byId('fImagePreview'), byId('fImageRemove'));
+
+        renderStatus();
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load brand.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const values = readAtlasBrandForm();
+      const validationError = validateAtlasBrandForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateAtlasBrand(current.id, toAtlasBrandInput(values));
+        dirty = false;
+        renderStatus();
+        showToast('Changes saved.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to save changes.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      if (!current) return;
+      const next = current.status === 'published' ? 'draft' : 'published';
+      toggleBtn.disabled = true;
+      try {
+        current = await setAtlasBrandStatus(current.id, next);
+        renderStatus();
+        showToast(next === 'published' ? 'Brand published.' : 'Brand unpublished.');
+        errorEl.hidden = true;
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to update status.';
+        errorEl.hidden = false;
+      } finally {
+        toggleBtn.disabled = false;
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.name}"? This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteAtlasBrand(current.id);
+        dirty = false;
+        window.location.href = withBase('/admin/atlas/brands/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

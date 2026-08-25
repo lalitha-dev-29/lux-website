@@ -1,0 +1,96 @@
+---
+// Shared field markup for the "Details" tab of
+// src/pages/admin/atlas/countries/{new,edit}.astro.
+import { MAP_IDS } from '../../lib/mapIds';
+---
+
+<div class="field">
+  <label for="fName">Country Name</label>
+  <input id="fName" name="name" type="text" required maxlength="120" placeholder="e.g. France" />
+  <p class="hint">The editorial display name — shown as the country tag in the Countries list and admin previews.</p>
+</div>
+
+<div class="field-row">
+  <div class="field">
+    <label for="fMapId">Map Identifier</label>
+    <select id="fMapId" name="map_id">
+      <option value="">— Not linked to the map yet —</option>
+      {MAP_IDS.map((id) => <option value={id}>{id}</option>)}
+    </select>
+    <p class="hint">Which region on the world map this country controls. Required before you can Publish. Only one country can use a given region.</p>
+  </div>
+  <div class="field">
+    <label for="fCountryCode">Country Code</label>
+    <input id="fCountryCode" name="country_code" type="text" maxlength="2" placeholder="e.g. FR" style="text-transform:uppercase;" />
+    <p class="hint">Two-letter code — used to show <span id="fCountryCodeFlagPreview" aria-hidden="true"></span> a flag automatically. No image to upload.</p>
+  </div>
+</div>
+
+<div class="field">
+  <label for="fShortDescription">Short Description</label>
+  <textarea id="fShortDescription" name="short_description" maxlength="240" rows="2"></textarea>
+  <p class="hint">A brief 1–2 sentence summary, shown in the admin Countries list and cards. Not shown publicly.</p>
+</div>
+
+<div class="field">
+  <label for="fHeading">Why This Country Matters</label>
+  <textarea id="fHeading" name="heading" required maxlength="200" rows="2"></textarea>
+  <p class="hint">The thesis line shown as the title of this country's panel on the public Atlas.</p>
+</div>
+
+<div class="field">
+  <label for="fResearchContent">Research Content</label>
+  <div class="content-toolbar">
+    <button type="button" class="btn-line insert-image-btn" id="insertImageBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="10" r="1.5"></circle><path d="M21 16.5 15.5 11 5 20"></path></svg>
+      Insert Image
+    </button>
+    <span class="upload-status" id="contentImageStatus"></span>
+    <input type="file" id="fContentImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" hidden />
+  </div>
+  <textarea id="fResearchContent" name="research_content" rows="12"></textarea>
+  <p class="hint">
+    The long-form write-up shown in this country's panel on the public Atlas. Supports Markdown — headings, bold/italic,
+    links, lists, quotes. Click "Insert Image" (above, not a text field) to upload a photo and drop it into the text at your cursor.
+  </p>
+</div>
+
+<div class="field">
+  <label for="fFeaturedImageFile">Featured Image</label>
+  <input type="file" id="fFeaturedImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" />
+  <input type="hidden" id="fFeaturedImage" name="featured_image_url" />
+  <span class="upload-status" id="fFeaturedImageStatus"></span>
+  <div class="image-preview-row">
+    <img id="fFeaturedImagePreview" class="image-preview" alt="Featured image preview" hidden />
+    <button type="button" class="btn-line" id="fFeaturedImageRemove" hidden>Remove</button>
+  </div>
+  <p class="hint">The country's hero image. JPG, PNG, WebP, GIF or SVG only (not HEIC/HEIF).</p>
+</div>
+
+<div class="field-row">
+  <div class="field">
+    <label for="fDisplayOrder">Display Order</label>
+    <input id="fDisplayOrder" name="display_order" type="number" step="1" value="0" />
+    <p class="hint">Lower numbers appear first in the admin Countries list.</p>
+  </div>
+  <div class="field field-checkbox">
+    <label for="fIsFeatured">
+      <input id="fIsFeatured" name="is_featured" type="checkbox" />
+      Feature this country
+    </label>
+    <p class="hint">Marks this country as a highlighted destination in the admin.</p>
+  </div>
+</div>
+
+<script>
+  import { countryFlagEmoji } from '../../lib/flagEmoji';
+
+  const codeInput = document.getElementById('fCountryCode') as HTMLInputElement | null;
+  const flagPreview = document.getElementById('fCountryCodeFlagPreview');
+  function updateFlagPreview() {
+    if (!codeInput || !flagPreview) return;
+    flagPreview.textContent = countryFlagEmoji(codeInput.value) || '—';
+  }
+  codeInput?.addEventListener('input', updateFlagPreview);
+  updateFlagPreview();
+</script>

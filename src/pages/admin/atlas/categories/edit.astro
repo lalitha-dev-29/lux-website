@@ -1,0 +1,129 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import CategoryFormFields from '../../../../components/admin/CategoryFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Edit Atlas Category">
+  <h1>Atlas</h1>
+  <AtlasSubNav />
+  <h2>Edit Category</h2>
+
+  <form class="admin-form" id="categoryForm" novalidate hidden>
+    <CategoryFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/atlas/categories/')} class="btn-line">Back to Categories</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Category</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import { getAtlasCategoryById, updateAtlasCategory, deleteAtlasCategory, listAllAtlasBrands } from '../../../../lib/supabaseAdmin';
+    import { readAtlasCategoryForm, writeAtlasCategoryForm, validateAtlasCategoryForm, toAtlasCategoryInput } from '../../../../lib/atlasCategoryForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+    import type { AtlasCategory } from '../../../../lib/atlasTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('categoryForm') as HTMLFormElement;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    let current: AtlasCategory | null = null;
+    let brandCount = 0;
+    let dirty = false;
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No category specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const [entry, brands] = await Promise.all([getAtlasCategoryById(id), listAllAtlasBrands()]);
+        if (!entry) {
+          loadError.textContent = 'Category not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        brandCount = brands.filter((b) => b.category_id === id).length;
+        writeAtlasCategoryForm(entry);
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load category.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const values = readAtlasCategoryForm();
+      const validationError = validateAtlasCategoryForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateAtlasCategory(current.id, toAtlasCategoryInput(values));
+        dirty = false;
+        showToast('Category updated.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to update category.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      const warning = brandCount > 0 ? `${brandCount} brand${brandCount === 1 ? '' : 's'} currently use "${current.name}" — they'll show as uncategorized. ` : '';
+      if (!confirm(`${warning}Delete "${current.name}"? This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteAtlasCategory(current.id);
+        dirty = false;
+        showToast('Category deleted.');
+        window.location.href = withBase('/admin/atlas/categories/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

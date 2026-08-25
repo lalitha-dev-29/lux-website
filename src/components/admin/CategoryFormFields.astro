@@ -1,0 +1,15 @@
+---
+// Shared field markup for src/pages/admin/atlas/categories/{new,edit}.astro.
+// Deliberately minimal — spec explicitly asks not to over-engineer Categories.
+---
+
+<div class="field">
+  <label for="fName">Category Name</label>
+  <input id="fName" name="name" type="text" required maxlength="80" placeholder="e.g. Leather Goods" />
+</div>
+
+<div class="field">
+  <label for="fDisplayOrder">Display Order</label>
+  <input id="fDisplayOrder" name="display_order" type="number" step="1" value="0" />
+  <p class="hint">Lower numbers appear first wherever categories are listed.</p>
+</div>

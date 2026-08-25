@@ -1,0 +1,174 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Atlas — Brands">
+  <h1>Atlas</h1>
+  <p class="admin-lede">Manage the countries, brands and research that appear in The Luxury Atlas.</p>
+  <AtlasSubNav />
+
+  <div class="admin-section-head">
+    <div>
+      <h2>Brands</h2>
+      <p class="admin-lede" style="margin-bottom:0;">Every luxury house across all countries in the Atlas.</p>
+    </div>
+    <a href={withBase('/admin/atlas/brands/new/')} class="btn-solid">+ Add Brand</a>
+  </div>
+
+  <div class="admin-toolbar">
+    <input type="search" id="searchInput" placeholder="Search by brand name…" aria-label="Search brands" />
+    <select id="countryFilter" aria-label="Filter by country">
+      <option value="all">All countries</option>
+    </select>
+    <select id="categoryFilter" aria-label="Filter by category">
+      <option value="all">All categories</option>
+    </select>
+    <select id="statusFilter" aria-label="Filter by status">
+      <option value="all">All statuses</option>
+      <option value="published">Published</option>
+      <option value="draft">Draft</option>
+    </select>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Name</th><th>Country</th><th>Category</th><th>Status</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="6" class="admin-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    import { listAllAtlasBrands, listAllAtlasCountries, listAllAtlasCategories, setAtlasBrandStatus, deleteAtlasBrand } from '../../../../lib/supabaseAdmin';
+    import { withBase } from '../../../../lib/url';
+    import { escapeHtml } from '../../../../lib/html';
+    import { showToast } from '../../../../lib/toast';
+    import type { AtlasBrand, AtlasCountry, AtlasCategory } from '../../../../lib/atlasTypes';
+
+    let allBrands: AtlasBrand[] = [];
+    let countries: AtlasCountry[] = [];
+    let categories: AtlasCategory[] = [];
+    let countryNameById = new Map<string, string>();
+    let categoryNameById = new Map<string, string>();
+
+    const rows = document.getElementById('rows')!;
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    const countryFilter = document.getElementById('countryFilter') as HTMLSelectElement;
+    const categoryFilter = document.getElementById('categoryFilter') as HTMLSelectElement;
+    const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const countryId = countryFilter.value;
+      const categoryId = categoryFilter.value;
+      const status = statusFilter.value;
+
+      const filtered = allBrands.filter((b) => {
+        const matchesQuery = !query || b.name.toLowerCase().includes(query);
+        const matchesCountry = countryId === 'all' || b.country_id === countryId;
+        const matchesCategory = categoryId === 'all' || b.category_id === categoryId;
+        const matchesStatus = status === 'all' || b.status === status;
+        return matchesQuery && matchesCountry && matchesCategory && matchesStatus;
+      });
+
+      if (filtered.length === 0) {
+        rows.innerHTML =
+          allBrands.length === 0
+            ? `<tr><td colspan="6" class="admin-empty">No brands added yet. <a class="btn-line" href="${withBase('/admin/atlas/brands/new/')}">Add Brand</a></td></tr>`
+            : '<tr><td colspan="6" class="admin-empty">No matching brands.</td></tr>';
+        return;
+      }
+
+      rows.innerHTML = filtered
+        .map((b) => {
+          const countryName = countryNameById.get(b.country_id) || 'Unknown';
+          const categoryName = b.category_id ? categoryNameById.get(b.category_id) || 'Uncategorized' : 'Uncategorized';
+          return `
+        <tr data-id="${b.id}">
+          <td class="title-cell"><a href="${withBase(`/admin/atlas/brands/edit/?id=${b.id}`)}">${escapeHtml(b.name)}</a></td>
+          <td><a href="${withBase(`/admin/atlas/countries/edit/?id=${b.country_id}`)}">${escapeHtml(countryName)}</a></td>
+          <td>${escapeHtml(categoryName)}</td>
+          <td><span class="badge badge-${b.status}">${b.status}</span></td>
+          <td>—</td>
+          <td class="actions-cell">
+            <button type="button" class="toggle-status-btn" data-id="${b.id}" data-next="${b.status === 'published' ? 'draft' : 'published'}">
+              ${b.status === 'published' ? 'Unpublish' : 'Publish'}
+            </button>
+            <a href="${withBase(`/admin/atlas/brands/edit/?id=${b.id}`)}">Edit</a>
+            <button type="button" class="danger delete-btn" data-id="${b.id}" data-name="${escapeHtml(b.name)}">Delete</button>
+          </td>
+        </tr>`;
+        })
+        .join('');
+    }
+
+    async function load() {
+      try {
+        [allBrands, countries, categories] = await Promise.all([listAllAtlasBrands(), listAllAtlasCountries(), listAllAtlasCategories()]);
+        countryNameById = new Map(countries.map((c) => [c.id, c.name]));
+        categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
+
+        countryFilter.innerHTML =
+          '<option value="all">All countries</option>' +
+          countries.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        categoryFilter.innerHTML =
+          '<option value="all">All categories</option>' +
+          categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+
+        render();
+      } catch (err) {
+        rows.innerHTML = `<tr><td colspan="6" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+      }
+    }
+
+    rows.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      const toggleBtn = target.closest('.toggle-status-btn') as HTMLButtonElement | null;
+      if (toggleBtn) {
+        const id = toggleBtn.dataset.id!;
+        const next = toggleBtn.dataset.next as 'draft' | 'published';
+        toggleBtn.disabled = true;
+        try {
+          const updated = await setAtlasBrandStatus(id, next);
+          allBrands = allBrands.map((b) => (b.id === id ? updated : b));
+          render();
+          showToast(next === 'published' ? 'Brand published.' : 'Brand unpublished.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to update status.', 'error');
+          toggleBtn.disabled = false;
+        }
+        return;
+      }
+
+      const deleteBtn = target.closest('.delete-btn') as HTMLButtonElement | null;
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.id!;
+        const name = deleteBtn.dataset.name!;
+        if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+        deleteBtn.disabled = true;
+        try {
+          await deleteAtlasBrand(id);
+          allBrands = allBrands.filter((b) => b.id !== id);
+          render();
+          showToast('Brand deleted.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to delete.', 'error');
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', render);
+    countryFilter.addEventListener('change', render);
+    categoryFilter.addEventListener('change', render);
+    statusFilter.addEventListener('change', render);
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

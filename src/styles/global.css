@@ -100,14 +100,6 @@
      the instant the page is in dark mode). */
   --paper-on-dark:#F7F4EC;
 
-  /* The Atlas map is deliberately a fixed dark "chalkboard" surface — like a
-     code block or an embedded map, its own artwork doesn't invert with the
-     page theme. Fixed, not swapped, for the same reason --ink-on-accent
-     isn't: without this, its ocean/markers would use --charcoal/--ivory and
-     flip to a light map with dark (near-invisible) markers in dark mode. */
-  --atlas-bg:#19170F;
-  --atlas-fg:#F7F4EC;
-
   /* translucent surfaces built from tokens (see the dark-mode block below
      for why these can't just be literal rgba(247,244,236,x) — the colour
      needs to track the theme). */
@@ -912,21 +904,59 @@ a.card:hover .card-media img{transform:scale(1.05);}
 .atlas-map-wrap{
   position:relative; overflow:hidden;
   border:1px solid var(--line); border-radius:var(--r-md);
-  background:var(--atlas-bg);
+  background:var(--ivory);
 }
 .atlas-map-wrap svg{width:100%; height:auto; display:block;}
-.atlas-map-wrap .ocean{fill:var(--atlas-bg);}
+.atlas-map-wrap .ocean{fill:var(--ivory);}
+
+/* Same theme-aware surface/ink tokens as the rest of the site, so the map
+   flips with the light/dark toggle instead of staying a fixed surface. */
+.atlas-map-controls{
+  position:absolute; top:var(--sp-3); right:var(--sp-3); z-index:5;
+  display:flex; flex-direction:column; gap:var(--sp-2); align-items:flex-end;
+}
+.atlas-map-control-btn{
+  display:inline-flex; align-items:center; justify-content:center;
+  min-height:36px; min-width:36px;
+  border:1px solid color-mix(in srgb, var(--charcoal) 25%, transparent);
+  border-radius:var(--r-sm);
+  background:color-mix(in srgb, var(--ivory) 70%, transparent);
+  color:var(--charcoal); opacity:.85;
+  transition:opacity var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.atlas-map-control-btn svg{width:18px; height:18px;}
+.atlas-map-control-btn:hover:not(:disabled){opacity:1; border-color:var(--gold); color:var(--gold);}
+.atlas-map-control-btn:disabled{opacity:.3; cursor:default;}
+
+.atlas-fullscreen-btn[aria-pressed="true"]{opacity:1; border-color:var(--gold); color:var(--gold);}
+.atlas-fullscreen-btn .icon-exit{display:none;}
+.atlas-fullscreen-btn[aria-pressed="true"] .icon-enter{display:none;}
+.atlas-fullscreen-btn[aria-pressed="true"] .icon-exit{display:block;}
+
+.atlas-zoom-controls{display:flex; flex-direction:column; border-radius:var(--r-sm); overflow:hidden;}
+.atlas-zoom-controls .atlas-map-control-btn{border-radius:0;}
+.atlas-zoom-controls .atlas-map-control-btn:first-child{border-bottom:none;}
+
+.atlas-map-wrap.atlas-fullscreen{
+  position:fixed; inset:0; z-index:1150; border-radius:0;
+}
+.atlas-map-wrap.atlas-fullscreen svg#worldMapSvg{width:100%; height:100%;}
+
+.atlas-map-wrap.pannable{cursor:grab;}
+.atlas-map-wrap.pannable.panning{cursor:grabbing;}
+
+body.atlas-fullscreen-open{overflow:hidden;}
 
 .country{
-  fill:#3A362C; stroke:#19170F; stroke-width:.6; stroke-linejoin:round;
+  fill:var(--stone-light); stroke:var(--line-strong); stroke-width:.6; stroke-linejoin:round;
   transition:fill var(--dur-fast) var(--ease);
 }
-.country.has-data{fill:#6B5528; cursor:pointer;}
+.country.has-data{fill:color-mix(in srgb, var(--gold) 55%, var(--stone-light)); cursor:pointer;}
 .country.has-data:hover{fill:var(--gold);}
-.country.has-data:focus-visible{fill:var(--gold); outline:none; stroke:var(--atlas-fg); stroke-width:1.4;}
+.country.has-data:focus-visible{fill:var(--gold); outline:none; stroke:var(--charcoal); stroke-width:1.4;}
 .country.selected{fill:var(--gold-soft);}
 
-.atlas-marker{fill:var(--atlas-fg); stroke:var(--gold); stroke-width:1.4; pointer-events:none;}
+.atlas-marker{fill:var(--charcoal); stroke:var(--gold); stroke-width:1.4; pointer-events:none;}
 .atlas-marker-pulse{
   fill:none; stroke:var(--gold-soft); stroke-width:1; pointer-events:none;
   animation:mapPulse 2.6s var(--ease) infinite;

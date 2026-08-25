@@ -1,0 +1,94 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import CountryFormFields from '../../../../components/admin/CountryFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Atlas Country">
+  <h1>Atlas</h1>
+  <AtlasSubNav />
+  <h2>New Country</h2>
+  <p class="admin-lede">Save as a draft to keep working, or publish right away. You can add brands and preview after saving.</p>
+
+  <form class="admin-form" id="countryForm" novalidate>
+    <CountryFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/atlas/countries/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="saveDraftBtn">Save Draft</button>
+      <button type="button" class="btn-solid" id="publishBtn">Publish</button>
+    </div>
+  </form>
+
+  <script>
+    import { createAtlasCountry } from '../../../../lib/supabaseAdmin';
+    import { readAtlasCountryForm, validateAtlasCountryForm, toAtlasCountryInput } from '../../../../lib/atlasCountryForm';
+    import { withBase } from '../../../../lib/url';
+    import { wireSingleImageField, wireInlineImageInsert } from '../../../../lib/imageUpload';
+    import { showToast } from '../../../../lib/toast';
+
+    const form = document.getElementById('countryForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const draftBtn = document.getElementById('saveDraftBtn') as HTMLButtonElement;
+    const publishBtn = document.getElementById('publishBtn') as HTMLButtonElement;
+    const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+    const draftId = crypto.randomUUID();
+    const prefix = `atlas/country/${draftId}`;
+    wireSingleImageField(prefix, {
+      fileInput: byId('fFeaturedImageFile'),
+      hiddenInput: byId('fFeaturedImage'),
+      preview: byId('fFeaturedImagePreview'),
+      removeBtn: byId('fFeaturedImageRemove'),
+      status: byId('fFeaturedImageStatus'),
+    });
+    wireInlineImageInsert(prefix, byId('fResearchContent'), byId('fContentImageFile'), byId('contentImageStatus'), byId('insertImageBtn'));
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    async function submit(status: 'draft' | 'published') {
+      errorEl.hidden = true;
+      const values = readAtlasCountryForm();
+      const validationError = validateAtlasCountryForm(values, status);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+
+      draftBtn.disabled = true;
+      publishBtn.disabled = true;
+      const busyBtn = status === 'draft' ? draftBtn : publishBtn;
+      const originalLabel = busyBtn.textContent;
+      busyBtn.textContent = 'Saving…';
+
+      try {
+        const entry = await createAtlasCountry(toAtlasCountryInput(values), status);
+        dirty = false;
+        showToast(status === 'published' ? 'Country published.' : 'Draft saved.');
+        window.location.href = withBase(`/admin/atlas/countries/edit/?id=${entry.id}`);
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        draftBtn.disabled = false;
+        publishBtn.disabled = false;
+        busyBtn.textContent = originalLabel;
+      }
+    }
+
+    draftBtn.addEventListener('click', () => submit('draft'));
+    publishBtn.addEventListener('click', () => submit('published'));
+  </script>
+</AdminLayout>

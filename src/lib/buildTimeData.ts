@@ -10,6 +10,9 @@ import {
   PUBLIC_EDUCATION_FIELDS,
   PUBLIC_CERTIFICATION_FIELDS,
 } from './learningTypes';
+import type { AtlasCountry, AtlasBrand, AtlasCategory } from './atlasTypes';
+import { PUBLIC_ATLAS_COUNTRY_FIELDS, PUBLIC_ATLAS_BRAND_FIELDS, PUBLIC_ATLAS_CATEGORY_FIELDS } from './atlasTypes';
+import { renderMarkdown } from './markdown';
 
 /**
  * Build-time reads against Supabase's PostgREST API, used by `getStaticPaths()`
@@ -105,4 +108,71 @@ export async function fetchAllEducation(): Promise<LearningEducationItem[]> {
 export async function fetchAllCertifications(): Promise<LearningCertification[]> {
   const rows = await restGet(`learning_certifications?select=${PUBLIC_CERTIFICATION_FIELDS}&order=order_index.asc`);
   return rows as LearningCertification[];
+}
+
+// ---------------------------------------------------------------------------
+// Atlas — the public /atlas/ page's build-time data source, replacing the
+// old static import of src/data/atlas.ts. RLS already restricts brand rows
+// to ones whose parent country is also published (supabase/atlas_cms.sql),
+// but the assembly below still keys brands by country_id defensively rather
+// than trusting that alone.
+// ---------------------------------------------------------------------------
+
+export async function fetchAllPublishedAtlasCountries(): Promise<AtlasCountry[]> {
+  const rows = await restGet(
+    `atlas_countries?select=${PUBLIC_ATLAS_COUNTRY_FIELDS}&status=eq.published&order=display_order.asc`
+  );
+  return rows as AtlasCountry[];
+}
+
+export async function fetchAllPublishedAtlasBrands(): Promise<AtlasBrand[]> {
+  const rows = await restGet(
+    `atlas_brands?select=${PUBLIC_ATLAS_BRAND_FIELDS}&status=eq.published&order=display_order.asc`
+  );
+  return rows as AtlasBrand[];
+}
+
+export async function fetchAllAtlasCategories(): Promise<AtlasCategory[]> {
+  const rows = await restGet(`atlas_categories?select=${PUBLIC_ATLAS_CATEGORY_FIELDS}&order=display_order.asc`);
+  return rows as AtlasCategory[];
+}
+
+export interface AtlasMapPanelData {
+  heading: string;
+  description: string;
+  brands: { name: string; cat: string }[];
+}
+
+/**
+ * Assembles the exact shape AtlasMap.astro has always consumed — a
+ * Record<mapId, {heading, description, brands}> — from the three Atlas
+ * tables, keyed by each published country's `map_id` (the string that must
+ * match a `data-name` in src/data/world-map-paths.svg) rather than its
+ * editorial `name`. `research_content` Markdown is rendered to HTML once
+ * here at build time via the shared renderMarkdown() (src/lib/markdown.ts),
+ * the same helper Journal/Case Study body content uses.
+ */
+export async function buildAtlasMapData(): Promise<Record<string, AtlasMapPanelData>> {
+  const [countries, brands, categories] = await Promise.all([
+    fetchAllPublishedAtlasCountries(),
+    fetchAllPublishedAtlasBrands(),
+    fetchAllAtlasCategories(),
+  ]);
+
+  const categoryNameById = new Map(categories.map((c) => [c.id, c.name]));
+
+  const result: Record<string, AtlasMapPanelData> = {};
+  for (const country of countries) {
+    if (!country.map_id) continue; // shouldn't happen for published rows (DB check constraint), guarded defensively
+    const countryBrands = brands
+      .filter((b) => b.country_id === country.id)
+      .map((b) => ({ name: b.name, cat: (b.category_id && categoryNameById.get(b.category_id)) || 'Uncategorized' }));
+
+    result[country.map_id] = {
+      heading: country.heading,
+      description: renderMarkdown(country.research_content),
+      brands: countryBrands,
+    };
+  }
+  return result;
 }

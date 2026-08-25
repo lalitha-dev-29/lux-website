@@ -1,0 +1,25 @@
+---
+// Sub-navigation for the four Admin → Atlas tabs (Overview, Countries,
+// Brands, Categories). Mirrors LearningSubNav's pattern —
+// `aria-current="page"` on whichever section the current path is under.
+import { withBase } from '../../lib/url';
+
+const tabs = [
+  { href: '/admin/atlas/', label: 'Overview' },
+  { href: '/admin/atlas/countries/', label: 'Countries' },
+  { href: '/admin/atlas/brands/', label: 'Brands' },
+  { href: '/admin/atlas/categories/', label: 'Categories' },
+];
+const currentPath = Astro.url.pathname;
+
+function isActive(href: string): boolean {
+  if (href === '/admin/atlas/') return currentPath === withBase(href);
+  return currentPath.startsWith(withBase(href));
+}
+---
+
+<nav class="admin-subnav" aria-label="Atlas sections">
+  {tabs.map((tab) => (
+    <a href={withBase(tab.href)} aria-current={isActive(tab.href) ? 'page' : undefined}>{tab.label}</a>
+  ))}
+</nav>

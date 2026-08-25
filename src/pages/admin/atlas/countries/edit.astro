@@ -1,0 +1,379 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import CountryFormFields from '../../../../components/admin/CountryFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Edit Atlas Country">
+  <h1>Atlas</h1>
+  <AtlasSubNav />
+  <div class="admin-section-head">
+    <div>
+      <h2 id="editHeading">Edit Country</h2>
+      <p class="admin-lede" id="statusLede">Loading…</p>
+    </div>
+  </div>
+
+  <div id="editorBody" hidden>
+    <div class="admin-tabs" role="tablist" aria-label="Country editor sections">
+      <button type="button" class="admin-tab" id="tabBtnDetails" data-tab="details" role="tab" aria-selected="true">Details</button>
+      <button type="button" class="admin-tab" id="tabBtnBrands" data-tab="brands" role="tab" aria-selected="false">Brands</button>
+      <button type="button" class="admin-tab" id="tabBtnPreview" data-tab="preview" role="tab" aria-selected="false">Preview</button>
+    </div>
+
+    <div id="panelDetails" role="tabpanel">
+      <form class="admin-form" id="countryForm" novalidate>
+        <CountryFormFields />
+
+        <div class="field">
+          <label for="fStatus">Status</label>
+          <select id="fStatus">
+            <option value="draft">Draft</option>
+            <option value="published">Published</option>
+            <option value="unpublished">Unpublished</option>
+          </select>
+          <p class="hint">Published countries are highlighted and interactive on the public Atlas map. Unpublished keeps the content but removes it from public view — nothing is deleted.</p>
+        </div>
+
+        <div aria-live="polite" aria-atomic="true">
+          <p class="form-error" id="formError" hidden></p>
+        </div>
+
+        <div class="admin-form-actions">
+          <a href={withBase('/admin/atlas/countries/')} class="btn-line">Back to Countries</a>
+          <div class="spacer"></div>
+          <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+        </div>
+
+        <div class="admin-danger-zone">
+          <h2>Danger Zone</h2>
+          <button type="button" class="btn-line" id="deleteBtn">Delete This Country</button>
+        </div>
+      </form>
+    </div>
+
+    <div id="panelBrands" role="tabpanel" hidden>
+      <div class="admin-section-head">
+        <div>
+          <h2>Brands</h2>
+          <p class="admin-lede" style="margin-bottom:0;">Luxury houses shown under this country's panel on the public Atlas.</p>
+        </div>
+        <a href="#" id="addBrandLink" class="btn-solid">+ New Brand</a>
+      </div>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>Order</th><th>Name</th><th>Category</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="brandRows">
+            <tr><td colspan="5" class="admin-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div id="panelPreview" role="tabpanel" hidden>
+      <p class="admin-lede admin-preview-hint">
+        A live preview of this country's panel on the public Atlas, using published brands only. Because the public site is
+        static, this is the way to check a draft before publishing — the real /atlas/ page only ever shows published content.
+      </p>
+      <div class="admin-preview-box" id="previewBox"></div>
+    </div>
+  </div>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import {
+      getAtlasCountryById,
+      updateAtlasCountry,
+      setAtlasCountryStatus,
+      deleteAtlasCountry,
+      listAtlasBrandsByCountry,
+      listAllAtlasCategories,
+      setAtlasBrandStatus,
+      deleteAtlasBrand,
+      reorderAtlasBrandsWithinCountry,
+    } from '../../../../lib/supabaseAdmin';
+    import {
+      readAtlasCountryForm,
+      writeAtlasCountryForm,
+      validateAtlasCountryForm,
+      toAtlasCountryInput,
+    } from '../../../../lib/atlasCountryForm';
+    import { withBase } from '../../../../lib/url';
+    import { wireSingleImageField, wireInlineImageInsert, showExistingImage } from '../../../../lib/imageUpload';
+    import { showToast } from '../../../../lib/toast';
+    import { escapeHtml } from '../../../../lib/html';
+    import { countryFlagEmoji } from '../../../../lib/flagEmoji';
+    import { renderMarkdown } from '../../../../lib/markdown';
+    import type { AtlasCountry, AtlasCountryStatus, AtlasBrand, AtlasCategory } from '../../../../lib/atlasTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const editorBody = document.getElementById('editorBody')!;
+    const statusLede = document.getElementById('statusLede')!;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const statusSelect = document.getElementById('fStatus') as HTMLSelectElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+    const addBrandLink = document.getElementById('addBrandLink') as HTMLAnchorElement;
+    const brandRows = document.getElementById('brandRows')!;
+    const previewBox = document.getElementById('previewBox')!;
+    const byId = <T extends HTMLElement>(elId: string) => document.getElementById(elId) as T;
+
+    let current: AtlasCountry | null = null;
+    let brands: AtlasBrand[] = [];
+    let categories: AtlasCategory[] = [];
+    let dirty = false;
+
+    // --- tabs ---------------------------------------------------------------
+    const tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.admin-tab'));
+    const tabPanels: Record<string, HTMLElement> = {
+      details: byId('panelDetails'),
+      brands: byId('panelBrands'),
+      preview: byId('panelPreview'),
+    };
+    function selectTab(name: string) {
+      tabButtons.forEach((btn) => btn.setAttribute('aria-selected', String(btn.dataset.tab === name)));
+      Object.entries(tabPanels).forEach(([key, panel]) => {
+        panel.hidden = key !== name;
+      });
+      if (name === 'preview') renderPreview();
+    }
+    tabButtons.forEach((btn) => btn.addEventListener('click', () => selectTab(btn.dataset.tab!)));
+
+    // --- status ---------------------------------------------------------------
+    function renderStatusLede() {
+      if (!current) return;
+      const label = current.status === 'published' ? 'Published' : current.status === 'unpublished' ? 'Unpublished' : 'Draft';
+      statusLede.textContent = `Status: ${label} · Last updated ${new Date(current.updated_at).toLocaleString()}`;
+    }
+
+    // --- preview ---------------------------------------------------------------
+    function categoryName(categoryId: string | null): string {
+      if (!categoryId) return 'Uncategorized';
+      return categories.find((c) => c.id === categoryId)?.name ?? 'Uncategorized';
+    }
+    function renderPreview() {
+      const values = readAtlasCountryForm();
+      const flag = countryFlagEmoji(values.country_code);
+      const publishedBrands = brands.filter((b) => b.status === 'published');
+      const brandsHtml = publishedBrands.length
+        ? publishedBrands
+            .map(
+              (b) =>
+                `<div class="atlas-house"><div class="maison">${escapeHtml(b.name)}</div><div class="cat">${escapeHtml(categoryName(b.category_id))}</div></div>`
+            )
+            .join('')
+        : '';
+      const researchHtml = values.research_content
+        ? renderMarkdown(values.research_content)
+        : '<p>No research content yet.</p>';
+      previewBox.innerHTML = `
+        <span class="country-tag">${flag ? flag + ' ' : ''}${escapeHtml(values.name || 'Country')}</span>
+        <h3>${escapeHtml(values.heading || 'Why this country matters')}</h3>
+        <div class="atlas-empty prose">${researchHtml}</div>
+        ${brandsHtml}
+      `;
+    }
+
+    // --- brands tab ---------------------------------------------------------------
+    function renderBrandRows() {
+      if (brands.length === 0) {
+        brandRows.innerHTML = '<tr><td colspan="5" class="admin-empty">No brands added yet.</td></tr>';
+        return;
+      }
+      brandRows.innerHTML = brands
+        .map(
+          (b, i) => `
+        <tr data-id="${b.id}">
+          <td class="reorder-cell">
+            <button type="button" class="move-up-btn" data-id="${b.id}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+            <button type="button" class="move-down-btn" data-id="${b.id}" aria-label="Move down" ${i === brands.length - 1 ? 'disabled' : ''}>↓</button>
+          </td>
+          <td class="title-cell"><a href="${withBase(`/admin/atlas/brands/edit/?id=${b.id}`)}">${escapeHtml(b.name)}</a></td>
+          <td>${escapeHtml(categoryName(b.category_id))}</td>
+          <td><span class="badge badge-${b.status}">${b.status}</span></td>
+          <td class="actions-cell">
+            <button type="button" class="brand-toggle-status-btn" data-id="${b.id}" data-next="${b.status === 'published' ? 'draft' : 'published'}">
+              ${b.status === 'published' ? 'Unpublish' : 'Publish'}
+            </button>
+            <a href="${withBase(`/admin/atlas/brands/edit/?id=${b.id}`)}">Edit</a>
+            <button type="button" class="danger brand-delete-btn" data-id="${b.id}" data-name="${escapeHtml(b.name)}">Delete</button>
+          </td>
+        </tr>`
+        )
+        .join('');
+    }
+
+    async function persistBrandReorder() {
+      if (!current) return;
+      try {
+        await reorderAtlasBrandsWithinCountry(current.id, brands.map((b) => b.id));
+        showToast('Brand order updated.');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to reorder.', 'error');
+      }
+    }
+
+    brandRows.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      const upBtn = target.closest('.move-up-btn') as HTMLButtonElement | null;
+      const downBtn = target.closest('.move-down-btn') as HTMLButtonElement | null;
+      if (upBtn || downBtn) {
+        const bid = (upBtn || downBtn)!.dataset.id!;
+        const idx = brands.findIndex((b) => b.id === bid);
+        const swapWith = upBtn ? idx - 1 : idx + 1;
+        if (idx === -1 || swapWith < 0 || swapWith >= brands.length) return;
+        [brands[idx], brands[swapWith]] = [brands[swapWith], brands[idx]];
+        renderBrandRows();
+        await persistBrandReorder();
+        return;
+      }
+
+      const toggleBtn = target.closest('.brand-toggle-status-btn') as HTMLButtonElement | null;
+      if (toggleBtn) {
+        const bid = toggleBtn.dataset.id!;
+        const next = toggleBtn.dataset.next as 'draft' | 'published';
+        toggleBtn.disabled = true;
+        try {
+          const updated = await setAtlasBrandStatus(bid, next);
+          brands = brands.map((b) => (b.id === bid ? updated : b));
+          renderBrandRows();
+          showToast(next === 'published' ? 'Brand published.' : 'Brand unpublished.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to update status.', 'error');
+          toggleBtn.disabled = false;
+        }
+        return;
+      }
+
+      const brandDeleteBtn = target.closest('.brand-delete-btn') as HTMLButtonElement | null;
+      if (brandDeleteBtn) {
+        const bid = brandDeleteBtn.dataset.id!;
+        const bname = brandDeleteBtn.dataset.name!;
+        if (!confirm(`Delete "${bname}"? This cannot be undone.`)) return;
+        brandDeleteBtn.disabled = true;
+        try {
+          await deleteAtlasBrand(bid);
+          brands = brands.filter((b) => b.id !== bid);
+          renderBrandRows();
+          showToast('Brand deleted.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to delete.', 'error');
+          brandDeleteBtn.disabled = false;
+        }
+      }
+    });
+
+    // --- load ---------------------------------------------------------------
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No country specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const [entry, brandList, categoryList] = await Promise.all([
+          getAtlasCountryById(id),
+          listAtlasBrandsByCountry(id),
+          listAllAtlasCategories(),
+        ]);
+        if (!entry) {
+          loadError.textContent = 'Country not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        brands = brandList;
+        categories = categoryList;
+
+        writeAtlasCountryForm(entry);
+        statusSelect.value = entry.status;
+        document.getElementById('fCountryCode')?.dispatchEvent(new Event('input'));
+
+        const prefix = `atlas/country/${entry.id}`;
+        wireSingleImageField(prefix, {
+          fileInput: byId('fFeaturedImageFile'),
+          hiddenInput: byId('fFeaturedImage'),
+          preview: byId('fFeaturedImagePreview'),
+          removeBtn: byId('fFeaturedImageRemove'),
+          status: byId('fFeaturedImageStatus'),
+        });
+        wireInlineImageInsert(prefix, byId('fResearchContent'), byId('fContentImageFile'), byId('contentImageStatus'), byId('insertImageBtn'));
+        showExistingImage(entry.featured_image_url, byId('fFeaturedImagePreview'), byId('fFeaturedImageRemove'));
+
+        addBrandLink.href = withBase(`/admin/atlas/brands/new/?country_id=${entry.id}`);
+        renderBrandRows();
+        renderStatusLede();
+
+        editorBody.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load country.';
+        loadError.hidden = false;
+      }
+    }
+
+    document.getElementById('countryForm')!.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const values = readAtlasCountryForm();
+      const targetStatus = statusSelect.value as AtlasCountryStatus;
+      const validationError = validateAtlasCountryForm(values, targetStatus);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateAtlasCountry(current.id, toAtlasCountryInput(values));
+        if (targetStatus !== current.status) {
+          current = await setAtlasCountryStatus(current.id, targetStatus);
+        }
+        dirty = false;
+        renderStatusLede();
+        showToast('Changes saved.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to save changes.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      const count = brands.length;
+      const warning = count > 0 ? `This country has ${count} brand${count === 1 ? '' : 's'} — deleting it will also delete them. ` : '';
+      if (!confirm(`${warning}Delete "${current.name}"? This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteAtlasCountry(current.id);
+        dirty = false;
+        window.location.href = withBase('/admin/atlas/countries/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

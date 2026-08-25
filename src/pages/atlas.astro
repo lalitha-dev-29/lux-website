@@ -1,6 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import AtlasMap from '../components/AtlasMap.astro';
+import { buildAtlasMapData } from '../lib/buildTimeData';
+
+// Build-time read from the Admin-managed Atlas CMS (Supabase), replacing the
+// old static import of src/data/atlas.ts — see supabase/atlas_cms.sql and
+// src/lib/buildTimeData.ts's buildAtlasMapData() for the full pipeline.
+const countries = await buildAtlasMapData();
 ---
 
 <Layout title="The Luxury Atlas | Kasturi Lalitha Manogna">
@@ -12,7 +18,7 @@ import AtlasMap from '../components/AtlasMap.astro';
         <p>Luxury is global, but it doesn't look the same everywhere. France has its maisons and craftsmanship. Italy has its relationship with design and materials. Switzerland has its watchmaking. Japan has its precision and restraint. India has an incredible relationship with craft, culture and ceremony. I created the Atlas because I want to understand where these differences come from.</p>
       </div>
       <div class="atlas-note reveal"><span class="pulse"></span> Countries in gold have research on file, more are added over time</div>
-      <AtlasMap />
+      <AtlasMap countries={countries} />
     </div>
   </section>
 

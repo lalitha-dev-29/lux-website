@@ -1,0 +1,95 @@
+---
+// Shared field markup for src/pages/admin/atlas/brands/{new,edit}.astro.
+// The Country and Category <select> options are populated client-side by
+// each page's script (from listAllAtlasCountries()/listAllAtlasCategories())
+// since they're live admin data, not known at build time.
+---
+
+<div class="field-row">
+  <div class="field">
+    <label for="fCountry">Country</label>
+    <select id="fCountry" name="country_id" required>
+      <option value="">Loading countries…</option>
+    </select>
+    <p class="hint">Which country this brand belongs to.</p>
+  </div>
+  <div class="field">
+    <label for="fCategory">Category</label>
+    <select id="fCategory" name="category_id">
+      <option value="">Loading categories…</option>
+    </select>
+    <p class="hint">Optional. Manage the list under Atlas → Categories.</p>
+  </div>
+</div>
+
+<div class="field">
+  <label for="fName">Brand Name</label>
+  <input id="fName" name="name" type="text" required maxlength="120" placeholder="e.g. Louis Vuitton" />
+</div>
+
+<div class="field-row">
+  <div class="field">
+    <label for="fFoundedYear">Founded Year</label>
+    <input id="fFoundedYear" name="founded_year" type="number" step="1" min="0" placeholder="e.g. 1854" />
+  </div>
+  <div class="field">
+    <label for="fFounder">Founder</label>
+    <input id="fFounder" name="founder" type="text" maxlength="200" />
+  </div>
+</div>
+
+<div class="field">
+  <label for="fDescription">Description</label>
+  <textarea id="fDescription" name="description" rows="4"></textarea>
+</div>
+
+<div class="field">
+  <label for="fPositioning">Luxury Positioning</label>
+  <textarea id="fPositioning" name="positioning" rows="3"></textarea>
+  <p class="hint">How this brand positions itself within luxury — heritage, craft, accessibility, etc.</p>
+</div>
+
+<div class="field-row">
+  <div class="field">
+    <label for="fWebsiteUrl">Website</label>
+    <input id="fWebsiteUrl" name="website_url" type="url" placeholder="https://…" />
+  </div>
+  <div class="field">
+    <label for="fInstagramUrl">Instagram</label>
+    <input id="fInstagramUrl" name="instagram_url" type="url" placeholder="https://instagram.com/…" />
+  </div>
+</div>
+
+<div class="field">
+  <label for="fLogoFile">Logo</label>
+  <input type="file" id="fLogoFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" />
+  <input type="hidden" id="fLogo" name="logo_url" />
+  <span class="upload-status" id="fLogoStatus"></span>
+  <div class="image-preview-row">
+    <img id="fLogoPreview" class="image-preview" alt="Logo preview" hidden />
+    <button type="button" class="btn-line" id="fLogoRemove" hidden>Remove</button>
+  </div>
+</div>
+
+<div class="field">
+  <label for="fImageFile">Brand Image</label>
+  <input type="file" id="fImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" />
+  <input type="hidden" id="fImage" name="image_url" />
+  <span class="upload-status" id="fImageStatus"></span>
+  <div class="image-preview-row">
+    <img id="fImagePreview" class="image-preview" alt="Brand image preview" hidden />
+    <button type="button" class="btn-line" id="fImageRemove" hidden>Remove</button>
+  </div>
+</div>
+
+<div class="field">
+  <label for="fResearchNotes">Research Notes</label>
+  <textarea id="fResearchNotes" name="research_notes" rows="4"></textarea>
+  <p class="hint">Private working notes — not shown publicly.</p>
+</div>
+
+<div class="field">
+  <label for="fDisplayOrder">Display Order</label>
+  <input id="fDisplayOrder" name="display_order" type="number" step="1" value="0" />
+  <p class="hint">Lower numbers appear first within this brand's country.</p>
+</div>

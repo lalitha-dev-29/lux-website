@@ -1,0 +1,122 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import AtlasSubNav from '../../../../components/admin/AtlasSubNav.astro';
+import BrandFormFields from '../../../../components/admin/BrandFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Atlas Brand">
+  <h1>Atlas</h1>
+  <AtlasSubNav />
+  <h2>New Brand</h2>
+  <p class="admin-lede">Save as a draft to keep working, or publish right away.</p>
+
+  <form class="admin-form" id="brandForm" novalidate>
+    <BrandFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/atlas/brands/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="saveDraftBtn">Save Draft</button>
+      <button type="button" class="btn-solid" id="publishBtn">Publish</button>
+    </div>
+  </form>
+
+  <script>
+    import { createAtlasBrand, listAllAtlasCountries, listAllAtlasCategories } from '../../../../lib/supabaseAdmin';
+    import { readAtlasBrandForm, validateAtlasBrandForm, toAtlasBrandInput } from '../../../../lib/atlasBrandForm';
+    import { withBase } from '../../../../lib/url';
+    import { wireSingleImageField } from '../../../../lib/imageUpload';
+    import { showToast } from '../../../../lib/toast';
+    import { escapeHtml } from '../../../../lib/html';
+
+    const form = document.getElementById('brandForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const draftBtn = document.getElementById('saveDraftBtn') as HTMLButtonElement;
+    const publishBtn = document.getElementById('publishBtn') as HTMLButtonElement;
+    const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+
+    const draftId = crypto.randomUUID();
+    const prefix = `atlas/brand/${draftId}`;
+    wireSingleImageField(prefix, {
+      fileInput: byId('fLogoFile'),
+      hiddenInput: byId('fLogo'),
+      preview: byId('fLogoPreview'),
+      removeBtn: byId('fLogoRemove'),
+      status: byId('fLogoStatus'),
+    });
+    wireSingleImageField(prefix, {
+      fileInput: byId('fImageFile'),
+      hiddenInput: byId('fImage'),
+      preview: byId('fImagePreview'),
+      removeBtn: byId('fImageRemove'),
+      status: byId('fImageStatus'),
+    });
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    document.addEventListener('admin:ready', async () => {
+      try {
+        const [countries, categories] = await Promise.all([listAllAtlasCountries(), listAllAtlasCategories()]);
+        const preselectCountryId = new URLSearchParams(window.location.search).get('country_id') || '';
+
+        const countrySelect = byId<HTMLSelectElement>('fCountry');
+        countrySelect.innerHTML =
+          '<option value="">Select a country…</option>' +
+          countries.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+        if (preselectCountryId) countrySelect.value = preselectCountryId;
+
+        const categorySelect = byId<HTMLSelectElement>('fCategory');
+        categorySelect.innerHTML =
+          '<option value="">Uncategorized</option>' +
+          categories.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to load countries/categories.';
+        errorEl.hidden = false;
+      }
+    });
+
+    async function submit(status: 'draft' | 'published') {
+      errorEl.hidden = true;
+      const values = readAtlasBrandForm();
+      const validationError = validateAtlasBrandForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+
+      draftBtn.disabled = true;
+      publishBtn.disabled = true;
+      const busyBtn = status === 'draft' ? draftBtn : publishBtn;
+      const originalLabel = busyBtn.textContent;
+      busyBtn.textContent = 'Saving…';
+
+      try {
+        const entry = await createAtlasBrand(toAtlasBrandInput(values), status);
+        dirty = false;
+        showToast(status === 'published' ? 'Brand published.' : 'Draft saved.');
+        window.location.href = withBase(`/admin/atlas/brands/edit/?id=${entry.id}`);
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        draftBtn.disabled = false;
+        publishBtn.disabled = false;
+        busyBtn.textContent = originalLabel;
+      }
+    }
+
+    draftBtn.addEventListener('click', () => submit('draft'));
+    publishBtn.addEventListener('click', () => submit('published'));
+  </script>
+</AdminLayout>

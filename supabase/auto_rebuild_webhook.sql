@@ -78,3 +78,21 @@ drop trigger if exists learning_certifications_notify_update on public.learning_
 create trigger learning_certifications_notify_update
   after insert or update or delete on public.learning_certifications
   for each row execute function public.notify_content_updated();
+
+-- Atlas CMS (supabase/atlas_cms.sql) — same rebuild-on-save wiring, covering
+-- all three Atlas tables so publishing/editing a country or brand goes live
+-- the same way a Journal/Case Study/Learning edit does.
+drop trigger if exists atlas_countries_notify_update on public.atlas_countries;
+create trigger atlas_countries_notify_update
+  after insert or update or delete on public.atlas_countries
+  for each row execute function public.notify_content_updated();
+
+drop trigger if exists atlas_brands_notify_update on public.atlas_brands;
+create trigger atlas_brands_notify_update
+  after insert or update or delete on public.atlas_brands
+  for each row execute function public.notify_content_updated();
+
+drop trigger if exists atlas_categories_notify_update on public.atlas_categories;
+create trigger atlas_categories_notify_update
+  after insert or update or delete on public.atlas_categories
+  for each row execute function public.notify_content_updated();
