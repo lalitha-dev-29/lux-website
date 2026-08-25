@@ -20,10 +20,10 @@ body.admin{overflow-x:visible;}
   letter-spacing:.02em;
 }
 .admin-brand .dot{color:var(--gold-ink);}
-.admin-brand .logo-mark{height:30px; width:auto; display:block;}
+.admin-brand .logo-mark{height:38px; width:auto; display:block;}
 
 .admin-login-brand{display:flex; align-items:center; justify-content:center; gap:var(--sp-3);}
-.admin-login-brand .logo-mark{height:40px; width:auto; display:block;}
+.admin-login-brand .logo-mark{height:52px; width:auto; display:block;}
 .admin-nav{display:flex; align-items:center; gap:var(--sp-5); flex-wrap:wrap;}
 .admin-nav a{
   font-size:var(--fs-xs); letter-spacing:var(--tracking-label); text-transform:uppercase;
