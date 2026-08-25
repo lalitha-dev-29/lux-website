@@ -579,7 +579,7 @@ header.site-nav.scrolled{
   transition:color var(--dur) var(--ease);
 }
 .brand-mark:hover{color:var(--gold-ink);}
-.brand-mark .logo-mark{height:58px; width:auto; display:block;}
+.brand-mark .logo-mark{height:72px; width:auto; display:block;}
 
 /* Mobile drawer (default). Becomes an inline bar at >=880px. */
 nav.primary-links{
