@@ -1,0 +1,217 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import CertificationFormFields from '../../../../components/admin/CertificationFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Edit Certificate">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>Edit Certificate</h2>
+  <p class="admin-lede" id="statusLede">Loading…</p>
+
+  <div class="admin-pdf-section" id="fileSection" hidden>
+    <h2>Certificate File</h2>
+    <div class="cert-file-preview" id="certFilePreview">
+      <img id="certFilePreviewImg" alt="Certificate preview" hidden />
+      <div class="cert-file-pdf-badge" id="certFilePdfBadge" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+        <span id="certFilePdfName"></span>
+      </div>
+    </div>
+    <div class="pdf-current-info">
+      <a id="certFileView" href="#" target="_blank" rel="noopener" class="btn-line">View</a>
+      <a id="certFileDownload" href="#" class="btn-line">Download</a>
+    </div>
+    <div class="field">
+      <label for="fCertFileInput">Replace Certificate</label>
+      <input type="file" id="fCertFileInput" accept="application/pdf,image/jpeg,image/png,image/webp" />
+      <p class="hint">PDF, JPG, JPEG, PNG or WebP — up to 10MB. The existing file stays untouched unless a replacement upload succeeds.</p>
+      <span class="upload-status" id="fCertFileStatus"></span>
+    </div>
+  </div>
+
+  <form class="admin-form" id="certForm" novalidate hidden>
+    <CertificationFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/certifications/')} class="btn-line">Back to Certifications</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Certificate</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import {
+      getCertificationById,
+      updateCertification,
+      deleteCertification,
+      uploadCertificateFile,
+      updateCertificationFile,
+      deleteCertificateFileObject,
+    } from '../../../../lib/supabaseAdmin';
+    import {
+      readCertificationForm,
+      writeCertificationForm,
+      validateCertificationForm,
+      toCertificationMetadata,
+    } from '../../../../lib/certificationForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+    import type { LearningCertification } from '../../../../lib/learningTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('certForm') as HTMLFormElement;
+    const statusLede = document.getElementById('statusLede')!;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    const fileSection = document.getElementById('fileSection')!;
+    const previewImg = document.getElementById('certFilePreviewImg') as HTMLImageElement;
+    const pdfBadge = document.getElementById('certFilePdfBadge')!;
+    const pdfName = document.getElementById('certFilePdfName')!;
+    const fileView = document.getElementById('certFileView') as HTMLAnchorElement;
+    const fileDownload = document.getElementById('certFileDownload') as HTMLAnchorElement;
+    const fileInput = document.getElementById('fCertFileInput') as HTMLInputElement;
+    const fileStatus = document.getElementById('fCertFileStatus')!;
+
+    let current: LearningCertification | null = null;
+    let dirty = false;
+
+    function renderFile() {
+      if (!current) return;
+      if (current.file_type === 'image') {
+        previewImg.src = current.file_url;
+        previewImg.hidden = false;
+        pdfBadge.hidden = true;
+      } else {
+        pdfName.textContent = current.file_name || 'certificate.pdf';
+        pdfBadge.hidden = false;
+        previewImg.hidden = true;
+      }
+      fileView.href = current.file_url;
+      fileDownload.href = current.file_url;
+      fileDownload.setAttribute('download', current.file_name || 'certificate');
+    }
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No certificate specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const entry = await getCertificationById(id);
+        if (!entry) {
+          loadError.textContent = 'Certificate not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        writeCertificationForm(entry);
+        renderFile();
+        statusLede.textContent = `Last updated ${new Date(entry.updated_at).toLocaleString()}`;
+        fileSection.hidden = false;
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load certificate.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const values = readCertificationForm();
+      const validationError = validateCertificationForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateCertification(current.id, toCertificationMetadata(values, current.order_index));
+        dirty = false;
+        showToast('Certificate updated successfully.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to update certificate.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.name}"? This will remove the certificate from the Learning section. This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteCertification(current.id);
+        await deleteCertificateFileObject(current.file_url);
+        dirty = false;
+        showToast('Certificate deleted successfully.');
+        window.location.href = withBase('/admin/learning/certifications/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    fileInput.addEventListener('change', async () => {
+      if (!current) return;
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      fileStatus.textContent = 'Uploading…';
+      const previousUrl = current.file_url;
+      try {
+        const uploaded = await uploadCertificateFile(current.id, file);
+        // Only remove the old object after the new upload + row update both
+        // succeed — an interrupted replace never leaves the certificate fileless.
+        current = await updateCertificationFile(current.id, {
+          file_url: uploaded.url,
+          file_type: uploaded.fileType,
+          file_name: uploaded.filename,
+        });
+        renderFile();
+        fileStatus.textContent = '';
+        showToast('Certificate file replaced.');
+        await deleteCertificateFileObject(previousUrl);
+      } catch (err) {
+        fileStatus.textContent = err instanceof Error ? err.message : 'Upload failed.';
+        showToast('Certificate upload failed.', 'error');
+      } finally {
+        fileInput.value = '';
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

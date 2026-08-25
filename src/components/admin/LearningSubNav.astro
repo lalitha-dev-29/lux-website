@@ -1,0 +1,25 @@
+---
+// Sub-navigation for the four Admin → Learning tabs (Overview, Right Now,
+// Education, Certifications). Mirrors AdminLayout's top nav pattern —
+// `aria-current="page"` on whichever section the current path is under.
+import { withBase } from '../../lib/url';
+
+const tabs = [
+  { href: '/admin/learning/', label: 'Overview' },
+  { href: '/admin/learning/right-now/', label: 'Right Now' },
+  { href: '/admin/learning/education/', label: 'Education' },
+  { href: '/admin/learning/certifications/', label: 'Certifications' },
+];
+const currentPath = Astro.url.pathname;
+
+function isActive(href: string): boolean {
+  if (href === '/admin/learning/') return currentPath === withBase(href);
+  return currentPath.startsWith(withBase(href));
+}
+---
+
+<nav class="admin-subnav" aria-label="Learning sections">
+  {tabs.map((tab) => (
+    <a href={withBase(tab.href)} aria-current={isActive(tab.href) ? 'page' : undefined}>{tab.label}</a>
+  ))}
+</nav>

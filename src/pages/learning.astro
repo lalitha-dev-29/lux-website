@@ -1,31 +1,15 @@
 ---
-import { getCollection } from 'astro:content';
 import Layout from '../layouts/Layout.astro';
-import CertCard from '../components/CertCard.astro';
+import LearningCertCard from '../components/LearningCertCard.astro';
+import { fetchLearningOverview, fetchAllRightNow, fetchAllEducation, fetchAllCertifications } from '../lib/buildTimeData';
+import { formatEducationPeriod } from '../lib/learningTypes';
 
-const certifications = (await getCollection('certifications')).sort((a, b) => a.data.order - b.data.order);
-
-const learningNow = [
-  { title: 'Luxury Strategy', body: "I'm learning what makes luxury different from traditional marketing and why the usual rules don't always apply." },
-  { title: 'Brand Management', body: "I'm interested in how global brands are managed over the long term, from positioning and communication to consumer experience." },
-  { title: 'Consumer Psychology', body: "I'm exploring the reasons behind aspiration, desire, identity and the emotional value people attach to brands." },
-  { title: 'Culture', body: "I'm increasingly interested in how culture influences what consumers consider desirable and how brands can respond without losing their identity." },
-];
-
-const education = [
-  {
-    issuer: 'ESSEC Business School',
-    date: 'Singapore, 2026',
-    title: 'MSc Marketing Management & Digital',
-    body: "My current academic journey, where I'm developing a stronger understanding of marketing, digital strategy and consumer behaviour.",
-  },
-  {
-    issuer: 'NMIMS',
-    date: 'India',
-    title: 'BBA Marketing',
-    body: 'Where I built my foundation in marketing and started understanding how brands, consumers and businesses connect.',
-  },
-];
+const [overview, learningNow, education, certifications] = await Promise.all([
+  fetchLearningOverview(),
+  fetchAllRightNow(),
+  fetchAllEducation(),
+  fetchAllCertifications(),
+]);
 ---
 
 <Layout title="Learning | Kasturi Lalitha Manogna">
@@ -33,8 +17,8 @@ const education = [
     <div class="container">
       <div class="section-head reveal">
         <span class="eyebrow">Learning</span>
-        <h1>I'm Still Learning. And I Think That's a Good Thing.</h1>
-        <p>Marketing changes constantly. Consumers change. Culture changes. And luxury definitely changes. So I don't want to treat learning as something that ends with a degree or a certificate. I want it to be part of how I build my career.</p>
+        <h1>{overview.heading}</h1>
+        <p>{overview.description}</p>
       </div>
     </div>
   </section>
@@ -75,9 +59,9 @@ const education = [
         {education.map((item, i) => (
           <article class={`card reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
             <div class="card-body">
-              <div class="issuer">{item.issuer} <span class="date">· {item.date}</span></div>
-              <h3>{item.title}</h3>
-              <p class="excerpt">{item.body}</p>
+              <div class="issuer">{item.institution} <span class="date">· {formatEducationPeriod(item)}</span></div>
+              <h3>{item.programme}</h3>
+              <p class="excerpt">{item.description}</p>
             </div>
           </article>
         ))}
@@ -96,7 +80,7 @@ const education = [
       {certifications.length ? (
         <div class="grid-3">
           {certifications.map((entry, i) => (
-            <CertCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
+            <LearningCertCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
           ))}
         </div>
       ) : (
@@ -111,3 +95,10 @@ const education = [
     </div>
   </section>
 </Layout>
+
+<script>
+  import { initCertDialogs } from '../scripts/certDialogs';
+  import { initCertPdfThumbnails } from '../scripts/certPdfThumbnails';
+  initCertDialogs();
+  initCertPdfThumbnails();
+</script>

@@ -1,0 +1,131 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Learning — Right Now">
+  <h1>Learning</h1>
+  <p class="admin-lede">Manage the Learning page's introduction, Right Now topics, Education history and Certifications.</p>
+  <LearningSubNav />
+
+  <div class="admin-section-head">
+    <div>
+      <h2>Right Now</h2>
+      <p class="admin-lede" style="margin-bottom:0;">What I'm Currently Learning About — the topic cards on the public page.</p>
+    </div>
+    <a href={withBase('/admin/learning/right-now/new/')} class="btn-solid">New Topic</a>
+  </div>
+
+  <div class="admin-toolbar">
+    <input type="search" id="searchInput" placeholder="Search by title…" aria-label="Search Right Now topics" />
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Order</th><th>Title</th><th>Description</th><th></th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="4" class="admin-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    import { listAllRightNow, deleteRightNow, reorderRightNow } from '../../../../lib/supabaseAdmin';
+    import { withBase } from '../../../../lib/url';
+    import { escapeHtml } from '../../../../lib/html';
+    import { showToast } from '../../../../lib/toast';
+    import type { LearningRightNowItem } from '../../../../lib/learningTypes';
+
+    let all: LearningRightNowItem[] = [];
+
+    const rows = document.getElementById('rows')!;
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const filtered = all.filter((item) => !query || item.title.toLowerCase().includes(query));
+
+      if (filtered.length === 0) {
+        rows.innerHTML = `<tr><td colspan="4" class="admin-empty">${all.length === 0 ? 'No Right Now topics yet.' : 'No matching topics.'}</td></tr>`;
+        return;
+      }
+
+      rows.innerHTML = filtered
+        .map(
+          (item, i) => `
+        <tr data-id="${item.id}">
+          <td class="reorder-cell">
+            <button type="button" class="move-up-btn" data-id="${item.id}" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>↑</button>
+            <button type="button" class="move-down-btn" data-id="${item.id}" aria-label="Move down" ${i === filtered.length - 1 ? 'disabled' : ''}>↓</button>
+          </td>
+          <td class="title-cell"><a href="${withBase(`/admin/learning/right-now/edit/?id=${item.id}`)}">${escapeHtml(item.title)}</a></td>
+          <td>${escapeHtml(item.body.slice(0, 90))}${item.body.length > 90 ? '…' : ''}</td>
+          <td class="actions-cell">
+            <a href="${withBase(`/admin/learning/right-now/edit/?id=${item.id}`)}">Edit</a>
+            <button type="button" class="danger delete-btn" data-id="${item.id}" data-title="${escapeHtml(item.title)}">Delete</button>
+          </td>
+        </tr>`
+        )
+        .join('');
+    }
+
+    async function load() {
+      try {
+        all = await listAllRightNow();
+        render();
+      } catch (err) {
+        rows.innerHTML = `<tr><td colspan="4" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+      }
+    }
+
+    async function persistReorder() {
+      try {
+        await reorderRightNow(all.map((item) => item.id));
+        showToast('Order updated.');
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to reorder.', 'error');
+      }
+    }
+
+    rows.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      const upBtn = target.closest('.move-up-btn') as HTMLButtonElement | null;
+      const downBtn = target.closest('.move-down-btn') as HTMLButtonElement | null;
+      if (upBtn || downBtn) {
+        const id = (upBtn || downBtn)!.dataset.id!;
+        const idx = all.findIndex((item) => item.id === id);
+        const swapWith = upBtn ? idx - 1 : idx + 1;
+        if (idx === -1 || swapWith < 0 || swapWith >= all.length) return;
+        [all[idx], all[swapWith]] = [all[swapWith], all[idx]];
+        render();
+        await persistReorder();
+        return;
+      }
+
+      const deleteBtn = target.closest('.delete-btn') as HTMLButtonElement | null;
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.id!;
+        const title = deleteBtn.dataset.title!;
+        if (!confirm(`Delete "${title}"? This will remove it from the Learning section. This cannot be undone.`)) return;
+        deleteBtn.disabled = true;
+        try {
+          await deleteRightNow(id);
+          all = all.filter((item) => item.id !== id);
+          render();
+          showToast('Topic deleted.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to delete.', 'error');
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', render);
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

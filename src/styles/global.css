@@ -821,7 +821,44 @@ a.card:hover .card-media img{transform:scale(1.05);}
   color:var(--stone-mute); margin-bottom:var(--sp-1); font-weight:500;
 }
 .cert-id code{font-family:var(--font-body); font-size:var(--fs-sm); color:var(--charcoal-soft); word-break:break-all;}
-.cert-card .view-cert{margin-top:auto; padding-top:var(--sp-4);}
+.cert-actions{
+  margin-top:auto; padding-top:var(--sp-4);
+  display:flex; align-items:center; gap:var(--sp-5); flex-wrap:wrap;
+}
+.cert-actions button.link-arrow{background:none; border:0; padding:0; font:inherit; letter-spacing:inherit; cursor:pointer;}
+
+/* Certificate thumbnail is a plain reset button wrapping the same .card-media
+   markup as before — clickable, but visually identical to the non-interactive div it replaces. */
+.card-media-btn{display:block; width:100%; padding:0; border:0; background:none; text-align:left; cursor:zoom-in;}
+.card-media-btn:focus-visible{outline:var(--focus-ring); outline-offset:var(--focus-offset);}
+
+.cert-pdf-thumb{
+  width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:var(--sp-2); color:var(--stone-mute); background:var(--ivory-2);
+}
+.cert-pdf-thumb svg{width:34px; height:34px;}
+.cert-pdf-thumb span{font-size:var(--fs-2xs); letter-spacing:.14em; text-transform:uppercase; font-weight:600;}
+.cert-pdf-thumb-rendered{display:block; padding:0;}
+.cert-pdf-thumb-rendered canvas{width:100%; height:100%; object-fit:contain; background:var(--ivory-2);}
+
+/* --- certificate lightbox --- */
+.cert-dialog{
+  padding:0; border:0; border-radius:var(--r-lg); box-shadow:var(--shadow-lg);
+  background:var(--card); color:var(--charcoal);
+  width:min(720px, calc(100vw - var(--sp-6) * 2)); max-height:min(88vh, 900px);
+  margin:auto;
+}
+.cert-dialog::backdrop{background:rgba(20,18,12,.55); backdrop-filter:blur(2px);}
+.cert-dialog-inner{padding:var(--sp-6); max-height:min(88vh, 900px); overflow-y:auto;}
+.cert-dialog-head{display:flex; align-items:center; justify-content:space-between; gap:var(--sp-4); margin-bottom:var(--sp-5);}
+.cert-dialog-head h3{font-size:var(--fs-lg); font-family:var(--font-display);}
+.cert-dialog-close{
+  min-width:36px; min-height:36px; border:1px solid var(--line-strong); border-radius:var(--r-sm);
+  color:var(--stone-mute); flex-shrink:0;
+}
+.cert-dialog-close:hover{color:var(--charcoal); border-color:var(--gold-ink);}
+.cert-dialog-image{width:100%; max-height:70vh; object-fit:contain; border-radius:var(--r-sm); background:var(--ivory-2);}
+
 .cert-card .badge{
   position:absolute; top:var(--sp-3); right:var(--sp-3);
   width:42px; height:42px; border-radius:50%;

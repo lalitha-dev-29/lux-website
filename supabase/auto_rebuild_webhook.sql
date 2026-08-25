@@ -55,3 +55,26 @@ drop trigger if exists case_studies_notify_update on public.case_studies;
 create trigger case_studies_notify_update
   after insert or update or delete on public.case_studies
   for each row execute function public.notify_content_updated();
+
+-- Learning CMS (supabase/learning_cms.sql) — same rebuild-on-save wiring,
+-- covering all four Learning tables so an Admin → Learning edit goes live
+-- the same way a Journal/Case Study edit does.
+drop trigger if exists learning_overview_notify_update on public.learning_overview;
+create trigger learning_overview_notify_update
+  after insert or update on public.learning_overview
+  for each row execute function public.notify_content_updated();
+
+drop trigger if exists learning_right_now_notify_update on public.learning_right_now;
+create trigger learning_right_now_notify_update
+  after insert or update or delete on public.learning_right_now
+  for each row execute function public.notify_content_updated();
+
+drop trigger if exists learning_education_notify_update on public.learning_education;
+create trigger learning_education_notify_update
+  after insert or update or delete on public.learning_education
+  for each row execute function public.notify_content_updated();
+
+drop trigger if exists learning_certifications_notify_update on public.learning_certifications;
+create trigger learning_certifications_notify_update
+  after insert or update or delete on public.learning_certifications
+  for each row execute function public.notify_content_updated();

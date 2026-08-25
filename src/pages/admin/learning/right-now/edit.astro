@@ -1,0 +1,126 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import RightNowFormFields from '../../../../components/admin/RightNowFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Edit Right Now Topic">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>Edit Right Now Topic</h2>
+
+  <form class="admin-form" id="rightNowForm" novalidate hidden>
+    <RightNowFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/right-now/')} class="btn-line">Back to Right Now</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Topic</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import { getRightNowById, updateRightNow, deleteRightNow } from '../../../../lib/supabaseAdmin';
+    import { readRightNowForm, writeRightNowForm, validateRightNowForm, toRightNowInput } from '../../../../lib/rightNowForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+    import type { LearningRightNowItem } from '../../../../lib/learningTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('rightNowForm') as HTMLFormElement;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    let current: LearningRightNowItem | null = null;
+    let dirty = false;
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No topic specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const entry = await getRightNowById(id);
+        if (!entry) {
+          loadError.textContent = 'Topic not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        writeRightNowForm(entry);
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load topic.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const values = readRightNowForm();
+      const validationError = validateRightNowForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateRightNow(current.id, toRightNowInput(values, current.order_index));
+        dirty = false;
+        showToast('Topic updated successfully.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to update topic.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.title}"? This will remove it from the Learning section. This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteRightNow(current.id);
+        dirty = false;
+        showToast('Topic deleted successfully.');
+        window.location.href = withBase('/admin/learning/right-now/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

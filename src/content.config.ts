@@ -31,8 +31,12 @@ const journal = defineCollection({
   }),
 });
 
-/* Add a certificate by adding a Markdown file to src/content/certifications/.
-   Only real, earned certifications should go here. */
+/* Frozen, unused collection — Certifications are now managed via the Admin
+   Panel (Admin → Learning → Certifications) and read from Supabase at build
+   time (see supabase/learning_cms.sql and src/lib/buildTimeData.ts), same as
+   caseStudies/journal above. This folder was never populated with a real
+   certificate, so there was nothing to migrate; it's kept only for schema
+   reference. Nothing reads from this collection anymore. */
 const certifications = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/certifications' }),
   schema: z.object({

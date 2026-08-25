@@ -1,0 +1,80 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import RightNowFormFields from '../../../../components/admin/RightNowFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Right Now Topic">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>New Right Now Topic</h2>
+  <p class="admin-lede">Add a new "What I'm Currently Learning About" card.</p>
+
+  <form class="admin-form" id="rightNowForm" novalidate>
+    <RightNowFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/right-now/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Create Topic</button>
+    </div>
+  </form>
+
+  <script>
+    import { createRightNow, listAllRightNow } from '../../../../lib/supabaseAdmin';
+    import { readRightNowForm, validateRightNowForm, toRightNowInput } from '../../../../lib/rightNowForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+
+    const form = document.getElementById('rightNowForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    document.addEventListener('admin:ready', async () => {
+      try {
+        const existing = await listAllRightNow();
+        const orderInput = document.getElementById('fOrderIndex') as HTMLInputElement;
+        orderInput.value = String(existing.length + 1);
+      } catch {
+        // Non-fatal — the default order_index of 1 still works, the admin can adjust it.
+      }
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      const values = readRightNowForm();
+      const validationError = validateRightNowForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await createRightNow(toRightNowInput(values, 1));
+        dirty = false;
+        showToast('Topic added successfully.');
+        window.location.href = withBase('/admin/learning/right-now/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Create Topic';
+      }
+    });
+  </script>
+</AdminLayout>

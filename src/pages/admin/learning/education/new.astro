@@ -1,0 +1,80 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import EducationFormFields from '../../../../components/admin/EducationFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Education Entry">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>New Education Entry</h2>
+  <p class="admin-lede">Add a new entry to the Education section.</p>
+
+  <form class="admin-form" id="educationForm" novalidate>
+    <EducationFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/education/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Create Entry</button>
+    </div>
+  </form>
+
+  <script>
+    import { createEducation, listAllEducation } from '../../../../lib/supabaseAdmin';
+    import { readEducationForm, validateEducationForm, toEducationInput } from '../../../../lib/educationForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+
+    const form = document.getElementById('educationForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    document.addEventListener('admin:ready', async () => {
+      try {
+        const existing = await listAllEducation();
+        const orderInput = document.getElementById('fOrderIndex') as HTMLInputElement;
+        orderInput.value = String(existing.length + 1);
+      } catch {
+        // Non-fatal — the default order_index of 1 still works, the admin can adjust it.
+      }
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      const values = readEducationForm();
+      const validationError = validateEducationForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await createEducation(toEducationInput(values, 1));
+        dirty = false;
+        showToast('Education entry added successfully.');
+        window.location.href = withBase('/admin/learning/education/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Create Entry';
+      }
+    });
+  </script>
+</AdminLayout>

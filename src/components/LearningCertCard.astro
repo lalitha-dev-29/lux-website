@@ -1,0 +1,67 @@
+---
+import type { LearningCertification } from '../lib/learningTypes';
+import { formatCertDate } from '../lib/learningTypes';
+import PDFViewer from './PDFViewer.astro';
+
+interface Props {
+  entry: LearningCertification;
+  revealClass?: string;
+}
+
+const { entry: c, revealClass = '' } = Astro.props;
+const dialogId = `certDialog-${c.id}`;
+---
+
+<article class={`card cert-card reveal ${revealClass}`}>
+  <button type="button" class="card-media-btn" data-open-dialog={dialogId} aria-haspopup="dialog">
+    <div class="card-media">
+      {c.file_type === 'image' ? (
+        <img src={c.file_url} alt="" loading="lazy" width="800" height="600" />
+      ) : (
+        <span class="cert-pdf-thumb" data-pdf-thumb-url={c.file_url} aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+          <span>PDF</span>
+        </span>
+      )}
+      <span class="badge" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+          <path d="M12 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" />
+          <path d="M8.5 13.5L7 21l5-2.5 5 2.5-1.5-7.5" />
+        </svg>
+      </span>
+    </div>
+    <span class="visually-hidden">View {c.name} certificate</span>
+  </button>
+  <div class="card-body">
+    <div class="issuer">
+      {c.issuing_institution}{c.issuer_portal ? ` · ${c.issuer_portal}` : ''} <span class="date">· {formatCertDate(c)}</span>
+    </div>
+    <h3>{c.name}</h3>
+    <div class="cert-id"><span>Credential ID</span><code>{c.credential_id}</code></div>
+    <div class="cert-actions">
+      <button type="button" class="link-arrow" data-open-dialog={dialogId}>
+        View Certificate<span class="arrow" aria-hidden="true">→</span>
+      </button>
+      <a class="link-arrow view-cert" href={c.certificate_link} target="_blank" rel="noopener">
+        Verify Credential<span class="visually-hidden"> for {c.name} (opens in a new tab)</span>
+        <span class="arrow" aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+</article>
+
+<dialog id={dialogId} class="cert-dialog">
+  <div class="cert-dialog-inner">
+    <div class="cert-dialog-head">
+      <h3>{c.name}</h3>
+      <button type="button" class="cert-dialog-close" data-close-dialog aria-label="Close">
+        <span aria-hidden="true">✕</span>
+      </button>
+    </div>
+    {c.file_type === 'image' ? (
+      <img src={c.file_url} alt={`${c.name} certificate`} class="cert-dialog-image" />
+    ) : (
+      <PDFViewer pdfUrl={c.file_url} pdfFilename={c.file_name} title={c.name} />
+    )}
+  </div>
+</dialog>

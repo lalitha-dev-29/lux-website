@@ -1,0 +1,84 @@
+---
+// Shared field markup for src/pages/admin/learning/education/new.astro and edit.astro.
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+---
+
+<div class="field">
+  <label for="fInstitution">Institution</label>
+  <input id="fInstitution" name="institution" type="text" required maxlength="150" placeholder="e.g. ESSEC Business School" />
+</div>
+
+<div class="field">
+  <label for="fProgramme">Degree / Programme</label>
+  <input id="fProgramme" name="programme" type="text" required maxlength="150" placeholder="e.g. MSc Marketing Management & Digital" />
+</div>
+
+<div class="field">
+  <label for="fDescription">Description</label>
+  <textarea id="fDescription" name="description" required maxlength="500" rows="4"></textarea>
+</div>
+
+<div class="field">
+  <label for="fLocation">Location</label>
+  <input id="fLocation" name="location" type="text" maxlength="100" placeholder="e.g. Singapore" />
+  <p class="hint">Optional — shown alongside the date on the card.</p>
+</div>
+
+<fieldset class="field-group">
+  <legend>Start Date</legend>
+  <div class="field-row">
+    <div class="field">
+      <label for="fStartMonth">Month</label>
+      <select id="fStartMonth" name="start_month">
+        <option value="">—</option>
+        {months.map((m, i) => <option value={i + 1}>{m}</option>)}
+      </select>
+    </div>
+    <div class="field">
+      <label for="fStartYear">Year</label>
+      <input id="fStartYear" name="start_year" type="number" min="1950" max="2100" step="1" placeholder="e.g. 2023" />
+    </div>
+  </div>
+</fieldset>
+
+<div class="field field-checkbox">
+  <label for="fIsCurrent">
+    <input id="fIsCurrent" name="is_current" type="checkbox" />
+    Currently studying here (shows "Present")
+  </label>
+</div>
+
+<fieldset class="field-group" id="endDateGroup">
+  <legend>End Date</legend>
+  <div class="field-row">
+    <div class="field">
+      <label for="fEndMonth">Month</label>
+      <select id="fEndMonth" name="end_month">
+        <option value="">—</option>
+        {months.map((m, i) => <option value={i + 1}>{m}</option>)}
+      </select>
+    </div>
+    <div class="field">
+      <label for="fEndYear">Year</label>
+      <input id="fEndYear" name="end_year" type="number" min="1950" max="2100" step="1" placeholder="e.g. 2026" />
+    </div>
+  </div>
+  <p class="hint">Disabled while "Currently studying here" is checked.</p>
+</fieldset>
+
+<div class="field">
+  <label for="fOrderIndex">Display Order</label>
+  <input id="fOrderIndex" name="order_index" type="number" step="1" min="1" value="1" />
+  <p class="hint">Lower numbers appear first. You can also reorder from the list page.</p>
+</div>
+
+<script>
+  const currentCheckbox = document.getElementById('fIsCurrent') as HTMLInputElement | null;
+  currentCheckbox?.addEventListener('change', async () => {
+    const { toggleEndDateDisabled } = await import('../../lib/educationForm');
+    toggleEndDateDisabled(currentCheckbox.checked);
+  });
+</script>

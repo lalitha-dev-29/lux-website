@@ -1,0 +1,135 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import EducationFormFields from '../../../../components/admin/EducationFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="Edit Education Entry">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>Edit Education Entry</h2>
+
+  <form class="admin-form" id="educationForm" novalidate hidden>
+    <EducationFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/education/')} class="btn-line">Back to Education</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Entry</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import { getEducationById, updateEducation, deleteEducation } from '../../../../lib/supabaseAdmin';
+    import {
+      readEducationForm,
+      writeEducationForm,
+      validateEducationForm,
+      toEducationInput,
+      toggleEndDateDisabled,
+    } from '../../../../lib/educationForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+    import type { LearningEducationItem } from '../../../../lib/learningTypes';
+
+    const params = new URLSearchParams(window.location.search);
+    const id = params.get('id');
+
+    const form = document.getElementById('educationForm') as HTMLFormElement;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    let current: LearningEducationItem | null = null;
+    let dirty = false;
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No education entry specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const entry = await getEducationById(id);
+        if (!entry) {
+          loadError.textContent = 'Education entry not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        writeEducationForm(entry);
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load education entry.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    const currentCheckbox = document.getElementById('fIsCurrent') as HTMLInputElement;
+    currentCheckbox.addEventListener('change', () => toggleEndDateDisabled(currentCheckbox.checked));
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const values = readEducationForm();
+      const validationError = validateEducationForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        current = await updateEducation(current.id, toEducationInput(values, current.order_index));
+        dirty = false;
+        showToast('Education entry updated successfully.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to update entry.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.institution}"? This will remove it from the Learning section. This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteEducation(current.id);
+        dirty = false;
+        showToast('Education entry deleted successfully.');
+        window.location.href = withBase('/admin/learning/education/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

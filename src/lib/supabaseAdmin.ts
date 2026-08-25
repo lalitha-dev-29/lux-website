@@ -4,6 +4,13 @@ import type { JournalPost, JournalStatus } from './journalTypes';
 import type { CaseStudy, CaseStudyStatus } from './caseStudyTypes';
 import type { ContentLink } from './contentLinks';
 import { parseLinks } from './contentLinks';
+import type {
+  LearningOverview,
+  LearningRightNowItem,
+  LearningEducationItem,
+  LearningCertification,
+  CertFileType,
+} from './learningTypes';
 
 /**
  * Admin-only Supabase client. This module (and the @supabase/supabase-js
@@ -340,4 +347,257 @@ export async function deleteCaseStudyPdfObject(pdfUrl: string): Promise<void> {
   if (idx === -1) return;
   const path = pdfUrl.slice(idx + marker.length);
   await getSupabaseClient().storage.from('case-study-pdfs').remove([path]);
+}
+
+// ---------------------------------------------------------------------------
+// Learning — Overview (singleton), Right Now, Education, Certifications.
+// None of these carry a draft/published status: a saved row is simply live,
+// the same "no review step" model a settings panel would use. Delete
+// confirmation in the UI is what stands in for "unpublish".
+// ---------------------------------------------------------------------------
+
+export async function getLearningOverview(): Promise<LearningOverview | null> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_overview')
+    .select('*')
+    .eq('id', true)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as LearningOverview | null;
+}
+
+export async function saveLearningOverview(input: { heading: string; description: string }): Promise<LearningOverview> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_overview')
+    .upsert({ id: true, ...input })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LearningOverview;
+}
+
+export interface RightNowInput {
+  title: string;
+  body: string;
+  order_index: number;
+}
+
+export async function listAllRightNow(): Promise<LearningRightNowItem[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_right_now')
+    .select('*')
+    .order('order_index', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as LearningRightNowItem[];
+}
+
+export async function getRightNowById(id: string): Promise<LearningRightNowItem | null> {
+  const { data, error } = await getSupabaseClient().from('learning_right_now').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as LearningRightNowItem | null;
+}
+
+export async function createRightNow(input: RightNowInput): Promise<LearningRightNowItem> {
+  const { data, error } = await getSupabaseClient().from('learning_right_now').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return data as LearningRightNowItem;
+}
+
+export async function updateRightNow(id: string, input: RightNowInput): Promise<LearningRightNowItem> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_right_now')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LearningRightNowItem;
+}
+
+export async function deleteRightNow(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('learning_right_now').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderRightNow(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) => getSupabaseClient().from('learning_right_now').update({ order_index: i + 1 }).eq('id', id))
+  );
+}
+
+export interface EducationInput {
+  institution: string;
+  programme: string;
+  description: string;
+  location: string | null;
+  start_month: number | null;
+  start_year: number | null;
+  end_month: number | null;
+  end_year: number | null;
+  is_current: boolean;
+  order_index: number;
+}
+
+export async function listAllEducation(): Promise<LearningEducationItem[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_education')
+    .select('*')
+    .order('order_index', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as LearningEducationItem[];
+}
+
+export async function getEducationById(id: string): Promise<LearningEducationItem | null> {
+  const { data, error } = await getSupabaseClient().from('learning_education').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as LearningEducationItem | null;
+}
+
+export async function createEducation(input: EducationInput): Promise<LearningEducationItem> {
+  const { data, error } = await getSupabaseClient().from('learning_education').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return data as LearningEducationItem;
+}
+
+export async function updateEducation(id: string, input: EducationInput): Promise<LearningEducationItem> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_education')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LearningEducationItem;
+}
+
+export async function deleteEducation(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('learning_education').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderEducation(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) => getSupabaseClient().from('learning_education').update({ order_index: i + 1 }).eq('id', id))
+  );
+}
+
+export interface CertificationInput {
+  name: string;
+  issuer_portal: string | null;
+  issuing_institution: string;
+  cert_month: number;
+  cert_year: number;
+  file_url: string;
+  file_type: CertFileType;
+  file_name: string | null;
+  credential_id: string;
+  certificate_link: string;
+  order_index: number;
+}
+
+export async function listAllCertifications(): Promise<LearningCertification[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_certifications')
+    .select('*')
+    .order('order_index', { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as LearningCertification[];
+}
+
+export async function getCertificationById(id: string): Promise<LearningCertification | null> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_certifications')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as LearningCertification | null;
+}
+
+export async function createCertification(input: CertificationInput): Promise<LearningCertification> {
+  const { data, error } = await getSupabaseClient().from('learning_certifications').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return data as LearningCertification;
+}
+
+/** Metadata-only update — never touches file_url/file_type/file_name (see updateCertificationFile below), so editing details never risks the attached file. */
+export async function updateCertification(
+  id: string,
+  input: Omit<CertificationInput, 'file_url' | 'file_type' | 'file_name'>
+): Promise<LearningCertification> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_certifications')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LearningCertification;
+}
+
+/** Updates only the file fields — kept separate so replacing a certificate file never requires re-submitting the rest of the form. */
+export async function updateCertificationFile(
+  id: string,
+  fields: { file_url: string; file_type: CertFileType; file_name: string | null }
+): Promise<LearningCertification> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_certifications')
+    .update(fields)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LearningCertification;
+}
+
+export async function deleteCertification(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('learning_certifications').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+export async function reorderCertifications(orderedIds: string[]): Promise<void> {
+  await Promise.all(
+    orderedIds.map((id, i) => getSupabaseClient().from('learning_certifications').update({ order_index: i + 1 }).eq('id', id))
+  );
+}
+
+const ALLOWED_CERT_TYPES: Record<string, CertFileType> = {
+  'application/pdf': 'pdf',
+  'image/jpeg': 'image',
+  'image/png': 'image',
+  'image/webp': 'image',
+};
+
+const MAX_CERT_FILE_BYTES = 10 * 1024 * 1024;
+
+export interface UploadedCertFile {
+  url: string;
+  filename: string;
+  fileType: CertFileType;
+}
+
+/** Uploads a certificate file (image or PDF) for a given certification row and returns its public URL + detected type. */
+export async function uploadCertificateFile(certificationId: string, file: File): Promise<UploadedCertFile> {
+  const fileType = ALLOWED_CERT_TYPES[file.type];
+  if (!fileType) {
+    throw new Error('Unsupported certificate format — please upload a PDF, JPG, PNG or WebP file.');
+  }
+  if (file.size > MAX_CERT_FILE_BYTES) {
+    throw new Error('Certificate file is too large — the limit is 10MB.');
+  }
+  const supabase = getSupabaseClient();
+  const path = `${certificationId}/${uniqueObjectName(file)}`;
+  const { error } = await supabase.storage.from('learning-certificates').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('learning-certificates').getPublicUrl(path);
+  return { url: data.publicUrl, filename: file.name, fileType };
+}
+
+/** Best-effort delete of the previous certificate file when replacing/removing — failure here isn't fatal to the row update. */
+export async function deleteCertificateFileObject(fileUrl: string): Promise<void> {
+  const marker = '/object/public/learning-certificates/';
+  const idx = fileUrl.indexOf(marker);
+  if (idx === -1) return;
+  const path = fileUrl.slice(idx + marker.length);
+  await getSupabaseClient().storage.from('learning-certificates').remove([path]);
 }

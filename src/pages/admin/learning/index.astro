@@ -1,0 +1,134 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../components/admin/LearningSubNav.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Learning — Overview">
+  <h1>Learning</h1>
+  <p class="admin-lede">Manage the Learning page's introduction, Right Now topics, Education history and Certifications.</p>
+  <LearningSubNav />
+
+  <div class="admin-section-head">
+    <div>
+      <h2>Overview</h2>
+      <p class="admin-lede" style="margin-bottom:0;">The heading and intro paragraph at the top of the public /learning/ page.</p>
+    </div>
+    <a href={withBase('/learning/')} target="_blank" rel="noopener" class="btn-line">Preview Live Page<span class="arrow" aria-hidden="true">→</span></a>
+  </div>
+
+  <form class="admin-form" id="overviewForm" novalidate>
+    <div class="field">
+      <label for="fHeading">Heading</label>
+      <input id="fHeading" name="heading" type="text" required maxlength="200" disabled />
+      <p class="hint">The page's main headline (H1).</p>
+    </div>
+    <div class="field">
+      <label for="fDescription">Description</label>
+      <textarea id="fDescription" name="description" required rows="5" maxlength="600" disabled></textarea>
+      <p class="hint">The paragraph shown beneath the heading.</p>
+    </div>
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <button type="button" class="btn-line" id="cancelBtn" hidden>Cancel</button>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="editBtn">Edit</button>
+      <button type="button" class="btn-solid" id="saveBtn" hidden>Save Changes</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import { getLearningOverview, saveLearningOverview } from '../../../lib/supabaseAdmin';
+    import { showToast } from '../../../lib/toast';
+
+    const form = document.getElementById('overviewForm') as HTMLFormElement;
+    const headingInput = document.getElementById('fHeading') as HTMLInputElement;
+    const descriptionInput = document.getElementById('fDescription') as HTMLTextAreaElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const loadError = document.getElementById('loadError')!;
+    const editBtn = document.getElementById('editBtn') as HTMLButtonElement;
+    const cancelBtn = document.getElementById('cancelBtn') as HTMLButtonElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    let saved = { heading: '', description: '' };
+
+    function enterViewMode() {
+      headingInput.disabled = true;
+      descriptionInput.disabled = true;
+      editBtn.hidden = false;
+      cancelBtn.hidden = true;
+      saveBtn.hidden = true;
+      headingInput.value = saved.heading;
+      descriptionInput.value = saved.description;
+      errorEl.hidden = true;
+    }
+
+    function enterEditMode() {
+      headingInput.disabled = false;
+      descriptionInput.disabled = false;
+      editBtn.hidden = true;
+      cancelBtn.hidden = false;
+      saveBtn.hidden = false;
+      headingInput.focus();
+    }
+
+    async function load() {
+      try {
+        const overview = await getLearningOverview();
+        if (!overview) {
+          loadError.textContent = 'No Overview content found.';
+          loadError.hidden = false;
+          form.hidden = true;
+          return;
+        }
+        saved = { heading: overview.heading, description: overview.description };
+        enterViewMode();
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load Overview content.';
+        loadError.hidden = false;
+        form.hidden = true;
+      }
+    }
+
+    editBtn.addEventListener('click', enterEditMode);
+    cancelBtn.addEventListener('click', enterViewMode);
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      const heading = headingInput.value.trim();
+      const description = descriptionInput.value.trim();
+      if (!heading) {
+        errorEl.textContent = 'Heading is required.';
+        errorEl.hidden = false;
+        return;
+      }
+      if (!description) {
+        errorEl.textContent = 'Description is required.';
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const updated = await saveLearningOverview({ heading, description });
+        saved = { heading: updated.heading, description: updated.description };
+        enterViewMode();
+        showToast('Overview updated.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

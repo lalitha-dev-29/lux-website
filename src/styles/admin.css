@@ -51,6 +51,27 @@ body.admin{overflow-x:visible;}
 .admin-stat .num{font-family:var(--font-display); font-size:var(--display-3); line-height:1;}
 .admin-stat .label{font-size:var(--fs-2xs); letter-spacing:var(--tracking-label); text-transform:uppercase; color:var(--stone-mute); margin-top:var(--sp-2); display:block;}
 
+/* --- Learning sub-nav (Overview / Right Now / Education / Certifications) --- */
+.admin-subnav{
+  display:flex; flex-wrap:wrap; gap:var(--sp-6);
+  margin-bottom:var(--sp-7); padding-bottom:var(--sp-4); border-bottom:1px solid var(--line);
+}
+.admin-subnav a{
+  font-size:var(--fs-xs); letter-spacing:var(--tracking-label); text-transform:uppercase;
+  color:var(--stone-mute); padding-bottom:var(--sp-2); border-bottom:2px solid transparent;
+}
+.admin-subnav a:hover{color:var(--charcoal);}
+.admin-subnav a[aria-current="page"]{color:var(--gold-ink); border-bottom-color:var(--gold-ink);}
+
+/* --- reorder up/down buttons --- */
+.reorder-cell{white-space:nowrap;}
+.reorder-cell button{
+  min-height:28px; min-width:28px; border:1px solid var(--line-strong); border-radius:var(--r-sm);
+  color:var(--stone-mute); font-size:var(--fs-sm); line-height:1;
+}
+.reorder-cell button:hover:not(:disabled){color:var(--gold-ink); border-color:var(--gold-ink);}
+.reorder-cell button:disabled{opacity:.35; cursor:default;}
+
 .admin-section-head{
   display:flex; align-items:baseline; justify-content:space-between; gap:var(--sp-4);
   margin-bottom:var(--sp-4); flex-wrap:wrap;
@@ -184,6 +205,28 @@ table.admin-table{width:100%; border-collapse:collapse; min-width:640px;}
 .admin-toast-error{border-color:var(--danger); color:var(--danger);}
 .admin-toast-out{opacity:0; transform:translateY(6px); transition:opacity var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);}
 @keyframes adminToastIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;}}
+
+/* --- certificate file preview (Admin → Learning → Certifications) --- */
+.cert-file-preview{margin:var(--sp-4) 0; max-width:280px;}
+.cert-file-preview img{
+  width:100%; max-height:220px; object-fit:contain; border-radius:var(--r-sm);
+  border:1px solid var(--line); background:var(--ivory-2);
+}
+.cert-file-pdf-badge{
+  display:flex; align-items:center; gap:var(--sp-3); padding:var(--sp-4);
+  border:1px solid var(--line); border-radius:var(--r-sm); background:var(--ivory-2);
+}
+.cert-file-pdf-badge svg{width:28px; height:28px; flex-shrink:0; color:var(--gold-ink);}
+.cert-file-pdf-badge span{font-size:var(--fs-sm); word-break:break-all;}
+
+.cert-thumb{
+  display:block; width:56px; height:56px; border-radius:var(--r-sm); border:1px solid var(--line);
+  object-fit:cover; background:var(--ivory-2);
+}
+a.cert-thumb-pdf{
+  display:flex; align-items:center; justify-content:center;
+  font-size:var(--fs-2xs); letter-spacing:.08em; color:var(--gold-ink); font-weight:600;
+}
 
 /* --- PDF attachment section --- */
 .admin-pdf-section{

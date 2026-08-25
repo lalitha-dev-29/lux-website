@@ -3,6 +3,13 @@ import { PUBLIC_JOURNAL_FIELDS } from './journalTypes';
 import type { CaseStudy } from './caseStudyTypes';
 import { PUBLIC_CASE_STUDY_FIELDS } from './caseStudyTypes';
 import { parseLinks } from './contentLinks';
+import type { LearningOverview, LearningRightNowItem, LearningEducationItem, LearningCertification } from './learningTypes';
+import {
+  PUBLIC_LEARNING_OVERVIEW_FIELDS,
+  PUBLIC_RIGHT_NOW_FIELDS,
+  PUBLIC_EDUCATION_FIELDS,
+  PUBLIC_CERTIFICATION_FIELDS,
+} from './learningTypes';
 
 /**
  * Build-time reads against Supabase's PostgREST API, used by `getStaticPaths()`
@@ -70,4 +77,32 @@ export async function fetchAllPublishedCaseStudies(): Promise<CaseStudy[]> {
     `case_studies?select=${PUBLIC_CASE_STUDY_FIELDS}&status=eq.published&order=order_index.asc`
   );
   return (rows as Record<string, unknown>[]).map(normalizeCaseStudy);
+}
+
+/** Fallback used only if the learning_overview singleton row is ever missing (it's seeded by supabase/learning_cms.sql). */
+const FALLBACK_LEARNING_OVERVIEW: LearningOverview = {
+  heading: "I'm Still Learning. And I Think That's a Good Thing.",
+  description:
+    "Marketing changes constantly. Consumers change. Culture changes. And luxury definitely changes. So I don't want to treat learning as something that ends with a degree or a certificate. I want it to be part of how I build my career.",
+  updated_at: new Date(0).toISOString(),
+};
+
+export async function fetchLearningOverview(): Promise<LearningOverview> {
+  const rows = await restGet(`learning_overview?select=${PUBLIC_LEARNING_OVERVIEW_FIELDS}&id=eq.true&limit=1`);
+  return (rows[0] as LearningOverview | undefined) ?? FALLBACK_LEARNING_OVERVIEW;
+}
+
+export async function fetchAllRightNow(): Promise<LearningRightNowItem[]> {
+  const rows = await restGet(`learning_right_now?select=${PUBLIC_RIGHT_NOW_FIELDS}&order=order_index.asc`);
+  return rows as LearningRightNowItem[];
+}
+
+export async function fetchAllEducation(): Promise<LearningEducationItem[]> {
+  const rows = await restGet(`learning_education?select=${PUBLIC_EDUCATION_FIELDS}&order=order_index.asc`);
+  return rows as LearningEducationItem[];
+}
+
+export async function fetchAllCertifications(): Promise<LearningCertification[]> {
+  const rows = await restGet(`learning_certifications?select=${PUBLIC_CERTIFICATION_FIELDS}&order=order_index.asc`);
+  return rows as LearningCertification[];
 }

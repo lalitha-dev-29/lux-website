@@ -15,29 +15,37 @@ src/
     RelatedContent.astro    Tag/category-overlap "You Might Also Like" section
     PDFViewer.astro         Case Study PDF reader (pairs with scripts/pdfViewer.ts)
     admin/        Admin-only form fragments (Journal + Case Study editor fields,
-                  the shared LinksEditor, and the Toast notification)
+                  Right Now / Education / Certification editor fields, the shared
+                  LinksEditor, LearningSubNav, and the Toast notification)
   content/        Markdown content collections — FROZEN ARCHIVE, see "Adding content" below
     case-studies/ Original case study files, migrated into Supabase — kept for reference
     journal/      Original Journal posts, migrated into Supabase — kept for reference
-    certifications/  One .md file per certification (empty until you add real ones;
-                  this collection is still live/read directly, unlike the other two)
+    certifications/  Frozen/unused — was never populated; Certifications are now
+                  managed via Admin → Learning → Certifications (Supabase-backed)
   content.config.ts  Schema for the collections above
   data/atlas.ts   Country descriptions + marker coordinates for the Atlas page
   layouts/        Layout.astro (public shell — title/description/OG/canonical props),
                   AdminLayout.astro (Admin Panel shell)
-  lib/            supabaseAdmin.ts (auth + Journal/Case Study CRUD + Storage uploads),
+  lib/            supabaseAdmin.ts (auth + Journal/Case Study/Learning CRUD + Storage uploads),
                   buildTimeData.ts (build-time Supabase reads for getStaticPaths),
-                  journalForm.ts / caseStudyForm.ts (admin form read/write/validate),
-                  journalTypes.ts / caseStudyTypes.ts / contentLinks.ts (shared types),
+                  journalForm.ts / caseStudyForm.ts / rightNowForm.ts / educationForm.ts /
+                  certificationForm.ts (admin form read/write/validate),
+                  journalTypes.ts / caseStudyTypes.ts / learningTypes.ts / contentLinks.ts
+                  (shared types + Learning's date-formatting helpers),
                   markdown.ts (Markdown → HTML), readingTime.ts, relatedContent.ts,
                   imageUpload.ts / linksForm.ts / toast.ts (admin form widgets)
   pages/          Routes — one file/folder per URL, including admin/ (see below)
-  scripts/        site.ts (nav/scroll/reveal), pdfViewer.ts (pdf.js wiring, lazy-loaded)
+  scripts/        site.ts (nav/scroll/reveal), pdfViewer.ts (pdf.js wiring, lazy-loaded,
+                  the full Case Study/Certificate PDF reader), certPdfThumbnails.ts
+                  (lazy pdf.js first-page thumbnails for PDF certificate cards),
+                  certDialogs.ts (Learning certificate lightbox wiring)
   styles/global.css  Design tokens + all public-site component styles
-  styles/admin.css   Admin Panel-only layout (dashboard, table, editor, login)
+  styles/admin.css   Admin Panel-only layout (dashboard, table, editor, login, Learning sub-nav)
 supabase/schema.sql            Original Journal CMS schema, RLS policies, seed data
 supabase/case_study_cms.sql    Case Study table + Journal extensions + Storage buckets
                                 (run this AFTER schema.sql — see "Setting up" below)
+supabase/learning_cms.sql      Learning CMS: Overview/Right Now/Education/Certifications
+                                tables + Storage bucket (run AFTER schema.sql — see below)
 .github/workflows/deploy.yml            Deploys on every push to main
 .github/workflows/scheduled-rebuild.yml Rebuilds every 4h so Admin-panel edits go live
                                           without a manual push (see "Scheduled rebuild")
@@ -46,11 +54,11 @@ legacy/index.html  The original single-file HTML/CSS/JS version, kept for refere
 
 ## Adding content
 
-Journal posts and Case Studies are both managed entirely through the [Admin Panel](#journal--case-study-cms--admin-panel) — there is no Markdown file to hand-edit for either anymore, and adding one never requires a code change or a new page component (see that section for the architecture). Only Certifications remain plain Markdown:
+Journal posts, Case Studies, and everything on the Learning page are all managed entirely through the [Admin Panel](#journal--case-study-cms--admin-panel) — there is no Markdown file to hand-edit for any of them, and adding one never requires a code change or a new page component (see that section, and "Learning CMS" below, for the architecture).
 
 - **Journal post**: `/admin/journal/new/`. Full article (title, excerpt, Markdown body with inline images, author, category, tags, cover image, external links, SEO fields, featured/draft/published), rendered at `/journal/<slug>/`.
 - **Case study**: `/admin/case-studies/new/`. Same shape as a Journal post, plus PDF upload/replace/remove, rendered at `/case-studies/<slug>/`.
-- **Certification**: add a `.md` file to `src/content/certifications/` once you have a real one to list.
+- **Learning page content** — heading/intro, Right Now topics, Education entries, Certifications (with an uploaded image or PDF file): `/admin/learning/`. See "Learning CMS" below.
 
 ## Journal + Case Study CMS + Admin Panel
 
@@ -88,7 +96,7 @@ Journal and Case Study **pages are generated at build time**, not fetched client
 ### Setting up your own Supabase project
 
 1. Create a free project at [supabase.com](https://supabase.com).
-2. **Dashboard → SQL Editor → New query** — paste in the entire contents of [`supabase/schema.sql`](supabase/schema.sql) and run it, **then** do the same with [`supabase/case_study_cms.sql`](supabase/case_study_cms.sql) (order matters — the second file depends on functions the first one creates). Together these create every table, RLS policy, and Storage bucket, and seed the 5 original Journal posts and 5 original Case Studies as published rows.
+2. **Dashboard → SQL Editor → New query** — paste in the entire contents of [`supabase/schema.sql`](supabase/schema.sql) and run it, **then** do the same with [`supabase/case_study_cms.sql`](supabase/case_study_cms.sql), **then** [`supabase/learning_cms.sql`](supabase/learning_cms.sql) (order matters — both later files depend on functions `schema.sql` creates). Together these create every table, RLS policy, and Storage bucket, and seed the 5 original Journal posts, 5 original Case Studies, and the original Learning Overview/Right Now/Education content as rows.
 3. **Dashboard → Authentication → Users → Add user** — create your admin login (email + password, check "Auto Confirm User"). Copy the new user's UID.
 4. Back in the SQL Editor, run: `insert into public.admin_users (user_id) values ('<uid-from-step-3>');` — this one row is what makes that account an admin. Everyone else who might ever sign up is a plain USER by default.
 5. **Dashboard → Project Settings → API** — copy the **Project URL** and **anon public key**.
@@ -99,7 +107,8 @@ Journal and Case Study **pages are generated at build time**, not fetched client
 
 - `/admin/` — dashboard: Journal + Case Study counts, recently updated across both.
 - `/admin/journal/` and `/admin/case-studies/` — list, search, filter by status, publish/unpublish/delete, with featured/PDF-attached indicators.
-- `.../new/` — create; Save Draft or Publish.
+- `/admin/learning/` — four tabs (sub-nav at the top of every page under it): Overview, Right Now, Education, Certifications. See "Learning CMS" below.
+- `.../new/` — create; Save Draft or Publish (Journal/Case Studies) or Create (Learning — no draft state, see below).
 - `.../edit/?id=<uuid>` — edit, save, toggle publish state, or delete. (A static site can't pre-generate a page per database row with an unknown-at-build-time ID, so edit/new use a query string rather than a path segment like `/admin/journal/<id>/edit` — everything else about them behaves the same.)
 
 Title, Excerpt and Article Content are required on both forms (Case Studies also require a Category). Everything else — cover image, author, tags, featured, external links, SEO fields, OG image — is optional. A Case Study's PDF is managed separately, in its own section on the edit page, since a PDF needs a saved case study to attach to; upload, replace and remove all update the same `pdf_url`/`pdf_filename` fields and clean up the previous Storage object on replace/remove.
@@ -133,6 +142,22 @@ There is no server-only secret anywhere in this feature — the `PUBLIC_` prefix
 - **File uploads**: `case-study-pdfs` accepts uploads client-side gated only by a `file.type === 'application/pdf'` check (`uploadCaseStudyPdf()` in `src/lib/supabaseAdmin.ts`) — real enforcement is Storage RLS requiring `is_admin()` on every insert, so this check is a UX nicety (a fast, friendly error) rather than the security boundary, same pattern as the RBAC UX checks above.
 - **Recommended hardening — turn off public sign-up.** Supabase projects allow email sign-up by default. RBAC still holds if a stranger signs up (they land in the `authenticated` role, and every admin policy requires `is_admin()`, so they get exactly the same access as an anonymous visitor — no drafts, no writes). But there is no reason for anyone but the site owner to have an account here, and leaving it open lets strangers consume the project's auth and email quota. Turn it off at **Dashboard → Authentication → Sign In / Providers → Email → disable "Allow new users to sign up"**.
 - **Secrets**: confirmed no non-`PUBLIC_` Supabase credential exists in this repo, `.env.example`, or the deploy workflow. The Supabase **service role key** (which bypasses RLS) is never used anywhere in this codebase — intentionally, since nothing here needs it.
+
+## Learning CMS
+
+The `/learning/` page (Overview heading/intro, Right Now topics, Education history, Certifications) is admin-managed the same way as Journal/Case Studies — same Supabase project, same static-build-time-fetch architecture (see "Architecture" above) — with one deliberate difference: **none of the four Learning tables carry a draft/published status.** Learning has no editorial review step; a saved row is simply live, the same "no draft state" model a settings panel would use. The delete-confirmation dialog on every Learning admin page is what stands in for "unpublish".
+
+- **Overview** (`learning_overview`) — a single row (`supabase/learning_cms.sql` seeds it, `id` is always `true`) holding the page's `heading` and `description`. `/admin/learning/` shows it read-only until "Edit" is clicked; "Cancel" reverts to the last saved values without writing anything.
+- **Right Now** (`learning_right_now`) — `title` + `body` cards, full CRUD at `/admin/learning/right-now/`, reordered with ↑/↓ buttons on the list page (writes every visible row's `order_index` after each move).
+- **Education** (`learning_education`) — `institution`, `programme`, `description`, an optional free-text `location`, and optional structured `start_month`/`start_year`/`end_month`/`end_year`/`is_current` date fields. `src/lib/learningTypes.ts`'s `formatEducationPeriod()` decides what to actually print (e.g. `"Singapore, 2026"`, `"India"`, or a full `"Jan 2023 – Present"` for an entry with more complete dates) — the public page's minimal one-line date display never had to change to support the richer admin data model behind it. Full CRUD + ↑/↓ reorder at `/admin/learning/education/`.
+- **Certifications** (`learning_certifications`) — `name`, `issuer_portal`, `issuing_institution`, a required `cert_month`/`cert_year` (rendered as `"August 2026"` by `formatCertDate()`), a required `credential_id` (validated both client-side and by a Postgres check constraint to letters/numbers/spaces/`.`/`-`/`_` only), a required `certificate_link` (validated as an `http(s)://` URL, both client-side and by a check constraint), and one uploaded file (image or PDF) in the `learning-certificates` Storage bucket. Full CRUD + ↑/↓ reorder at `/admin/learning/certifications/`.
+  - **Creating** one requires the file to finish uploading before the row can be saved (`file_url` is `not null` in the schema) — the New Certificate page uploads to a client-generated draft ID's Storage path as soon as a file is chosen (same "upload before the row exists" technique `wireContentFormImages()` already uses for a new Case Study's cover image, see `src/lib/imageUpload.ts`), then inserts the row with the already-known file URL/type/filename.
+  - **Editing** metadata (`updateCertification()`) never touches the file fields, and replacing the file (`updateCertificationFile()`) never touches the metadata fields — the two are separate calls, so an in-progress edit of one can't corrupt the other. Replacing a file uploads the new one and updates the row *before* deleting the old Storage object, so a failed/interrupted replace never leaves a certificate fileless.
+  - **Public rendering** (`src/components/LearningCertCard.astro`): an image certificate shows the image itself as the card thumbnail; a PDF certificate shows a real rendered first-page thumbnail (`src/scripts/certPdfThumbnails.ts`, lazy pdf.js via `IntersectionObserver`, same lazy-loading discipline as the Case Study PDF reader). Clicking either thumbnail (or the card's "View Certificate" button) opens a `<dialog>` lightbox (`src/scripts/certDialogs.ts`) — an image certificate shows full-size inline; a PDF certificate reuses the exact same `PDFViewer.astro` + `pdfViewer.ts` reader Case Studies use (page navigation, zoom, fullscreen, open-in-new-tab, download), so viewing never forces a download. The separate "Verify Credential" link opens `certificate_link` in a new tab.
+
+### Setting up
+
+Covered by the same "Setting up your own Supabase project" steps above — running [`supabase/learning_cms.sql`](supabase/learning_cms.sql) (after `schema.sql`) creates all four tables, their RLS policies, and the `learning-certificates` Storage bucket (public read, admin write, 10MB cap, restricted to PDF/JPG/PNG/WebP at the bucket level in addition to the app's own check), and seeds the Overview/Right Now/Education content that was previously hardcoded in `src/pages/learning.astro`. No new environment variables — Learning reuses the same `PUBLIC_SUPABASE_URL`/`PUBLIC_SUPABASE_ANON_KEY`. If you've set up the "Automatic rebuild on save" GitHub webhook for Journal/Case Studies, `supabase/auto_rebuild_webhook.sql` also wires the four Learning tables into it — an Admin → Learning edit goes live the same way a Journal/Case Study edit does.
 
 ## The Atlas map
 

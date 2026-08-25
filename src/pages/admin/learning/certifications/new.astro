@@ -1,0 +1,145 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import CertificationFormFields from '../../../../components/admin/CertificationFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Certificate">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>New Certificate</h2>
+  <p class="admin-lede">Upload the certificate file first, then fill in its details.</p>
+
+  <div class="admin-pdf-section">
+    <h2>Certificate File</h2>
+    <p class="hint">PDF, JPG, JPEG, PNG or WebP — up to 10MB.</p>
+    <div class="field">
+      <label for="fCertFileInput">Upload Certificate</label>
+      <input type="file" id="fCertFileInput" accept="application/pdf,image/jpeg,image/png,image/webp" />
+      <span class="upload-status" id="fCertFileStatus"></span>
+    </div>
+    <div class="cert-file-preview" id="certFilePreview" hidden>
+      <img id="certFilePreviewImg" alt="Certificate preview" hidden />
+      <div class="cert-file-pdf-badge" id="certFilePdfBadge" hidden>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path></svg>
+        <span id="certFilePdfName"></span>
+      </div>
+    </div>
+  </div>
+
+  <form class="admin-form" id="certForm" novalidate>
+    <CertificationFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/certifications/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn" disabled>Create Certificate</button>
+    </div>
+  </form>
+
+  <script>
+    import { createCertification, listAllCertifications, uploadCertificateFile, type UploadedCertFile } from '../../../../lib/supabaseAdmin';
+    import { readCertificationForm, validateCertificationForm, toCertificationMetadata } from '../../../../lib/certificationForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+
+    const form = document.getElementById('certForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    const fileInput = document.getElementById('fCertFileInput') as HTMLInputElement;
+    const fileStatus = document.getElementById('fCertFileStatus')!;
+    const filePreview = document.getElementById('certFilePreview')!;
+    const previewImg = document.getElementById('certFilePreviewImg') as HTMLImageElement;
+    const pdfBadge = document.getElementById('certFilePdfBadge')!;
+    const pdfName = document.getElementById('certFilePdfName')!;
+
+    const draftId = crypto.randomUUID();
+    let uploaded: UploadedCertFile | null = null;
+    let dirty = false;
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty || uploaded) e.preventDefault();
+    });
+
+    document.addEventListener('admin:ready', async () => {
+      try {
+        const existing = await listAllCertifications();
+        const orderInput = document.getElementById('fOrderIndex') as HTMLInputElement;
+        orderInput.value = String(existing.length + 1);
+      } catch {
+        // Non-fatal — the default order_index of 1 still works, the admin can adjust it.
+      }
+    });
+
+    fileInput.addEventListener('change', async () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      dirty = true;
+      fileStatus.textContent = 'Uploading…';
+      saveBtn.disabled = true;
+      try {
+        uploaded = await uploadCertificateFile(draftId, file);
+        if (uploaded.fileType === 'image') {
+          previewImg.src = uploaded.url;
+          previewImg.hidden = false;
+          pdfBadge.hidden = true;
+        } else {
+          pdfName.textContent = uploaded.filename;
+          pdfBadge.hidden = false;
+          previewImg.hidden = true;
+        }
+        filePreview.hidden = false;
+        fileStatus.textContent = 'Uploaded.';
+        saveBtn.disabled = false;
+      } catch (err) {
+        fileStatus.textContent = err instanceof Error ? err.message : 'Upload failed.';
+        showToast('Certificate upload failed.', 'error');
+      } finally {
+        fileInput.value = '';
+      }
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      if (!uploaded) {
+        errorEl.textContent = 'Please upload a supported certificate format.';
+        errorEl.hidden = false;
+        return;
+      }
+      const values = readCertificationForm();
+      const validationError = validateCertificationForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await createCertification({
+          ...toCertificationMetadata(values, 1),
+          file_url: uploaded.url,
+          file_type: uploaded.fileType,
+          file_name: uploaded.filename,
+        });
+        dirty = false;
+        showToast('Certificate added successfully.');
+        window.location.href = withBase('/admin/learning/certifications/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Create Certificate';
+      }
+    });
+  </script>
+</AdminLayout>

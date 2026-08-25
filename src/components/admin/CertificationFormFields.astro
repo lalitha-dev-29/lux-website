@@ -1,0 +1,64 @@
+---
+// Shared metadata field markup for src/pages/admin/learning/certifications/new.astro
+// and edit.astro. The certificate file itself (upload/preview/replace) is handled
+// separately in each of those pages — see the "Certificate File" section they render
+// around this component, mirroring how CaseStudyFormFields.astro leaves PDF handling
+// to its parent pages.
+const months = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
+---
+
+<div class="field">
+  <label for="fCertName">Certificate Name</label>
+  <input id="fCertName" name="name" type="text" required maxlength="150" placeholder="e.g. Google Project Management Certificate" />
+</div>
+
+<div class="field-row">
+  <div class="field">
+    <label for="fIssuerPortal">Certificate Issuer Portal</label>
+    <input id="fIssuerPortal" name="issuer_portal" type="text" maxlength="120" placeholder="e.g. Coursera" />
+    <p class="hint">The platform that issued or hosts the credential.</p>
+  </div>
+  <div class="field">
+    <label for="fIssuingInstitution">Certificate Issuing Institution</label>
+    <input id="fIssuingInstitution" name="issuing_institution" type="text" required maxlength="120" placeholder="e.g. Google" />
+  </div>
+</div>
+
+<fieldset class="field-group">
+  <legend>Certification Date</legend>
+  <div class="field-row">
+    <div class="field">
+      <label for="fCertMonth">Month</label>
+      <select id="fCertMonth" name="cert_month" required>
+        <option value="">—</option>
+        {months.map((m, i) => <option value={i + 1}>{m}</option>)}
+      </select>
+    </div>
+    <div class="field">
+      <label for="fCertYear">Year</label>
+      <input id="fCertYear" name="cert_year" type="number" required min="1950" max="2100" step="1" placeholder="e.g. 2026" />
+    </div>
+  </div>
+  <p class="hint">Displayed as, for example, "August 2026".</p>
+</fieldset>
+
+<div class="field">
+  <label for="fCredentialId">Credential ID</label>
+  <input id="fCredentialId" name="credential_id" type="text" required maxlength="100" placeholder="e.g. ABC123456789" />
+  <p class="hint">Letters, numbers, spaces, hyphens, underscores and periods only.</p>
+</div>
+
+<div class="field">
+  <label for="fCertificateLink">Certificate Link</label>
+  <input id="fCertificateLink" name="certificate_link" type="url" required maxlength="500" placeholder="https://example.com/certificate/12345" />
+  <p class="hint">The external verification/credential page. Shown publicly as "Verify Credential".</p>
+</div>
+
+<div class="field">
+  <label for="fOrderIndex">Display Order</label>
+  <input id="fOrderIndex" name="order_index" type="number" step="1" min="1" value="1" />
+  <p class="hint">Lower numbers appear first. You can also reorder from the list page.</p>
+</div>
