@@ -1,6 +1,7 @@
 ---
 import { withBase } from '../lib/url';
 import { version } from '../../package.json';
+import Logo from './Logo.astro';
 
 const links = [
   { href: '/', label: 'Home' },
@@ -15,7 +16,7 @@ const links = [
 <footer>
   <div class="container">
     <div class="footer-grid">
-      <a href={withBase('/')} class="brand-mark" aria-label="KLM — home">KLM<span class="dot" aria-hidden="true"></span></a>
+      <a href={withBase('/')} class="brand-mark" aria-label="Kasturi Lalitha Manogna — home"><Logo class="logo-mark" /></a>
       <nav aria-label="Footer">
         {links.map((link) => <a href={withBase(link.href)}>{link.label}</a>)}
       </nav>

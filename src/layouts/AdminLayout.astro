@@ -1,5 +1,6 @@
 ---
 import { withBase } from '../lib/url';
+import Logo from '../components/Logo.astro';
 import '../styles/global.css';
 import '../styles/admin.css';
 
@@ -41,7 +42,7 @@ const currentPath = Astro.url.pathname;
   ) : (
     <>
       <header class="admin-topbar">
-        <a class="admin-brand" href={withBase('/admin/')}>KLM Admin<span class="dot">.</span></a>
+        <a class="admin-brand" href={withBase('/admin/')}><Logo class="logo-mark" /> Admin<span class="dot">.</span></a>
         <nav class="admin-nav" aria-label="Admin">
           {navLinks.map((link) => (
             <a href={withBase(link.href)} aria-current={currentPath.endsWith(link.href) ? 'page' : undefined}>

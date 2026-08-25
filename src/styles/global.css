@@ -574,13 +574,12 @@ header.site-nav.scrolled{
    redistributing as controls are added. */
 .nav-controls{display:flex; align-items:center; gap:var(--sp-3);}
 .brand-mark{
-  display:inline-flex; align-items:center; gap:var(--sp-2);
-  font-family:var(--font-display); font-size:21px; letter-spacing:.12em; font-weight:600;
+  display:inline-flex; align-items:center;
   min-height:44px;
   transition:color var(--dur) var(--ease);
 }
 .brand-mark:hover{color:var(--gold-ink);}
-.brand-mark .dot{width:5px; height:5px; border-radius:50%; background:var(--gold); flex:none;}
+.brand-mark .logo-mark{height:46px; width:auto; display:block;}
 
 /* Mobile drawer (default). Becomes an inline bar at >=880px. */
 nav.primary-links{
