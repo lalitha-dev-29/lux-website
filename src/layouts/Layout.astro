@@ -4,10 +4,6 @@ import Nav from '../components/Nav.astro';
 import Footer from '../components/Footer.astro';
 import { withBase } from '../lib/url';
 import '../styles/global.css';
-// TEMPORARY — dark-blue background exploration branch only. Remove this
-// import + its usage below (and the matching CSS block in global.css) once
-// a final shade is picked. See BgVariantPicker.astro for details.
-import BgVariantPicker from '../components/dev/BgVariantPicker.astro';
 
 interface Props {
   title: string;
@@ -39,8 +35,10 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content={description} />
   <meta name="author" content="Kasturi Lalitha Manogna" />
-  <meta name="theme-color" content="#F7F4EC" media="(prefers-color-scheme: light)" />
-  <meta name="theme-color" content="#17140D" media="(prefers-color-scheme: dark)" />
+  <!-- Dark is the default theme, so this is the default chrome colour;
+       the inline script below swaps it to light's when that's the
+       resolved theme, and the toggle keeps it in sync after that. -->
+  <meta name="theme-color" content="#0D1B2E" />
   <link rel="icon" type="image/svg+xml" href={withBase('/favicon.svg')} />
   <link rel="canonical" href={canonicalUrl} />
   <title>{title}</title>
@@ -59,35 +57,25 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined
     rel="stylesheet"
   />
   <!--
-    Theme must be resolved and applied before first paint, or the page
-    flashes the wrong colours for a frame — this has to be a synchronous,
-    blocking inline script (not the deferred site.ts) so it runs before
-    <body> is rendered. An explicit stored choice always wins; with none
-    yet, `data-theme` is simply left unset and CSS falls back to
-    prefers-color-scheme on its own, so this script has nothing to do
-    (and nothing to get wrong) for a first-time visitor.
+    Dark is the site's default theme regardless of OS preference — only an
+    explicit stored choice can opt into light. Resolved and applied before
+    first paint, or the page flashes the wrong colours for a frame; this
+    has to be a synchronous, blocking inline script (not the deferred
+    site.ts) so it runs before <body> is rendered. Also mirrors the
+    resolved theme into the theme-color meta tag, since that tag can't
+    reference a CSS variable.
   -->
   <script is:inline>
     try {
       var t = localStorage.getItem('lmk-theme');
-      if (t === 'light' || t === 'dark') {
-        document.documentElement.setAttribute('data-theme', t);
+      if (t !== 'light' && t !== 'dark') t = 'dark';
+      document.documentElement.setAttribute('data-theme', t);
+      if (t === 'light') {
+        var m = document.querySelector('meta[name="theme-color"]');
+        if (m) m.setAttribute('content', '#F7F4EC');
       }
     } catch (e) {
-      /* localStorage unavailable — fall back to prefers-color-scheme */
-    }
-  </script>
-  <!-- TEMPORARY — dark-blue background exploration branch only. Restores
-       the picked swatch before first paint so reloads don't flash back to
-       baseline. Remove alongside BgVariantPicker.astro. -->
-  <script is:inline>
-    try {
-      var bgv = localStorage.getItem('lmk-bg-variant-temp');
-      if (bgv && bgv !== 'baseline') {
-        document.documentElement.setAttribute('data-bg-variant', bgv);
-      }
-    } catch (e) {
-      /* localStorage unavailable — defaults to baseline */
+      document.documentElement.setAttribute('data-theme', 'dark');
     }
   </script>
   <!--
@@ -118,7 +106,6 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined
     <slot />
   </main>
   <Footer />
-  <BgVariantPicker />
   <script src="../scripts/site.ts"></script>
 </body>
 </html>

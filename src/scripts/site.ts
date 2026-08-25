@@ -1,17 +1,14 @@
 /* ============ THEME TOGGLE ============
-   The blocking inline script in <head> already applied any stored choice
-   before paint (avoiding a flash) — this just wires up the button and
-   keeps everything in sync from here on: persisting new choices, updating
-   the toggle's label/pressed state, and reacting live if the OS theme
-   changes while no explicit choice has been made yet. */
+   Dark is the site's default regardless of OS preference — the blocking
+   inline script in <head> already applied it (or a stored explicit choice)
+   before paint, avoiding a flash. This just wires up the button: persisting
+   new choices and updating the toggle's label/pressed state. */
 const THEME_KEY = 'lmk-theme';
 const themeToggle = document.getElementById('themeToggle') as HTMLButtonElement | null;
-const darkSchemeQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
 function effectiveTheme(): 'light' | 'dark' {
   const explicit = document.documentElement.getAttribute('data-theme');
-  if (explicit === 'light' || explicit === 'dark') return explicit;
-  return darkSchemeQuery.matches ? 'dark' : 'light';
+  return explicit === 'light' ? 'light' : 'dark';
 }
 
 function updateThemeToggleLabel() {
@@ -25,7 +22,7 @@ function updateMetaThemeColor() {
   const isDark = effectiveTheme() === 'dark';
   document
     .querySelectorAll('meta[name="theme-color"]')
-    .forEach((m) => m.setAttribute('content', isDark ? '#17140D' : '#F7F4EC'));
+    .forEach((m) => m.setAttribute('content', isDark ? '#0D1B2E' : '#F7F4EC'));
 }
 
 if (themeToggle) {
@@ -49,15 +46,6 @@ if (themeToggle) {
 
     if (!prefersReducedMotion) {
       window.setTimeout(() => html.classList.remove('theme-transition'), 260);
-    }
-  });
-
-  // No explicit choice yet: if the OS theme changes (e.g. sunset auto-switch),
-  // follow it live — but never override a choice the visitor already made.
-  darkSchemeQuery.addEventListener('change', () => {
-    if (!document.documentElement.getAttribute('data-theme')) {
-      updateThemeToggleLabel();
-      updateMetaThemeColor();
     }
   });
 }

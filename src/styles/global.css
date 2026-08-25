@@ -129,9 +129,16 @@
 
 /* ============================================================
    DARK MODE
-   Default (no explicit choice): follow the OS. An explicit choice (the
-   toggle in the nav) sets data-theme and always wins over the OS setting,
-   in either direction — see the two blocks below.
+   Dark is now the site's unconditional default — it applies regardless of
+   OS preference, unless the visitor explicitly switches to light via the
+   nav toggle (which sets data-theme="light" and wins here). This is a
+   single rule rather than the old OS-media-query + explicit-choice pair
+   because both branches now carry identical values.
+
+   Background is Deep Midnight Blue (#0D1B2E); every other dark surface
+   (--ivory-2/-3, --card, --white, --line, --line-strong) is a lighter tint
+   of it so cards, the CTA band, and hairlines read as one coherent blue
+   surface system rather than the previous background-only swap.
 
    Every colour here was chosen and checked independently for dark
    surfaces (not just the light palette inverted), then verified to clear
@@ -140,83 +147,43 @@
    button hover states that live inside the (also-inverting) dark CTA
    band) — the same bar the light palette was held to.
    ============================================================ */
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --ivory:#17140D;
-    --ivory-2:#1D1912;
-    --ivory-3:#241F16;
-    --card:#221E15;
-    --white:#221E15;
-    --charcoal:#F2ECDD;
-    --charcoal-soft:#D9D0BC;
-
-    --stone:#ADA48C;         /* 7.41:1 on --ivory */
-    --stone-mute:#A79E86;    /* 6.90:1 on --ivory */
-    --stone-light:#4A4536;   /* decorative only */
-
-    --gold:#C29A52;
-    --gold-ink:#E0B563;      /* 9.59:1 on --ivory */
-    --gold-soft:#D9B978;
-    --gold-wash:#2A2313;
-
-    --line:#332C1F;
-    --line-strong:#453C29;
-
-    --danger:#E2695A;        /* 5.60:1 on --ivory */
-    --danger-wash:#2E1712;
-    --success:#7FA377;
-
-    /* Shadows read as "ink cast on paper" and were tuned for a light
-       surface — reused as-is they'd all but disappear against a dark one,
-       so dark mode gets its own, blacker set. */
-    --shadow-sm:0 1px 2px rgba(0,0,0,.35), 0 2px 8px -4px rgba(0,0,0,.45);
-    --shadow-md:0 8px 24px -12px rgba(0,0,0,.55), 0 2px 6px -3px rgba(0,0,0,.35);
-    --shadow-lg:0 28px 56px -28px rgba(0,0,0,.65), 0 6px 16px -8px rgba(0,0,0,.45);
-    --shadow-nav:0 1px 20px -12px rgba(0,0,0,.55);
-
-    /* Same shapes, richer treatment: gold carries the whole system here
-       (mixed against the *dark* --gold token, not light's) and gets a soft
-       glow for atmosphere — near-black backgrounds have the headroom to
-       take it without the page feeling busy. */
-    --motif-field-1:color-mix(in srgb, var(--gold) 20%, transparent);
-    --motif-field-2:color-mix(in srgb, var(--gold) 13%, transparent);
-    --motif-ring:color-mix(in srgb, var(--gold) 30%, transparent);
-    --motif-spoke:color-mix(in srgb, var(--gold) 42%, transparent);
-    --motif-accent:color-mix(in srgb, var(--gold-soft) 78%, transparent);
-    --motif-particle:color-mix(in srgb, var(--gold-soft) 70%, transparent);
-    --motif-glow:drop-shadow(0 0 22px color-mix(in srgb, var(--gold) 35%, transparent));
-  }
-}
-:root[data-theme="dark"]{
-  --ivory:#17140D;
-  --ivory-2:#1D1912;
-  --ivory-3:#241F16;
-  --card:#221E15;
-  --white:#221E15;
+:root:not([data-theme="light"]){
+  --ivory:#0D1B2E;
+  --ivory-2:#1E2B3D;
+  --ivory-3:#2F3B4B;
+  --card:#253243;
+  --white:#253243;
   --charcoal:#F2ECDD;
   --charcoal-soft:#D9D0BC;
 
-  --stone:#ADA48C;
-  --stone-mute:#A79E86;
-  --stone-light:#4A4536;
+  --stone:#ADA48C;         /* 7.41:1 on --ivory */
+  --stone-mute:#A79E86;    /* 6.90:1 on --ivory */
+  --stone-light:#4A4536;   /* decorative only */
 
   --gold:#C29A52;
-  --gold-ink:#E0B563;
+  --gold-ink:#E0B563;      /* 9.59:1 on --ivory */
   --gold-soft:#D9B978;
   --gold-wash:#2A2313;
 
-  --line:#332C1F;
-  --line-strong:#453C29;
+  --line:#394454;
+  --line-strong:#475260;
 
-  --danger:#E2695A;
+  --danger:#E2695A;        /* 5.60:1 on --ivory */
   --danger-wash:#2E1712;
   --success:#7FA377;
 
+  /* Shadows read as "ink cast on paper" and were tuned for a light
+     surface — reused as-is they'd all but disappear against a dark one,
+     so dark mode gets its own, blacker set. */
   --shadow-sm:0 1px 2px rgba(0,0,0,.35), 0 2px 8px -4px rgba(0,0,0,.45);
   --shadow-md:0 8px 24px -12px rgba(0,0,0,.55), 0 2px 6px -3px rgba(0,0,0,.35);
   --shadow-lg:0 28px 56px -28px rgba(0,0,0,.65), 0 6px 16px -8px rgba(0,0,0,.45);
   --shadow-nav:0 1px 20px -12px rgba(0,0,0,.55);
 
+  /* Same shapes, richer treatment: gold carries the whole system here
+     (mixed against the *dark* --gold token, not light's) and gets a soft
+     glow for atmosphere — near-black backgrounds have the headroom to
+     take it without the page feeling busy. */
   --motif-field-1:color-mix(in srgb, var(--gold) 20%, transparent);
   --motif-field-2:color-mix(in srgb, var(--gold) 13%, transparent);
   --motif-ring:color-mix(in srgb, var(--gold) 30%, transparent);
@@ -224,41 +191,6 @@
   --motif-accent:color-mix(in srgb, var(--gold-soft) 78%, transparent);
   --motif-particle:color-mix(in srgb, var(--gold-soft) 70%, transparent);
   --motif-glow:drop-shadow(0 0 22px color-mix(in srgb, var(--gold) 35%, transparent));
-}
-
-/* ============================================================
-   EXPERIMENTAL: DARK-BLUE BACKGROUND EXPLORATION (TEMPORARY)
-   Preview-only swatches for the dark-mode background colour. Each swatch
-   sets `--ivory` (the token `body{background}` reads); the shared rule
-   below then re-derives every other dark surface — card, CTA band, hairline
-   borders, and the comparison panel itself — from that same `--ivory` via
-   color-mix, so the whole page (not just the page background) adopts the
-   tested colour as one coherent set instead of pairing a blue background
-   with the baseline's fixed warm-neutral surfaces.
-   Baseline is untouched: it never sets data-bg-variant (see
-   BgVariantPicker.astro), so it keeps the exact hand-tuned dark-mode
-   values defined earlier in this file.
-   Requires BOTH data-theme="dark" AND data-bg-variant="…" (set together by
-   BgVariantPicker.astro) so this can never affect anyone who isn't using
-   the picker, and never touches light mode.
-   To remove: delete this block, delete BgVariantPicker.astro, and remove
-   its <BgVariantPicker /> usage + import from Layout.astro.
-   ============================================================ */
-:root[data-theme="dark"][data-bg-variant="navy"]{--ivory:#0A0E1A;}
-:root[data-theme="dark"][data-bg-variant="midnight"]{--ivory:#0D1B2E;}
-:root[data-theme="dark"][data-bg-variant="royal"]{--ivory:#141B3D;}
-:root[data-theme="dark"][data-bg-variant="blueblack"]{--ivory:#060911;}
-:root[data-theme="dark"][data-bg-variant="desaturated"]{--ivory:#1C222C;}
-:root[data-theme="dark"][data-bg-variant="brighter"]{--ivory:#1F2E52;}
-:root[data-theme="dark"][data-bg-variant="bluegrey"]{--ivory:#262B36;}
-
-:root[data-theme="dark"][data-bg-variant]{
-  --ivory-2:color-mix(in srgb, var(--ivory) 93%, white 7%);
-  --ivory-3:color-mix(in srgb, var(--ivory) 86%, white 14%);
-  --card:color-mix(in srgb, var(--ivory) 90%, white 10%);
-  --white:color-mix(in srgb, var(--ivory) 90%, white 10%);
-  --line:color-mix(in srgb, var(--ivory) 82%, white 18%);
-  --line-strong:color-mix(in srgb, var(--ivory) 76%, white 24%);
 }
 
 /* ============================================================
