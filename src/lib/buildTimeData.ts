@@ -41,15 +41,32 @@ function getConfig(): { url: string; anonKey: string } {
   return { url, anonKey };
 }
 
+// Scheduled rebuilds have occasionally failed on a transient Cloudflare
+// "could not resolve host" error in front of Supabase (a few-second DNS
+// blip, not a real outage) — retry a couple of times with backoff before
+// failing the whole build over it.
+const REST_GET_MAX_ATTEMPTS = 3;
+
 async function restGet(path: string): Promise<unknown[]> {
   const { url, anonKey } = getConfig();
-  const res = await fetch(`${url}/rest/v1/${path}`, {
-    headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
-  });
-  if (!res.ok) {
-    throw new Error(`Supabase request failed (${res.status}) for ${path}: ${await res.text()}`);
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= REST_GET_MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${url}/rest/v1/${path}`, {
+        headers: { apikey: anonKey, Authorization: `Bearer ${anonKey}` },
+      });
+      if (!res.ok) {
+        throw new Error(`Supabase request failed (${res.status}) for ${path}: ${await res.text()}`);
+      }
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+      if (attempt < REST_GET_MAX_ATTEMPTS) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+      }
+    }
   }
-  return res.json();
+  throw lastError;
 }
 
 function normalizeJournalPost(row: Record<string, unknown>): JournalPost {
