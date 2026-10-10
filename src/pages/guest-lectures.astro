@@ -1,10 +1,11 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import GuestLectureCard from '../components/GuestLectureCard.astro';
 import { fetchAllGuestLectures } from '../lib/buildTimeData';
-import { formatLectureDate } from '../lib/guestLectureTypes';
+import { lectureSlugs } from '../lib/guestLectureTypes';
 
 const lectures = await fetchAllGuestLectures();
-const lines = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boolean);
+const slugs = lectureSlugs(lectures);
 ---
 
 <Layout title="Guest Lectures | Kasturi Lalitha Manogna">
@@ -22,56 +23,19 @@ const lines = (text: string) => text.split('\n').map((l) => l.trim()).filter(Boo
 
   <section class="tight">
     <div class="container">
-      {lectures.length === 0 ? (
-        <div class="empty-state reveal">
-          <p>No guest lectures added yet. This page will grow as I learn from more speakers.</p>
-        </div>
-      ) : (
-        <div class="lecture-list">
-          {lectures.map((lecture) => (
-            <article class="card lecture-card reveal">
-              <div class="card-body">
-                <div class="issuer"><span class="date">{formatLectureDate(lecture.lecture_date)}</span></div>
-                <h2>{lecture.topic}</h2>
-
-                <div class="lecture-speakers">
-                  {lecture.speakers.map((speaker) => (
-                    <div class="lecture-speaker">
-                      {speaker.photos.length > 0 && (
-                        <div class="lecture-photos">
-                          {speaker.photos.map((src) => (
-                            <img src={src} alt={`Photo of ${speaker.name}`} loading="lazy" />
-                          ))}
-                        </div>
-                      )}
-                      <h3>{speaker.name}</h3>
-                      {speaker.role && <p class="lecture-role">{speaker.role}</p>}
-                      {speaker.description && <p class="excerpt">{speaker.description}</p>}
-                      {speaker.quote && <blockquote class="lecture-quote">{speaker.quote}</blockquote>}
-                    </div>
-                  ))}
-                </div>
-
-                <h3 class="lecture-learned-title">What I learned</h3>
-                <ul class="excerpt lecture-learned">
-                  {lines(lecture.key_learnings).map((line) => (
-                    <li>{line}</li>
-                  ))}
-                </ul>
-
-                {lecture.files.length > 0 && (
-                  <div class="lecture-files">
-                    {lecture.files.map((file) => (
-                      <a class="btn-line" href={file.url} target="_blank" rel="noopener noreferrer">
-                        {file.name} <span class="arrow" aria-hidden="true">↗</span>
-                      </a>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </article>
+      <h2 class="visually-hidden">Guest lectures</h2>
+      {lectures.length > 0 ? (
+        <div class="grid-3">
+          {lectures.map((lecture, i) => (
+            <GuestLectureCard
+              entry={lecture}
+              slug={slugs.get(lecture.id)!}
+              revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''}
+            />
           ))}
         </div>
+      ) : (
+        <p class="journal-status">No guest lectures yet — check back soon.</p>
       )}
     </div>
   </section>

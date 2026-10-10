@@ -1,5 +1,6 @@
 /** Shared types + formatting helpers for the standalone Guest Lectures CMS. */
 import { monthName } from './learningTypes';
+import { slugify } from './slugify';
 
 export interface GuestSpeaker {
   name: string;
@@ -62,4 +63,48 @@ export function normalizeGuestLecture(row: Record<string, unknown>): GuestLectur
     return [{ url, name: str(o.name) ?? 'Download', type: o.type === 'ppt' ? 'ppt' : 'pdf' } as GuestLectureFile];
   });
   return { ...(row as unknown as GuestLecture), speakers, files };
+}
+
+/**
+ * Stable URL slug per lecture, derived from the topic. Lectures have no slug
+ * column, so a duplicate topic gets the first 8 chars of its id appended.
+ */
+export function lectureSlugs(lectures: GuestLecture[]): Map<string, string> {
+  const seen = new Map<string, number>();
+  const base = lectures.map((l) => slugify(l.topic));
+  base.forEach((b) => seen.set(b, (seen.get(b) ?? 0) + 1));
+  return new Map(lectures.map((l, i) => [l.id, (seen.get(base[i]) ?? 0) > 1 ? `${base[i]}-${l.id.slice(0, 8)}` : base[i]]));
+}
+
+/** "Rishabh & Ashwin", "A, B & C" — for card eyebrows and detail metadata. */
+export function speakerNames(lecture: GuestLecture): string {
+  const names = lecture.speakers.map((s) => s.name).filter(Boolean);
+  if (names.length <= 1) return names[0] ?? '';
+  return `${names.slice(0, -1).join(', ')} & ${names[names.length - 1]}`;
+}
+
+/** First speaker photo across all speakers — used as the card cover. */
+export function lectureCoverImage(lecture: GuestLecture): string | null {
+  for (const s of lecture.speakers) if (s.photos[0]) return s.photos[0];
+  return null;
+}
+
+/** Unique, non-empty speaker roles, shown as the card's tag chips. */
+export function speakerRoleTags(lecture: GuestLecture): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const s of lecture.speakers) {
+    const role = s.role?.trim();
+    if (role && !seen.has(role.toLowerCase())) {
+      seen.add(role.toLowerCase());
+      out.push(role);
+    }
+  }
+  return out;
+}
+
+/** Card excerpt: the takeaways flattened to one line and trimmed. */
+export function lectureExcerpt(lecture: GuestLecture, max = 170): string {
+  const flat = lecture.key_learnings.split('\n').map((l) => l.trim()).filter(Boolean).join(' · ');
+  return flat.length > max ? `${flat.slice(0, max).replace(/\s+\S*$/, '')}…` : flat;
 }

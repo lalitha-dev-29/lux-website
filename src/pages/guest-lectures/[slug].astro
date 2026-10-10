@@ -1,0 +1,99 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ContentMetadata from '../../components/ContentMetadata.astro';
+import { withBase } from '../../lib/url';
+import { fetchAllGuestLectures } from '../../lib/buildTimeData';
+import {
+  formatLectureDate,
+  lectureCoverImage,
+  lectureExcerpt,
+  lectureSlugs,
+  speakerNames,
+  speakerRoleTags,
+} from '../../lib/guestLectureTypes';
+
+export async function getStaticPaths() {
+  const lectures = await fetchAllGuestLectures();
+  const slugs = lectureSlugs(lectures);
+  return lectures.map((lecture) => ({
+    params: { slug: slugs.get(lecture.id)! },
+    props: { lecture },
+  }));
+}
+
+const { lecture } = Astro.props;
+const lines = lecture.key_learnings.split('\n').map((l) => l.trim()).filter(Boolean);
+const cover = lectureCoverImage(lecture);
+const tags = speakerRoleTags(lecture);
+---
+
+<Layout
+  title={`${lecture.topic} | Guest Lectures | Kasturi Lalitha Manogna`}
+  description={lectureExcerpt(lecture, 155)}
+  ogImage={cover || undefined}
+  ogType="article"
+>
+  <section class="tight case-detail-head">
+    <div class="container">
+      <a href={withBase('/guest-lectures/')} class="btn-line case-back reveal"><span class="arrow" aria-hidden="true">←</span> All Guest Lectures</a>
+      <div class="reveal">
+        <div class="card-meta content-metadata">
+          <span>{speakerNames(lecture)}</span>
+          <span class="dot" aria-hidden="true"></span>
+          <span>{formatLectureDate(lecture.lecture_date)}</span>
+        </div>
+        <h1 class="case-detail-title">{lecture.topic}</h1>
+        {tags.length > 0 && <div class="tags" style="margin-top:var(--sp-5);">{tags.map((t) => <span>{t}</span>)}</div>}
+      </div>
+    </div>
+  </section>
+
+  {cover && (
+    <section class="tight flush-top">
+      <div class="container">
+        <div class="case-detail-media reveal">
+          <img src={cover} alt={`Photo of ${lecture.speakers[0]?.name ?? 'the speaker'}`} width="1600" height="800" />
+        </div>
+      </div>
+    </section>
+  )}
+
+  <section class="tight">
+    <div class="container">
+      <div class="prose reveal">
+        <h2>{lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker'}</h2>
+        {lecture.speakers.map((speaker) => (
+          <div class="lecture-speaker">
+            <h3>{speaker.name}</h3>
+            {speaker.role && <p class="lecture-role">{speaker.role}</p>}
+            {speaker.photos.length > 0 && (
+              <div class="lecture-photos">
+                {speaker.photos.map((src) => (
+                  <img src={src} alt={`Photo of ${speaker.name}`} loading="lazy" />
+                ))}
+              </div>
+            )}
+            {speaker.description && <p class="lecture-bio">{speaker.description}</p>}
+            {speaker.quote && <blockquote class="lecture-quote">{speaker.quote}</blockquote>}
+          </div>
+        ))}
+
+        <h2>What I Learned</h2>
+        <ul class="lecture-learned">
+          {lines.map((line) => <li>{line}</li>)}
+        </ul>
+      </div>
+
+      {lecture.files.length > 0 && (
+        <div class="external-links">
+          {lecture.files.map((file) => (
+            <a href={file.url} target="_blank" rel="noopener" class="btn-line external-link">
+              {file.name}<span class="arrow" aria-hidden="true">↗</span>
+              <span class="visually-hidden"> (opens in a new tab)</span>
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  </section>
+</Layout>
