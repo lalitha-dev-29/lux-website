@@ -1,3 +1,5 @@
+import type { GuestLecture } from './guestLectureTypes';
+import { PUBLIC_GUEST_LECTURE_FIELDS, normalizeGuestLecture } from './guestLectureTypes';
 import type { JournalPost } from './journalTypes';
 import { PUBLIC_JOURNAL_FIELDS } from './journalTypes';
 import type { CaseStudy } from './caseStudyTypes';
@@ -115,6 +117,28 @@ export async function fetchLearningOverview(): Promise<LearningOverview> {
 export async function fetchAllRightNow(): Promise<LearningRightNowItem[]> {
   const rows = await restGet(`learning_right_now?select=${PUBLIC_RIGHT_NOW_FIELDS}&order=order_index.asc`);
   return rows as LearningRightNowItem[];
+}
+
+/**
+ * Guest lectures are an additive section: if supabase/guest_lectures.sql has
+ * not been applied yet the table does not exist, and the build must keep
+ * working (the page just shows its empty state) rather than fail.
+ */
+export async function fetchAllGuestLectures(): Promise<GuestLecture[]> {
+  const order = '&order=lecture_date.desc';
+  try {
+    const rows = await restGet(`guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS}${order}`);
+    return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
+  } catch {
+    // Table missing, or the `tags` column not added yet (older guest_lectures.sql): retry without it.
+    try {
+      const fields = PUBLIC_GUEST_LECTURE_FIELDS.replace(',tags', '');
+      const rows = await restGet(`guest_lectures?select=${fields}${order}`);
+      return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
+    } catch {
+      return [];
+    }
+  }
 }
 
 export async function fetchAllEducation(): Promise<LearningEducationItem[]> {

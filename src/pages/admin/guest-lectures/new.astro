@@ -1,0 +1,89 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import GuestLectureFormFields from '../../../components/admin/GuestLectureFormFields.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="New Guest Lecture">
+  <h1>New Guest Lecture</h1>
+  <p class="admin-lede">Record a guest lecture — the speakers, what they shared, and what you took away.</p>
+
+  <form class="admin-form" id="guestLectureForm" novalidate>
+    <GuestLectureFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/guest-lectures/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Save Lecture</button>
+    </div>
+  </form>
+
+  <script>
+    import { createGuestLecture, deleteGuestLectureAssets, listAllGuestLectures } from '../../../lib/supabaseAdmin';
+    import { createGuestLectureEditor } from '../../../lib/guestLectureEditor';
+    import { withBase } from '../../../lib/url';
+    import { showToast } from '../../../lib/toast';
+
+    const form = document.getElementById('guestLectureForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    const editor = createGuestLectureEditor();
+    editor.addSpeaker();
+
+    // Offer tags already used on other lectures (non-fatal if this fails).
+    document.addEventListener('admin:ready', async () => {
+      try {
+        editor.setKnownTags((await listAllGuestLectures()).flatMap((l) => l.tags));
+      } catch {
+        /* suggestions are a convenience only */
+      }
+    });
+
+    // Default the date to today (local time).
+    const now = new Date();
+    (document.getElementById('fLectureDate') as HTMLInputElement).value =
+      `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    let dirty = false;
+    form.addEventListener('input', () => (dirty = true));
+    editor.onChange(() => (dirty = true));
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      const problem = editor.validate();
+      if (problem) {
+        errorEl.textContent = problem;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        // The id is chosen up front so photos/files can be filed under it before the row exists.
+        const input = await editor.buildInput(crypto.randomUUID());
+        try {
+          await createGuestLecture(input);
+        } catch (err) {
+          await deleteGuestLectureAssets([...input.speakers.flatMap((s) => s.photos), ...input.files.map((f) => f.url)]);
+          throw err;
+        }
+        dirty = false;
+        showToast('Lecture saved.');
+        window.location.href = withBase('/admin/guest-lectures/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Lecture';
+      }
+    });
+  </script>
+</AdminLayout>

@@ -1,0 +1,42 @@
+---
+import Layout from '../layouts/Layout.astro';
+import GuestLectureCard from '../components/GuestLectureCard.astro';
+import { fetchAllGuestLectures } from '../lib/buildTimeData';
+import { lectureSlugs } from '../lib/guestLectureTypes';
+
+const lectures = await fetchAllGuestLectures();
+const slugs = lectureSlugs(lectures);
+---
+
+<Layout title="Guest Lectures | Kasturi Lalitha Manogna">
+  <section class="tight">
+    <div class="container">
+      <div class="section-head reveal">
+        <span class="eyebrow">Guest Lectures</span>
+        <h1>Voices I've Learned From</h1>
+        <p>Notes, quotes and takeaways from the guest speakers who have shaped how I think about luxury and marketing.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <section class="tight">
+    <div class="container">
+      <h2 class="visually-hidden">Guest lectures</h2>
+      {lectures.length > 0 ? (
+        <div class="grid-3">
+          {lectures.map((lecture, i) => (
+            <GuestLectureCard
+              entry={lecture}
+              slug={slugs.get(lecture.id)!}
+              revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''}
+            />
+          ))}
+        </div>
+      ) : (
+        <p class="journal-status">No guest lectures yet — check back soon.</p>
+      )}
+    </div>
+  </section>
+</Layout>

@@ -1,0 +1,147 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import GuestLectureFormFields from '../../../components/admin/GuestLectureFormFields.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Edit Guest Lecture">
+  <h1>Edit Guest Lecture</h1>
+
+  <form class="admin-form" id="guestLectureForm" novalidate hidden>
+    <GuestLectureFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/guest-lectures/')} class="btn-line">Back to Guest Lectures</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Lecture</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import {
+      getGuestLectureById,
+      listAllGuestLectures,
+      updateGuestLecture,
+      deleteGuestLecture,
+      deleteGuestLectureAssets,
+    } from '../../../lib/supabaseAdmin';
+    import { createGuestLectureEditor } from '../../../lib/guestLectureEditor';
+    import { withBase } from '../../../lib/url';
+    import { showToast } from '../../../lib/toast';
+    import type { GuestLecture } from '../../../lib/guestLectureTypes';
+
+    const id = new URLSearchParams(window.location.search).get('id');
+
+    const form = document.getElementById('guestLectureForm') as HTMLFormElement;
+    const loadError = document.getElementById('loadError')!;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+    const deleteBtn = document.getElementById('deleteBtn') as HTMLButtonElement;
+
+    const editor = createGuestLectureEditor();
+    let current: GuestLecture | null = null;
+    let dirty = false;
+
+    function showLoadError(message: string) {
+      loadError.textContent = message;
+      loadError.hidden = false;
+    }
+
+    async function load() {
+      if (!id) return showLoadError('No lecture specified.');
+      try {
+        const lecture = await getGuestLectureById(id);
+        if (!lecture) return showLoadError('Lecture not found.');
+        current = lecture;
+        editor.setValue(lecture);
+        form.hidden = false;
+        dirty = false;
+        try {
+          const others = await listAllGuestLectures();
+          editor.setKnownTags(others.flatMap((l) => l.tags));
+        } catch {
+          /* suggestions are a convenience only */
+        }
+      } catch (err) {
+        showLoadError(err instanceof Error ? err.message : 'Failed to load lecture.');
+      }
+    }
+
+    form.addEventListener('input', () => (dirty = true));
+    editor.onChange(() => (dirty = true));
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const problem = editor.validate();
+      if (problem) {
+        errorEl.textContent = problem;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const input = await editor.buildInput(current.id);
+        const previous = current;
+        let saved: GuestLecture;
+        try {
+          saved = await updateGuestLecture(current.id, input);
+        } catch (err) {
+          const keep = new Set(editor.assetUrls(previous));
+          await deleteGuestLectureAssets(
+            [...input.speakers.flatMap((s) => s.photos), ...input.files.map((f) => f.url)].filter((u) => !keep.has(u))
+          );
+          throw err;
+        }
+        // Photos/files the admin removed are no longer referenced — clean them out of Storage.
+        const still = new Set(editor.assetUrls(saved));
+        await deleteGuestLectureAssets(editor.assetUrls(previous).filter((u) => !still.has(u)));
+        current = saved;
+        editor.setValue(saved);
+        dirty = false;
+        showToast('Lecture updated.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to update lecture.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.topic}"? Its photos and files are removed too. This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteGuestLecture(current.id);
+        await deleteGuestLectureAssets(editor.assetUrls(current));
+        dirty = false;
+        showToast('Lecture deleted.');
+        window.location.href = withBase('/admin/guest-lectures/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

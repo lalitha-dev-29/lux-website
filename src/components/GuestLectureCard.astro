@@ -1,0 +1,31 @@
+---
+import { withBase } from '../lib/url';
+import ContentCard from './ContentCard.astro';
+import {
+  formatLectureDate,
+  lectureCoverImage,
+  lectureExcerpt,
+  speakerNames,
+} from '../lib/guestLectureTypes';
+import type { GuestLecture } from '../lib/guestLectureTypes';
+
+interface Props {
+  entry: GuestLecture;
+  slug: string;
+  revealClass?: string;
+}
+
+const { entry: lecture, slug, revealClass = '' } = Astro.props;
+---
+
+<ContentCard
+  href={withBase(`/guest-lectures/${slug}/`)}
+  eyebrow={speakerNames(lecture)}
+  meta={formatLectureDate(lecture.lecture_date)}
+  title={lecture.topic}
+  excerpt={lectureExcerpt(lecture)}
+  tags={lecture.tags}
+  image={lectureCoverImage(lecture)}
+  ctaLabel="Read my notes"
+  revealClass={revealClass}
+/>
