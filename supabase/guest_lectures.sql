@@ -104,3 +104,22 @@ create policy "admins can update guest-lectures" on storage.objects
 drop policy if exists "admins can delete guest-lectures" on storage.objects;
 create policy "admins can delete guest-lectures" on storage.objects
   for delete to authenticated using (bucket_id = 'guest-lectures' and public.is_admin());
+
+-- ---------------------------------------------------------------------------
+-- Rebuild-on-save. If the automatic rebuild webhook is set up
+-- (supabase/auto_rebuild_webhook.sql), wire this table into it so a lecture
+-- edit goes live in ~1 minute like every other CMS table. Skipped silently
+-- when notify_content_updated() doesn't exist yet; re-run this file (or
+-- auto_rebuild_webhook.sql) after setting the webhook up.
+-- ---------------------------------------------------------------------------
+do $$
+begin
+  if to_regprocedure('public.notify_content_updated()') is not null then
+    drop trigger if exists guest_lectures_notify_update on public.guest_lectures;
+    create trigger guest_lectures_notify_update
+      after insert or update or delete on public.guest_lectures
+      for each row execute function public.notify_content_updated();
+  end if;
+end
+$$;
+

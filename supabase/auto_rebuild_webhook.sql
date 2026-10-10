@@ -112,3 +112,10 @@ drop trigger if exists atlas_categories_notify_update on public.atlas_categories
 create trigger atlas_categories_notify_update
   after insert or update or delete on public.atlas_categories
   for each row execute function public.notify_content_updated();
+
+-- Guest Lectures CMS (supabase/guest_lectures.sql) — same rebuild-on-save
+-- wiring, so adding/editing/removing a lecture republishes the site.
+drop trigger if exists guest_lectures_notify_update on public.guest_lectures;
+create trigger guest_lectures_notify_update
+  after insert or update or delete on public.guest_lectures
+  for each row execute function public.notify_content_updated();
