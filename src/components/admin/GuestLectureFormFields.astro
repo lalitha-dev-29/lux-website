@@ -1,31 +1,74 @@
 ---
-// Shared field markup for src/pages/admin/learning/guest-lectures/new.astro and edit.astro.
+// Shared field markup for src/pages/admin/guest-lectures/new.astro and edit.astro.
+// Behaviour (speaker repeater, photo/handout handling, save) lives in
+// src/lib/guestLectureEditor.ts.
 ---
 
 <div class="field">
-  <label for="fTitle">Lecture Title</label>
-  <input id="fTitle" name="title" type="text" required maxlength="160" placeholder="e.g. Building Heritage Brands in the Digital Age" />
-  <p class="hint">The talk's title or topic, shown as the card heading.</p>
+  <label for="fTopic">Topic of the Guest Lecture</label>
+  <input id="fTopic" name="topic" type="text" required maxlength="200" placeholder="e.g. Building Heritage Brands in the Digital Age" />
 </div>
 
 <div class="field">
-  <label for="fSpeaker">Speaker</label>
-  <input id="fSpeaker" name="speaker" type="text" required maxlength="120" placeholder="e.g. Jane Doe" />
-</div>
-
-<div class="field">
-  <label for="fOrganisation">Speaker's Organisation / Role <span class="hint-inline">(optional)</span></label>
-  <input id="fOrganisation" name="organisation" type="text" maxlength="160" placeholder="e.g. Chief Marketing Officer, Maison Example" />
-</div>
-
-<div class="field">
-  <label for="fLectureDate">Lecture Date</label>
+  <label for="fLectureDate">Date of the Lecture</label>
   <input id="fLectureDate" name="lecture_date" type="date" required />
-  <p class="hint">Entries are shown newest first.</p>
+  <p class="hint">Lectures are listed newest first.</p>
 </div>
+
+<fieldset class="field-group">
+  <legend>Guest Speakers</legend>
+  <p class="hint">Add one speaker, or several if the session had a panel. Everything except the name is optional.</p>
+  <div id="speakersList"></div>
+  <button type="button" class="btn-line" id="addSpeakerBtn">+ Add Another Speaker</button>
+</fieldset>
+
+<template id="speakerTemplate">
+  <div class="speaker-card">
+    <div class="speaker-card-head">
+      <h3 class="speaker-heading">Speaker 1</h3>
+      <button type="button" class="btn-line speaker-remove" hidden>Remove Speaker</button>
+    </div>
+
+    <div class="field">
+      <label>Name</label>
+      <input type="text" class="speaker-name" maxlength="120" placeholder="e.g. Jane Doe" />
+    </div>
+
+    <div class="field">
+      <label>Role / Organisation <span class="hint-inline">(optional)</span></label>
+      <input type="text" class="speaker-role" maxlength="160" placeholder="e.g. Chief Marketing Officer, Maison Example" />
+    </div>
+
+    <div class="field">
+      <label>Photos <span class="hint-inline">(optional — add as many as you like)</span></label>
+      <div class="speaker-photos"></div>
+      <input type="file" class="speaker-photo-input" accept="image/jpeg,image/png,image/webp" multiple />
+      <p class="form-error speaker-photo-error" hidden></p>
+      <p class="hint">JPG, PNG or WebP, up to 10MB each.</p>
+    </div>
+
+    <div class="field">
+      <label>About the Speaker <span class="hint-inline">(optional)</span></label>
+      <textarea class="speaker-description" rows="5" maxlength="3000" placeholder="Background, career highlights, anything worth remembering about them…"></textarea>
+    </div>
+
+    <div class="field">
+      <label>A Quote I Remember <span class="hint-inline">(optional)</span></label>
+      <textarea class="speaker-quote" rows="2" maxlength="500" placeholder="Something this speaker said that stuck with you…"></textarea>
+    </div>
+  </div>
+</template>
 
 <div class="field">
   <label for="fKeyLearnings">What I Learned</label>
-  <textarea id="fKeyLearnings" name="key_learnings" required maxlength="2000" rows="8" placeholder="Key takeaways from the lecture — put each point on its own line…"></textarea>
+  <textarea id="fKeyLearnings" name="key_learnings" required rows="10" maxlength="6000" placeholder="My key takeaways and insights from the session — put each point on its own line…"></textarea>
   <p class="hint">Each line is shown as its own bullet on the public page.</p>
+</div>
+
+<div class="field">
+  <label for="fFiles">Slides / Handouts <span class="hint-inline">(optional)</span></label>
+  <ul id="filesList" class="files-list"></ul>
+  <input id="fFiles" type="file" accept=".pdf,.ppt,.pptx,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" multiple />
+  <p class="form-error" id="fFilesError" hidden></p>
+  <p class="hint">PDF or PowerPoint (.ppt / .pptx) files provided by the speaker, up to 25MB each.</p>
 </div>

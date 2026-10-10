@@ -1,13 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import LearningCertCard from '../components/LearningCertCard.astro';
-import { fetchLearningOverview, fetchAllRightNow, fetchAllGuestLectures, fetchAllEducation, fetchAllCertifications } from '../lib/buildTimeData';
-import { formatEducationPeriod, formatLectureDate } from '../lib/learningTypes';
+import { fetchLearningOverview, fetchAllRightNow, fetchAllEducation, fetchAllCertifications } from '../lib/buildTimeData';
+import { formatEducationPeriod } from '../lib/learningTypes';
 
-const [overview, learningNow, guestLectures, education, certifications] = await Promise.all([
+const [overview, learningNow, education, certifications] = await Promise.all([
   fetchLearningOverview(),
   fetchAllRightNow(),
-  fetchAllGuestLectures(),
   fetchAllEducation(),
   fetchAllCertifications(),
 ]);
@@ -47,36 +46,6 @@ const [overview, learningNow, guestLectures, education, certifications] = await 
   </section>
 
   <div class="divider"></div>
-
-  {guestLectures.length > 0 && (
-    <>
-      <section class="tight">
-        <div class="container">
-          <div class="section-head reveal">
-            <span class="eyebrow">Guest Lectures</span>
-            <h2>What I've Learned from Guest Lectures</h2>
-          </div>
-          <div class="grid-2">
-            {guestLectures.map((item, i) => (
-              <article class={`card reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
-                <div class="card-body">
-                  <div class="issuer">{item.speaker}{item.organisation ? `, ${item.organisation}` : ''} <span class="date">· {formatLectureDate(item.lecture_date)}</span></div>
-                  <h3>{item.title}</h3>
-                  <ul class="excerpt">
-                    {item.key_learnings.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => (
-                      <li>{line}</li>
-                    ))}
-                  </ul>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <div class="divider"></div>
-    </>
-  )}
 
   <section class="tight">
     <div class="container">

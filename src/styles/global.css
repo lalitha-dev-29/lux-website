@@ -1452,3 +1452,16 @@ body.pdf-pseudo-fullscreen-open{overflow:hidden;}
   .card,.atlas-chip,.btn-solid,.field input,.field textarea,.field select{border:1px solid;}
   :focus-visible{outline:2px solid; outline-offset:2px;}
 }
+
+/* ---- Guest Lectures page ---------------------------------------------- */
+.lecture-list{display:grid; gap:var(--sp-6);}
+.lecture-speakers{display:grid; gap:var(--sp-5); margin:var(--sp-5) 0;}
+.lecture-speaker h3{margin-bottom:var(--sp-1);}
+.lecture-role{color:var(--stone); font-size:var(--fs-sm); margin:0 0 var(--sp-3);}
+.lecture-photos{display:flex; flex-wrap:wrap; gap:var(--sp-3); margin-bottom:var(--sp-3);}
+.lecture-photos img{width:96px; height:96px; object-fit:cover; border-radius:50%;}
+.lecture-quote{margin:var(--sp-4) 0 0; padding-left:var(--sp-4); border-left:2px solid var(--gold-ink); font-style:italic;}
+.lecture-learned-title{margin-top:var(--sp-2);}
+.lecture-learned{padding-left:var(--sp-5);}
+.lecture-learned li{margin-bottom:var(--sp-2);}
+.lecture-files{display:flex; flex-wrap:wrap; gap:var(--sp-3); margin-top:var(--sp-5);}

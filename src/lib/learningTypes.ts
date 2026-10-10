@@ -1,4 +1,4 @@
-/** Shared types + formatting helpers for the Learning CMS (Overview, Right Now, Guest Lectures, Education, Certifications). */
+/** Shared types + formatting helpers for the Learning CMS (Overview, Right Now, Education, Certifications). */
 
 export interface LearningOverview {
   heading: string;
@@ -18,27 +18,6 @@ export interface LearningRightNowItem {
 }
 
 export const PUBLIC_RIGHT_NOW_FIELDS = 'id,title,body,order_index' as const;
-
-export interface LearningGuestLecture {
-  id: string;
-  title: string;
-  speaker: string;
-  organisation: string | null;
-  /** ISO date, YYYY-MM-DD. */
-  lecture_date: string;
-  key_learnings: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export const PUBLIC_GUEST_LECTURE_FIELDS = 'id,title,speaker,organisation,lecture_date,key_learnings' as const;
-
-/** "12 March 2026" from a YYYY-MM-DD string (parsed as a calendar date, no timezone shift). */
-export function formatLectureDate(isoDate: string): string {
-  const [y, m, d] = isoDate.split('-').map(Number);
-  if (!y || !m || !d) return isoDate;
-  return `${d} ${monthName(m)} ${y}`;
-}
 
 export interface LearningEducationItem {
   id: string;

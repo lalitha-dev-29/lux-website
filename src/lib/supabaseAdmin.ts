@@ -1,3 +1,5 @@
+import type { GuestLecture, GuestSpeaker, GuestLectureFile } from './guestLectureTypes';
+import { normalizeGuestLecture } from './guestLectureTypes';
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js';
 import { withBase } from './url';
 import type { JournalPost, JournalStatus } from './journalTypes';
@@ -7,7 +9,6 @@ import { parseLinks } from './contentLinks';
 import type {
   LearningOverview,
   LearningRightNowItem,
-  LearningGuestLecture,
   LearningEducationItem,
   LearningCertification,
   CertFileType,
@@ -428,51 +429,6 @@ export async function reorderRightNow(orderedIds: string[]): Promise<void> {
   );
 }
 
-export interface GuestLectureInput {
-  title: string;
-  speaker: string;
-  organisation: string | null;
-  lecture_date: string;
-  key_learnings: string;
-}
-
-export async function listAllGuestLectures(): Promise<LearningGuestLecture[]> {
-  const { data, error } = await getSupabaseClient()
-    .from('learning_guest_lectures')
-    .select('*')
-    .order('lecture_date', { ascending: false });
-  if (error) throw new Error(error.message);
-  return data as LearningGuestLecture[];
-}
-
-export async function getGuestLectureById(id: string): Promise<LearningGuestLecture | null> {
-  const { data, error } = await getSupabaseClient().from('learning_guest_lectures').select('*').eq('id', id).maybeSingle();
-  if (error) throw new Error(error.message);
-  return data as LearningGuestLecture | null;
-}
-
-export async function createGuestLecture(input: GuestLectureInput): Promise<LearningGuestLecture> {
-  const { data, error } = await getSupabaseClient().from('learning_guest_lectures').insert(input).select().single();
-  if (error) throw new Error(error.message);
-  return data as LearningGuestLecture;
-}
-
-export async function updateGuestLecture(id: string, input: GuestLectureInput): Promise<LearningGuestLecture> {
-  const { data, error } = await getSupabaseClient()
-    .from('learning_guest_lectures')
-    .update(input)
-    .eq('id', id)
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as LearningGuestLecture;
-}
-
-export async function deleteGuestLecture(id: string): Promise<void> {
-  const { error } = await getSupabaseClient().from('learning_guest_lectures').delete().eq('id', id);
-  if (error) throw new Error(error.message);
-}
-
 export interface EducationInput {
   institution: string;
   programme: string;
@@ -648,6 +604,86 @@ export async function deleteCertificateFileObject(fileUrl: string): Promise<void
   if (idx === -1) return;
   const path = fileUrl.slice(idx + marker.length);
   await getSupabaseClient().storage.from('learning-certificates').remove([path]);
+}
+
+// ---------------------------------------------------------------------------
+// Guest Lectures — standalone CMS (supabase/guest_lectures.sql). Speaker
+// photos and optional PDF/PPT handouts live in the public `guest-lectures`
+// Storage bucket under `<lectureId>/…`; rows reference them by public URL.
+// ---------------------------------------------------------------------------
+
+export interface GuestLectureInput {
+  /** Supplied on create so uploads can be filed under the row's id before it exists. */
+  id?: string;
+  topic: string;
+  lecture_date: string;
+  speakers: GuestSpeaker[];
+  key_learnings: string;
+  files: GuestLectureFile[];
+}
+
+export async function listAllGuestLectures(): Promise<GuestLecture[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('guest_lectures')
+    .select('*')
+    .order('lecture_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return (data as Record<string, unknown>[]).map(normalizeGuestLecture);
+}
+
+export async function getGuestLectureById(id: string): Promise<GuestLecture | null> {
+  const { data, error } = await getSupabaseClient().from('guest_lectures').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data ? normalizeGuestLecture(data as Record<string, unknown>) : null;
+}
+
+export async function createGuestLecture(input: GuestLectureInput): Promise<GuestLecture> {
+  const { data, error } = await getSupabaseClient().from('guest_lectures').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return normalizeGuestLecture(data as Record<string, unknown>);
+}
+
+export async function updateGuestLecture(id: string, input: GuestLectureInput): Promise<GuestLecture> {
+  const { id: _ignored, ...fields } = input;
+  const { data, error } = await getSupabaseClient()
+    .from('guest_lectures')
+    .update(fields)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return normalizeGuestLecture(data as Record<string, unknown>);
+}
+
+export async function deleteGuestLecture(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('guest_lectures').delete().eq('id', id);
+  if (error) throw new Error(error.message);
+}
+
+/** Uploads one speaker photo or handout for a lecture and returns its public URL. */
+export async function uploadGuestLectureAsset(lectureId: string, file: File): Promise<string> {
+  const supabase = getSupabaseClient();
+  const path = `${lectureId}/${uniqueObjectName(file)}`;
+  const { error } = await supabase.storage.from('guest-lectures').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  return supabase.storage.from('guest-lectures').getPublicUrl(path).data.publicUrl;
+}
+
+/** Best-effort removal of storage objects by public URL — never fatal to the row operation that triggered it. */
+export async function deleteGuestLectureAssets(urls: string[]): Promise<void> {
+  const marker = '/object/public/guest-lectures/';
+  const paths = urls
+    .map((u) => {
+      const idx = u.indexOf(marker);
+      return idx === -1 ? null : decodeURIComponent(u.slice(idx + marker.length));
+    })
+    .filter((p): p is string => !!p);
+  if (paths.length === 0) return;
+  try {
+    await getSupabaseClient().storage.from('guest-lectures').remove(paths);
+  } catch {
+    // Orphaned objects are harmless; don't fail the save/delete over them.
+  }
 }
 
 // ---------------------------------------------------------------------------
