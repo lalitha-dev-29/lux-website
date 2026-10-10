@@ -10,6 +10,13 @@
 </div>
 
 <div class="field">
+  <label for="fTags">Tags <span class="hint-inline">(optional)</span></label>
+  <input id="fTags" name="tags" type="text" maxlength="300" placeholder="Comma separated, e.g. Luxury Strategy, Branding, Gen Z" />
+  <p class="hint">Your own labels to tell the subjects of lectures apart. They appear next to the title on the website and in this panel.</p>
+  <div id="tagSuggestions" class="tag-suggestions" hidden></div>
+</div>
+
+<div class="field">
   <label for="fLectureDate">Date of the Lecture</label>
   <input id="fLectureDate" name="lecture_date" type="date" required />
   <p class="hint">Lectures are listed newest first.</p>

@@ -23,7 +23,7 @@ import { withBase } from '../../../lib/url';
   </form>
 
   <script>
-    import { createGuestLecture, deleteGuestLectureAssets } from '../../../lib/supabaseAdmin';
+    import { createGuestLecture, deleteGuestLectureAssets, listAllGuestLectures } from '../../../lib/supabaseAdmin';
     import { createGuestLectureEditor } from '../../../lib/guestLectureEditor';
     import { withBase } from '../../../lib/url';
     import { showToast } from '../../../lib/toast';
@@ -34,6 +34,15 @@ import { withBase } from '../../../lib/url';
 
     const editor = createGuestLectureEditor();
     editor.addSpeaker();
+
+    // Offer tags already used on other lectures (non-fatal if this fails).
+    document.addEventListener('admin:ready', async () => {
+      try {
+        editor.setKnownTags((await listAllGuestLectures()).flatMap((l) => l.tags));
+      } catch {
+        /* suggestions are a convenience only */
+      }
+    });
 
     // Default the date to today (local time).
     const now = new Date();

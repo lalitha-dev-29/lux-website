@@ -31,6 +31,7 @@ import { withBase } from '../../../lib/url';
   <script>
     import {
       getGuestLectureById,
+      listAllGuestLectures,
       updateGuestLecture,
       deleteGuestLecture,
       deleteGuestLectureAssets,
@@ -66,6 +67,12 @@ import { withBase } from '../../../lib/url';
         editor.setValue(lecture);
         form.hidden = false;
         dirty = false;
+        try {
+          const others = await listAllGuestLectures();
+          editor.setKnownTags(others.flatMap((l) => l.tags));
+        } catch {
+          /* suggestions are a convenience only */
+        }
       } catch (err) {
         showLoadError(err instanceof Error ? err.message : 'Failed to load lecture.');
       }

@@ -618,6 +618,7 @@ export interface GuestLectureInput {
   topic: string;
   lecture_date: string;
   speakers: GuestSpeaker[];
+  tags: string[];
   key_learnings: string;
   files: GuestLectureFile[];
 }

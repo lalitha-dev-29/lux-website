@@ -28,13 +28,15 @@ export interface GuestLecture {
   /** ISO calendar date, YYYY-MM-DD. */
   lecture_date: string;
   speakers: GuestSpeaker[];
+  /** Admin-chosen subject tags, e.g. "Luxury Strategy". */
+  tags: string[];
   key_learnings: string;
   files: GuestLectureFile[];
   created_at: string;
   updated_at: string;
 }
 
-export const PUBLIC_GUEST_LECTURE_FIELDS = 'id,topic,lecture_date,speakers,key_learnings,files' as const;
+export const PUBLIC_GUEST_LECTURE_FIELDS = 'id,topic,lecture_date,speakers,tags,key_learnings,files' as const;
 
 /** "12 March 2026" from YYYY-MM-DD, parsed as a calendar date (no timezone shift). */
 export function formatLectureDate(isoDate: string): string {
@@ -62,7 +64,11 @@ export function normalizeGuestLecture(row: Record<string, unknown>): GuestLectur
     if (!url) return [];
     return [{ url, name: str(o.name) ?? 'Download', type: o.type === 'ppt' ? 'ppt' : 'pdf' } as GuestLectureFile];
   });
-  return { ...(row as unknown as GuestLecture), speakers, files };
+  const tags = (Array.isArray(row.tags) ? row.tags : [])
+    .filter((t): t is string => typeof t === 'string')
+    .map((t) => t.trim())
+    .filter(Boolean);
+  return { ...(row as unknown as GuestLecture), speakers, tags, files };
 }
 
 /**
@@ -87,20 +93,6 @@ export function speakerNames(lecture: GuestLecture): string {
 export function lectureCoverImage(lecture: GuestLecture): string | null {
   for (const s of lecture.speakers) if (s.photos[0]) return s.photos[0];
   return null;
-}
-
-/** Unique, non-empty speaker roles, shown as the card's tag chips. */
-export function speakerRoleTags(lecture: GuestLecture): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const s of lecture.speakers) {
-    const role = s.role?.trim();
-    if (role && !seen.has(role.toLowerCase())) {
-      seen.add(role.toLowerCase());
-      out.push(role);
-    }
-  }
-  return out;
 }
 
 /** Card excerpt: the takeaways flattened to one line and trimmed. */

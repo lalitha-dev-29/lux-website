@@ -6,7 +6,6 @@ import {
   lectureCoverImage,
   lectureExcerpt,
   speakerNames,
-  speakerRoleTags,
 } from '../lib/guestLectureTypes';
 import type { GuestLecture } from '../lib/guestLectureTypes';
 
@@ -25,7 +24,7 @@ const { entry: lecture, slug, revealClass = '' } = Astro.props;
   meta={formatLectureDate(lecture.lecture_date)}
   title={lecture.topic}
   excerpt={lectureExcerpt(lecture)}
-  tags={speakerRoleTags(lecture)}
+  tags={lecture.tags}
   image={lectureCoverImage(lecture)}
   ctaLabel="Read my notes"
   revealClass={revealClass}

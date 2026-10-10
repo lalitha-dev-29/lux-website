@@ -9,6 +9,7 @@
 --   lecture_date  when it happened (entries are shown newest first)
 --   speakers      jsonb array — one object per speaker:
 --                   { name, role, description, quote, photos: [url, ...] }
+--   tags          text[] — your own subject tags, shown on cards and the page
 --   key_learnings your own takeaways and insights
 --   files         jsonb array of optional handouts/slides:
 --                   { url, name, type: 'pdf' | 'ppt' }
@@ -30,6 +31,10 @@ create table if not exists public.guest_lectures (
   constraint guest_lectures_speakers_is_array check (jsonb_typeof(speakers) = 'array'),
   constraint guest_lectures_files_is_array check (jsonb_typeof(files) = 'array')
 );
+
+-- Custom subject tags (added after the first release; safe to re-run).
+alter table public.guest_lectures
+  add column if not exists tags text[] not null default '{}'::text[];
 
 create index if not exists guest_lectures_date_idx on public.guest_lectures (lecture_date desc);
 

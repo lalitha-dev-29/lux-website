@@ -9,7 +9,6 @@ import {
   lectureExcerpt,
   lectureSlugs,
   speakerNames,
-  speakerRoleTags,
 } from '../../lib/guestLectureTypes';
 
 export async function getStaticPaths() {
@@ -24,7 +23,7 @@ export async function getStaticPaths() {
 const { lecture } = Astro.props;
 const lines = lecture.key_learnings.split('\n').map((l) => l.trim()).filter(Boolean);
 const cover = lectureCoverImage(lecture);
-const tags = speakerRoleTags(lecture);
+const tags = lecture.tags;
 ---
 
 <Layout
@@ -60,25 +59,27 @@ const tags = speakerRoleTags(lecture);
 
   <section class="tight">
     <div class="container">
-      <div class="prose reveal">
-        <h2>{lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker'}</h2>
+      <h2 class="lecture-section-title reveal">{lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker'}</h2>
+      <div class="lecture-speakers reveal">
         {lecture.speakers.map((speaker) => (
           <div class="lecture-speaker">
-            <h3>{speaker.name}</h3>
+            <div class="lecture-photos">
+              {speaker.photos.length > 0 ? (
+                speaker.photos.map((src) => <img src={src} alt={`Photo of ${speaker.name}`} loading="lazy" />)
+              ) : (
+                <span class="lecture-avatar" aria-hidden="true">{speaker.name.trim().charAt(0).toUpperCase()}</span>
+              )}
+            </div>
+            <h3 class="lecture-speaker-name">{speaker.name}</h3>
             {speaker.role && <p class="lecture-role">{speaker.role}</p>}
-            {speaker.photos.length > 0 && (
-              <div class="lecture-photos">
-                {speaker.photos.map((src) => (
-                  <img src={src} alt={`Photo of ${speaker.name}`} loading="lazy" />
-                ))}
-              </div>
-            )}
             {speaker.description && <p class="lecture-bio">{speaker.description}</p>}
             {speaker.quote && <blockquote class="lecture-quote">{speaker.quote}</blockquote>}
           </div>
         ))}
+      </div>
 
-        <h2>What I Learned</h2>
+      <h2 class="lecture-section-title lecture-learned-title reveal">What I Learned</h2>
+      <div class="prose reveal">
         <ul class="lecture-learned">
           {lines.map((line) => <li>{line}</li>)}
         </ul>

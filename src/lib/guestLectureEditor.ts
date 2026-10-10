@@ -32,6 +32,20 @@ interface SpeakerRow {
   photos: PhotoItem[];
 }
 
+/** "Luxury Strategy, Gen Z" -> ["Luxury Strategy", "Gen Z"], de-duplicated case-insensitively. */
+export function parseTags(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(',')) {
+    const tag = part.trim().replace(/\s+/g, ' ');
+    if (tag && !seen.has(tag.toLowerCase())) {
+      seen.add(tag.toLowerCase());
+      out.push(tag);
+    }
+  }
+  return out;
+}
+
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
 function formatBytes(n: number): string {
@@ -47,6 +61,37 @@ export function createGuestLectureEditor() {
   let files: FileItem[] = [];
   const onChange: Array<() => void> = [];
   const changed = () => onChange.forEach((fn) => fn());
+
+  // ---- tags ------------------------------------------------------------
+  const tagsInput = $<HTMLInputElement>('fTags');
+  const tagSuggestions = $('tagSuggestions');
+  let knownTags: string[] = [];
+
+  function renderTagSuggestions() {
+    const chosen = new Set(parseTags(tagsInput.value).map((t) => t.toLowerCase()));
+    tagSuggestions.replaceChildren();
+    knownTags
+      .filter((t) => !chosen.has(t.toLowerCase()))
+      .forEach((tag) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tag-suggestion';
+        btn.textContent = `+ ${tag}`;
+        btn.addEventListener('click', () => {
+          tagsInput.value = [...parseTags(tagsInput.value), tag].join(', ');
+          tagsInput.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        tagSuggestions.append(btn);
+      });
+    tagSuggestions.hidden = tagSuggestions.childElementCount === 0;
+  }
+  tagsInput.addEventListener('input', renderTagSuggestions);
+
+  /** Tags already used on other lectures, offered as one-click chips so spelling stays consistent. */
+  function setKnownTags(tags: string[]) {
+    knownTags = Array.from(new Set(tags));
+    renderTagSuggestions();
+  }
 
   // ---- speakers --------------------------------------------------------
   function renumber() {
@@ -198,6 +243,8 @@ export function createGuestLectureEditor() {
     $<HTMLInputElement>('fTopic').value = lecture.topic;
     $<HTMLInputElement>('fLectureDate').value = lecture.lecture_date;
     $<HTMLTextAreaElement>('fKeyLearnings').value = lecture.key_learnings;
+    $<HTMLInputElement>('fTags').value = lecture.tags.join(', ');
+    renderTagSuggestions();
     rows.splice(0).forEach((r) => r.el.remove());
     (lecture.speakers.length ? lecture.speakers : [{}]).forEach((s) => addSpeaker(s));
     files = lecture.files.map((existing) => ({ existing }));
@@ -255,6 +302,7 @@ export function createGuestLectureEditor() {
         topic: $<HTMLInputElement>('fTopic').value.trim(),
         lecture_date: $<HTMLInputElement>('fLectureDate').value,
         speakers,
+        tags: parseTags($<HTMLInputElement>('fTags').value),
         key_learnings: $<HTMLTextAreaElement>('fKeyLearnings').value.trim(),
         files: outFiles,
       };
@@ -265,6 +313,7 @@ export function createGuestLectureEditor() {
   }
 
   return {
+    setKnownTags,
     addSpeaker,
     setValue,
     validate,

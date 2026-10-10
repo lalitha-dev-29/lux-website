@@ -125,11 +125,19 @@ export async function fetchAllRightNow(): Promise<LearningRightNowItem[]> {
  * working (the page just shows its empty state) rather than fail.
  */
 export async function fetchAllGuestLectures(): Promise<GuestLecture[]> {
+  const order = '&order=lecture_date.desc';
   try {
-    const rows = await restGet(`guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS}&order=lecture_date.desc`);
+    const rows = await restGet(`guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS}${order}`);
     return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
   } catch {
-    return [];
+    // Table missing, or the `tags` column not added yet (older guest_lectures.sql): retry without it.
+    try {
+      const fields = PUBLIC_GUEST_LECTURE_FIELDS.replace(',tags', '');
+      const rows = await restGet(`guest_lectures?select=${fields}${order}`);
+      return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
+    } catch {
+      return [];
+    }
   }
 }
 
