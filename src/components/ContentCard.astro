@@ -14,6 +14,8 @@ interface Props {
   featured?: boolean;
   badge?: string | null;
   revealClass?: string;
+  /** Rendered as a JSON `data-tags` attribute so client scripts can filter cards. */
+  dataTags?: string[];
 }
 
 const {
@@ -28,10 +30,15 @@ const {
   featured = false,
   badge,
   revealClass = '',
+  dataTags,
 } = Astro.props;
 ---
 
-<a href={href} class={`card case-card reveal ${featured ? 'card-featured' : ''} ${revealClass}`}>
+<a
+  href={href}
+  class={`card case-card reveal ${featured ? 'card-featured' : ''} ${revealClass}`}
+  data-tags={dataTags ? JSON.stringify(dataTags) : undefined}
+>
   <div class="card-media">
     {image ? (
       <img src={image} alt="" loading="lazy" width="800" height="600" />

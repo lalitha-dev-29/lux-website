@@ -6,6 +6,18 @@ import { lectureSlugs } from '../lib/guestLectureTypes';
 
 const lectures = await fetchAllGuestLectures();
 const slugs = lectureSlugs(lectures);
+
+// Every tag used across lectures, with how many lectures carry it (case-insensitive grouping).
+const tagCounts = new Map<string, { label: string; count: number }>();
+for (const lecture of lectures) {
+  for (const tag of lecture.tags) {
+    const key = tag.toLowerCase();
+    const entry = tagCounts.get(key);
+    if (entry) entry.count += 1;
+    else tagCounts.set(key, { label: tag, count: 1 });
+  }
+}
+const allTags = [...tagCounts.values()].sort((a, b) => a.label.localeCompare(b.label));
 ---
 
 <Layout title="Guest Lectures | Kasturi Lalitha Manogna">
@@ -24,8 +36,26 @@ const slugs = lectureSlugs(lectures);
   <section class="tight">
     <div class="container">
       <h2 class="visually-hidden">Guest lectures</h2>
+
+      {allTags.length > 0 && (
+        <div class="tag-filter reveal" id="tagFilter" role="group" aria-labelledby="tagFilterLabel">
+          <p class="tag-filter-label" id="tagFilterLabel">Browse by topic</p>
+          <div class="tag-filter-chips">
+            <button type="button" class="tag-chip" data-tag="" aria-pressed="true">
+              All <span class="tag-chip-count">{lectures.length}</span>
+            </button>
+            {allTags.map((tag) => (
+              <button type="button" class="tag-chip" data-tag={tag.label} aria-pressed="false">
+                {tag.label} <span class="tag-chip-count">{tag.count}</span>
+              </button>
+            ))}
+          </div>
+          <p class="tag-filter-status" id="tagFilterStatus" aria-live="polite"></p>
+        </div>
+      )}
+
       {lectures.length > 0 ? (
-        <div class="grid-3">
+        <div class="grid-3" id="lectureGrid">
           {lectures.map((lecture, i) => (
             <GuestLectureCard
               entry={lecture}
@@ -40,3 +70,58 @@ const slugs = lectureSlugs(lectures);
     </div>
   </section>
 </Layout>
+
+<script>
+  // Click a tag to show only the lectures carrying it; "All" resets. The
+  // selection is mirrored in ?tag= so a filtered view can be shared/bookmarked.
+  const filter = document.getElementById('tagFilter');
+  const grid = document.getElementById('lectureGrid');
+  const status = document.getElementById('tagFilterStatus');
+
+  if (filter && grid) {
+    const chips = Array.from(filter.querySelectorAll<HTMLButtonElement>('.tag-chip'));
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>('a.card'));
+    const norm = (s: string) => s.trim().toLowerCase();
+
+    function apply(tag: string, updateUrl: boolean) {
+      const wanted = norm(tag);
+      let shown = 0;
+      for (const card of cards) {
+        let tags: string[] = [];
+        try {
+          tags = JSON.parse(card.dataset.tags ?? '[]');
+        } catch {
+          /* malformed data-tags: treat as untagged */
+        }
+        const match = !wanted || tags.some((t) => norm(t) === wanted);
+        card.hidden = !match;
+        if (match) shown += 1;
+      }
+      for (const chip of chips) {
+        chip.setAttribute('aria-pressed', String(norm(chip.dataset.tag ?? '') === wanted));
+      }
+      if (status) {
+        status.textContent = wanted
+          ? `Showing ${shown} ${shown === 1 ? 'lecture' : 'lectures'} tagged "${tag}".`
+          : '';
+      }
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        if (wanted) url.searchParams.set('tag', tag);
+        else url.searchParams.delete('tag');
+        history.replaceState(null, '', url);
+      }
+    }
+
+    for (const chip of chips) {
+      chip.addEventListener('click', () => {
+        const tag = chip.dataset.tag ?? '';
+        const alreadyActive = chip.getAttribute('aria-pressed') === 'true';
+        apply(alreadyActive ? '' : tag, true);
+      });
+    }
+
+    const initial = new URLSearchParams(window.location.search).get('tag');
+    if (initial && chips.some((c) => norm(c.dataset.tag ?? '') === norm(initial))) apply(initial, false);
+  }
+</script>

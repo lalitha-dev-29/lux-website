@@ -1476,3 +1476,27 @@ body.pdf-pseudo-fullscreen-open{overflow:hidden;}
 .lecture-learned{padding-left:var(--sp-5); list-style:disc;}
 .lecture-learned li{margin-bottom:var(--sp-2);}
 .lecture-learned li::marker{color:var(--gold-ink);}
+
+/* ---- Guest Lectures tag filter ---------------------------------------- */
+.tag-filter{
+  border:1px solid var(--line); border-radius:var(--radius, 8px); background:var(--ivory);
+  padding:var(--sp-5); margin-bottom:var(--sp-7);
+}
+.tag-filter-label{
+  font-size:var(--fs-2xs); letter-spacing:.14em; text-transform:uppercase;
+  color:var(--gold-ink); font-weight:500; margin:0 0 var(--sp-3);
+}
+.tag-filter-chips{display:flex; flex-wrap:wrap; gap:var(--sp-2);}
+.tag-chip{
+  font:inherit; font-size:var(--fs-xs, .8125rem); letter-spacing:.05em; cursor:pointer;
+  color:var(--stone); background:transparent;
+  border:1px solid var(--line); border-radius:999px; padding:7px 14px;
+  transition:color .2s var(--ease), border-color .2s var(--ease), background-color .2s var(--ease);
+}
+.tag-chip:hover{color:var(--charcoal); border-color:var(--line-strong);}
+.tag-chip:focus-visible{outline:var(--focus-ring); outline-offset:var(--focus-offset);}
+.tag-chip[aria-pressed="true"]{color:var(--charcoal); border-color:var(--gold-ink); background:var(--ivory-2);}
+.tag-chip-count{opacity:.6; margin-left:4px; font-size:.9em;}
+.tag-filter-status{margin:var(--sp-3) 0 0; font-size:var(--fs-sm); color:var(--stone);}
+.tag-filter-status:empty{display:none;}
+a.card[hidden]{display:none;}

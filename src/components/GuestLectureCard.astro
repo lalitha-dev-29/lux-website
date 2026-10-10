@@ -28,4 +28,5 @@ const { entry: lecture, slug, revealClass = '' } = Astro.props;
   image={lectureCoverImage(lecture)}
   ctaLabel="Read my notes"
   revealClass={revealClass}
+  dataTags={lecture.tags}
 />
