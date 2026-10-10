@@ -1462,6 +1462,8 @@ body.pdf-pseudo-fullscreen-open{overflow:hidden;}
 .lecture-photos img{width:96px; height:96px; object-fit:cover; border-radius:50%;}
 .lecture-quote{margin:var(--sp-4) 0 0; padding-left:var(--sp-4); border-left:2px solid var(--gold-ink); font-style:italic;}
 .lecture-learned-title{margin-top:var(--sp-2);}
-.lecture-learned{padding-left:var(--sp-5);}
+.lecture-learned{padding-left:var(--sp-5); list-style:disc;}
+.lecture-learned li::marker{color:var(--gold-ink);}
+.lecture-speaker .excerpt{white-space:pre-line;}
 .lecture-learned li{margin-bottom:var(--sp-2);}
 .lecture-files{display:flex; flex-wrap:wrap; gap:var(--sp-3); margin-top:var(--sp-5);}
