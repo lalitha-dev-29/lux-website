@@ -1,12 +1,13 @@
 ---
-// Sub-navigation for the four Admin → Learning tabs (Overview, Right Now,
-// Education, Certifications). Mirrors AdminLayout's top nav pattern —
+// Sub-navigation for the Admin → Learning tabs (Overview, Right Now,
+// Guest Lectures, Education, Certifications). Mirrors AdminLayout's top nav pattern —
 // `aria-current="page"` on whichever section the current path is under.
 import { withBase } from '../../lib/url';
 
 const tabs = [
   { href: '/admin/learning/', label: 'Overview' },
   { href: '/admin/learning/right-now/', label: 'Right Now' },
+  { href: '/admin/learning/guest-lectures/', label: 'Guest Lectures' },
   { href: '/admin/learning/education/', label: 'Education' },
   { href: '/admin/learning/certifications/', label: 'Certifications' },
 ];

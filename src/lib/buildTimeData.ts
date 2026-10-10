@@ -3,10 +3,11 @@ import { PUBLIC_JOURNAL_FIELDS } from './journalTypes';
 import type { CaseStudy } from './caseStudyTypes';
 import { PUBLIC_CASE_STUDY_FIELDS } from './caseStudyTypes';
 import { parseLinks } from './contentLinks';
-import type { LearningOverview, LearningRightNowItem, LearningEducationItem, LearningCertification } from './learningTypes';
+import type { LearningOverview, LearningRightNowItem, LearningGuestLecture, LearningEducationItem, LearningCertification } from './learningTypes';
 import {
   PUBLIC_LEARNING_OVERVIEW_FIELDS,
   PUBLIC_RIGHT_NOW_FIELDS,
+  PUBLIC_GUEST_LECTURE_FIELDS,
   PUBLIC_EDUCATION_FIELDS,
   PUBLIC_CERTIFICATION_FIELDS,
 } from './learningTypes';
@@ -115,6 +116,22 @@ export async function fetchLearningOverview(): Promise<LearningOverview> {
 export async function fetchAllRightNow(): Promise<LearningRightNowItem[]> {
   const rows = await restGet(`learning_right_now?select=${PUBLIC_RIGHT_NOW_FIELDS}&order=order_index.asc`);
   return rows as LearningRightNowItem[];
+}
+
+/**
+ * Guest lectures are an additive section: if supabase/guest_lectures.sql has
+ * not been applied yet the table does not exist, and the build must keep
+ * working (the public section simply stays hidden) rather than fail.
+ */
+export async function fetchAllGuestLectures(): Promise<LearningGuestLecture[]> {
+  try {
+    const rows = await restGet(
+      `learning_guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS}&order=lecture_date.desc`
+    );
+    return rows as LearningGuestLecture[];
+  } catch {
+    return [];
+  }
 }
 
 export async function fetchAllEducation(): Promise<LearningEducationItem[]> {

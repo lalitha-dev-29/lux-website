@@ -7,6 +7,7 @@ import { parseLinks } from './contentLinks';
 import type {
   LearningOverview,
   LearningRightNowItem,
+  LearningGuestLecture,
   LearningEducationItem,
   LearningCertification,
   CertFileType,
@@ -425,6 +426,51 @@ export async function reorderRightNow(orderedIds: string[]): Promise<void> {
   await Promise.all(
     orderedIds.map((id, i) => getSupabaseClient().from('learning_right_now').update({ order_index: i + 1 }).eq('id', id))
   );
+}
+
+export interface GuestLectureInput {
+  title: string;
+  speaker: string;
+  organisation: string | null;
+  lecture_date: string;
+  key_learnings: string;
+}
+
+export async function listAllGuestLectures(): Promise<LearningGuestLecture[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_guest_lectures')
+    .select('*')
+    .order('lecture_date', { ascending: false });
+  if (error) throw new Error(error.message);
+  return data as LearningGuestLecture[];
+}
+
+export async function getGuestLectureById(id: string): Promise<LearningGuestLecture | null> {
+  const { data, error } = await getSupabaseClient().from('learning_guest_lectures').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(error.message);
+  return data as LearningGuestLecture | null;
+}
+
+export async function createGuestLecture(input: GuestLectureInput): Promise<LearningGuestLecture> {
+  const { data, error } = await getSupabaseClient().from('learning_guest_lectures').insert(input).select().single();
+  if (error) throw new Error(error.message);
+  return data as LearningGuestLecture;
+}
+
+export async function updateGuestLecture(id: string, input: GuestLectureInput): Promise<LearningGuestLecture> {
+  const { data, error } = await getSupabaseClient()
+    .from('learning_guest_lectures')
+    .update(input)
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as LearningGuestLecture;
+}
+
+export async function deleteGuestLecture(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('learning_guest_lectures').delete().eq('id', id);
+  if (error) throw new Error(error.message);
 }
 
 export interface EducationInput {

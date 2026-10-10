@@ -1,0 +1,31 @@
+---
+// Shared field markup for src/pages/admin/learning/guest-lectures/new.astro and edit.astro.
+---
+
+<div class="field">
+  <label for="fTitle">Lecture Title</label>
+  <input id="fTitle" name="title" type="text" required maxlength="160" placeholder="e.g. Building Heritage Brands in the Digital Age" />
+  <p class="hint">The talk's title or topic, shown as the card heading.</p>
+</div>
+
+<div class="field">
+  <label for="fSpeaker">Speaker</label>
+  <input id="fSpeaker" name="speaker" type="text" required maxlength="120" placeholder="e.g. Jane Doe" />
+</div>
+
+<div class="field">
+  <label for="fOrganisation">Speaker's Organisation / Role <span class="hint-inline">(optional)</span></label>
+  <input id="fOrganisation" name="organisation" type="text" maxlength="160" placeholder="e.g. Chief Marketing Officer, Maison Example" />
+</div>
+
+<div class="field">
+  <label for="fLectureDate">Lecture Date</label>
+  <input id="fLectureDate" name="lecture_date" type="date" required />
+  <p class="hint">Entries are shown newest first.</p>
+</div>
+
+<div class="field">
+  <label for="fKeyLearnings">What I Learned</label>
+  <textarea id="fKeyLearnings" name="key_learnings" required maxlength="2000" rows="8" placeholder="Key takeaways from the lecture — put each point on its own line…"></textarea>
+  <p class="hint">Each line is shown as its own bullet on the public page.</p>
+</div>

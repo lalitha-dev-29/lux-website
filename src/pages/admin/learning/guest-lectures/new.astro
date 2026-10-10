@@ -1,0 +1,75 @@
+---
+import AdminLayout from '../../../../layouts/AdminLayout.astro';
+import LearningSubNav from '../../../../components/admin/LearningSubNav.astro';
+import GuestLectureFormFields from '../../../../components/admin/GuestLectureFormFields.astro';
+import { withBase } from '../../../../lib/url';
+---
+
+<AdminLayout title="New Guest Lecture">
+  <h1>Learning</h1>
+  <LearningSubNav />
+  <h2>New Guest Lecture</h2>
+  <p class="admin-lede">Record what you learned from a guest lecture.</p>
+
+  <form class="admin-form" id="guestLectureForm" novalidate>
+    <GuestLectureFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/learning/guest-lectures/')} class="btn-line">Cancel</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-solid" id="saveBtn">Add Lecture</button>
+    </div>
+  </form>
+
+  <script>
+    import { createGuestLecture } from '../../../../lib/supabaseAdmin';
+    import { readGuestLectureForm, validateGuestLectureForm, toGuestLectureInput } from '../../../../lib/guestLectureForm';
+    import { withBase } from '../../../../lib/url';
+    import { showToast } from '../../../../lib/toast';
+
+    const form = document.getElementById('guestLectureForm') as HTMLFormElement;
+    const errorEl = document.getElementById('formError') as HTMLParagraphElement;
+    const saveBtn = document.getElementById('saveBtn') as HTMLButtonElement;
+
+    let dirty = false;
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    // Default the date to today (local time) so the common case is one less field to fill.
+    const dateInput = document.getElementById('fLectureDate') as HTMLInputElement;
+    const now = new Date();
+    dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    saveBtn.addEventListener('click', async () => {
+      errorEl.hidden = true;
+      const values = readGuestLectureForm();
+      const validationError = validateGuestLectureForm(values);
+      if (validationError) {
+        errorEl.textContent = validationError;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        await createGuestLecture(toGuestLectureInput(values));
+        dirty = false;
+        showToast('Lecture added successfully.');
+        window.location.href = withBase('/admin/learning/guest-lectures/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Add Lecture';
+      }
+    });
+  </script>
+</AdminLayout>
