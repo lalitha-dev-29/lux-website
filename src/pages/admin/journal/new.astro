@@ -66,7 +66,7 @@ import { withBase } from '../../../lib/url';
       busyBtn.textContent = 'Saving…';
 
       try {
-        const post = await createJournalPost(toJournalPostInput(values), status);
+        const post = await createJournalPost(toJournalPostInput(values), status, draftId);
         dirty = false;
         showToast(status === 'published' ? 'Post published.' : 'Draft saved.');
         window.location.href = withBase(`/admin/journal/edit/?id=${post.id}`);

@@ -163,11 +163,14 @@ export async function getJournalPostById(id: string): Promise<JournalPost | null
 
 export async function createJournalPost(
   input: JournalPostInput,
-  status: JournalStatus
+  status: JournalStatus,
+  /** The id the form already filed this post's images under, so the row and its images share a folder. */
+  id?: string
 ): Promise<JournalPost> {
   const supabase = getSupabaseClient();
   const payload = {
     ...input,
+    ...(id ? { id } : {}),
     status,
     published_at: status === 'published' ? new Date().toISOString() : null,
   };
@@ -218,6 +221,8 @@ export async function setJournalPostStatus(id: string, status: JournalStatus): P
 export async function deleteJournalPost(id: string): Promise<void> {
   const { error } = await getSupabaseClient().from('journal_posts').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  // Best effort: remove the post's cover and inline images from storage.
+  await removeUploadFolders([['content-images', `journal/${id}`]]);
 }
 
 // ---------------------------------------------------------------------------
@@ -263,11 +268,14 @@ export async function getCaseStudyById(id: string): Promise<CaseStudy | null> {
 
 export async function createCaseStudy(
   input: CaseStudyInput,
-  status: CaseStudyStatus
+  status: CaseStudyStatus,
+  /** The id the form already filed this entry's uploads under, so the row and its images share a folder. */
+  id?: string
 ): Promise<CaseStudy> {
   const supabase = getSupabaseClient();
   const payload = {
     ...input,
+    ...(id ? { id } : {}),
     status,
     published_at: status === 'published' ? new Date().toISOString() : null,
   };
@@ -281,7 +289,7 @@ export async function createCaseStudy(
       .single();
 
     if (!error) return normalizeCaseStudyRow(data as CaseStudy);
-    if (error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
+    if (error.code !== UNIQUE_VIOLATION) throw new Error(friendlyError(error.message));
   }
 
   throw new Error('Could not generate a unique URL slug for this title. Try a different title.');
@@ -315,6 +323,32 @@ export async function setCaseStudyStatus(id: string, status: CaseStudyStatus): P
 export async function deleteCaseStudy(id: string): Promise<void> {
   const { error } = await getSupabaseClient().from('case_studies').delete().eq('id', id);
   if (error) throw new Error(error.message);
+  // Best effort: remove the case study's images and PDF from storage.
+  await removeUploadFolders([
+    ['content-images', `case-studies/${id}`],
+    ['content-images', `case-studies/${id}/gallery`],
+    ['case-study-pdfs', `case-studies/${id}`],
+  ]);
+}
+
+/**
+ * Deletes every file directly inside each [bucket, folder]. Used after a row
+ * is deleted so its uploads don't linger; failures are ignored because the
+ * row itself is already gone and leftover files are harmless.
+ */
+async function removeUploadFolders(folders: [string, string][]): Promise<void> {
+  const supabase = getSupabaseClient();
+  await Promise.all(
+    folders.map(async ([bucket, folder]) => {
+      try {
+        const { data } = await supabase.storage.from(bucket).list(folder, { limit: 1000 });
+        const files = (data ?? []).filter((f) => f.id).map((f) => `${folder}/${f.name}`);
+        if (files.length) await supabase.storage.from(bucket).remove(files);
+      } catch {
+        /* leave the files */
+      }
+    })
+  );
 }
 
 /** Updates only the PDF fields — kept separate from the main form save so attaching/replacing/removing a PDF doesn't require the rest of the form to be filled in or re-submitted. */
@@ -339,6 +373,25 @@ export async function updateCaseStudyPdf(
 // the same filename can't silently overwrite an unrelated entry's file.
 // ---------------------------------------------------------------------------
 
+/** Supabase's per-file upload cap on this project's plan. */
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+const mb = (bytes: number) => `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+/** Uploads a file to a storage bucket, turning size and network failures into plain-English errors. */
+async function uploadToBucket(bucket: string, path: string, file: File): Promise<void> {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    throw new Error(
+      `"${file.name}" is ${mb(file.size)} — the upload limit is 50 MB. Compress it first (for a PDF, export with smaller images or use a PDF compressor) and try again.`
+    );
+  }
+  const { error } = await getSupabaseClient().storage.from(bucket).upload(path, file, { upsert: false });
+  if (!error) return;
+  if (/maximum allowed size|payload too large|413/i.test(error.message)) {
+    throw new Error(`"${file.name}" is too large to upload (${mb(file.size)}). Compress it and try again.`);
+  }
+  throw new Error(error.message);
+}
+
 function uniqueObjectName(file: File): string {
   const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '-');
   return `${Date.now()}-${safeName}`;
@@ -348,8 +401,7 @@ function uniqueObjectName(file: File): string {
 export async function uploadContentImage(prefix: string, file: File): Promise<string> {
   const supabase = getSupabaseClient();
   const path = `${prefix}/${uniqueObjectName(file)}`;
-  const { error } = await supabase.storage.from('content-images').upload(path, file, { upsert: false });
-  if (error) throw new Error(error.message);
+  await uploadToBucket('content-images', path, file);
   const { data } = supabase.storage.from('content-images').getPublicUrl(path);
   return data.publicUrl;
 }
@@ -365,8 +417,7 @@ export async function uploadCaseStudyPdf(caseStudyId: string, file: File): Promi
   }
   const supabase = getSupabaseClient();
   const path = `case-studies/${caseStudyId}/${uniqueObjectName(file)}`;
-  const { error } = await supabase.storage.from('case-study-pdfs').upload(path, file, { upsert: false });
-  if (error) throw new Error(error.message);
+  await uploadToBucket('case-study-pdfs', path, file);
   const { data } = supabase.storage.from('case-study-pdfs').getPublicUrl(path);
   return { url: data.publicUrl, filename: file.name };
 }
@@ -618,8 +669,7 @@ export async function uploadCertificateFile(certificationId: string, file: File)
   }
   const supabase = getSupabaseClient();
   const path = `${certificationId}/${uniqueObjectName(file)}`;
-  const { error } = await supabase.storage.from('learning-certificates').upload(path, file, { upsert: false });
-  if (error) throw new Error(error.message);
+  await uploadToBucket('learning-certificates', path, file);
   const { data } = supabase.storage.from('learning-certificates').getPublicUrl(path);
   return { url: data.publicUrl, filename: file.name, fileType };
 }
@@ -730,16 +780,23 @@ export async function updateProjectPdf(
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  const { error } = await getSupabaseClient().from('projects').delete().eq('id', id);
+  const supabase = getSupabaseClient();
+  const { error } = await supabase.from('projects').delete().eq('id', id);
   if (error) throw new Error(projectError(error.message));
+  // Best effort: remove the project's uploads (cover, inline and gallery
+  // images, PDF deck) so deleted projects don't leave files behind in storage.
+  await removeUploadFolders([
+    ['content-images', `projects/${id}`],
+    ['content-images', `projects/${id}/gallery`],
+    ['case-study-pdfs', `projects/${id}`],
+  ]);
 }
 
 export async function uploadProjectPdf(projectId: string, file: File): Promise<UploadedPdf> {
   if (file.type !== 'application/pdf') throw new Error('Please choose a PDF file.');
   const supabase = getSupabaseClient();
   const path = `projects/${projectId}/${uniqueObjectName(file)}`;
-  const { error } = await supabase.storage.from('case-study-pdfs').upload(path, file, { upsert: false });
-  if (error) throw new Error(error.message);
+  await uploadToBucket('case-study-pdfs', path, file);
   const { data } = supabase.storage.from('case-study-pdfs').getPublicUrl(path);
   return { url: data.publicUrl, filename: file.name };
 }
@@ -805,8 +862,7 @@ export async function deleteGuestLecture(id: string): Promise<void> {
 export async function uploadGuestLectureAsset(lectureId: string, file: File): Promise<string> {
   const supabase = getSupabaseClient();
   const path = `${lectureId}/${uniqueObjectName(file)}`;
-  const { error } = await supabase.storage.from('guest-lectures').upload(path, file, { upsert: false });
-  if (error) throw new Error(error.message);
+  await uploadToBucket('guest-lectures', path, file);
   return supabase.storage.from('guest-lectures').getPublicUrl(path).data.publicUrl;
 }
 

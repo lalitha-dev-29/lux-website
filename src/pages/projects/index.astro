@@ -61,6 +61,7 @@ function details(p: Project): (string | null)[] {
           <div id="projectList">
             {completed.length > 0 && (
               <div class="feature-list">
+                <h2 class="visually-hidden">Completed projects</h2>
                 {completed.map((p, i) => (
                   <FeatureCard
                     href={withBase(`/projects/${p.slug}/`)}

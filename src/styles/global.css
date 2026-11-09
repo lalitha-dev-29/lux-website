@@ -15,16 +15,16 @@
      `stone` and `stone-mute` are the two body/secondary text colours; both
      clear 4.5:1 on ivory and on white. `stone-light` is retained for
      DECORATIVE use only (hairlines, dots) — never for text. */
-  --stone:#726C5E;        /* 4.75:1 on ivory */
+  --stone:#686254;        /* 5.5:1 on ivory, 5.1:1 on tinted panels */
   --stone-mute:#756F5C;   /* 4.57:1 on ivory — replaces stone-light for labels */
   --stone-light:#A39C89;  /* decorative only: 2.49:1 — fails as text */
 
   /* --- gold ---
      `gold` is the decorative brand gold (rules, motifs, markers, borders).
-     `gold-ink` is the accessible text/interactive gold: 4.64:1 on ivory,
-     5.10:1 on white. Use gold-ink for any gold that carries meaning. */
+     `gold-ink` is the accessible text/interactive gold: 5.4:1 on ivory, 4.8:1 on gold-wash,
+     5.7:1 on white. Use gold-ink for any gold that carries meaning. */
   --gold:#A9863F;
-  --gold-ink:#866A32;
+  --gold-ink:#7D6230;
   --gold-soft:#C7A868;
   --gold-wash:#F3EADA;
 

@@ -8,7 +8,7 @@ import '../styles/global.css';
 interface Props {
   title: string;
   description?: string;
-  /** Absolute or site-relative image URL for social share previews. Omit to skip the og:image tag entirely. */
+  /** Absolute or site-relative image URL for social share previews. Omit to use the portrait. */
   ogImage?: string;
   /** Overrides the auto-derived canonical URL (Astro.url under the configured site/base). Rarely needed. */
   canonical?: string;
@@ -18,14 +18,18 @@ interface Props {
 
 const {
   title,
-  description = 'Kasturi Lalitha Manogna, an emerging luxury marketer focused on brand strategy, consumer behaviour and culture. Case studies on Louis Vuitton, Hermes, Chanel, Cartier and Dior.',
+  description: rawDescription = 'Kasturi Lalitha Manogna, an emerging luxury marketer: case studies, projects and writing on brand strategy, consumer behaviour and culture.',
   ogImage,
   canonical,
   ogType = 'website',
 } = Astro.props;
 
 const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toString();
-const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined;
+// Search engines show roughly 160 characters; cut long excerpts at a word.
+const description =
+  rawDescription.length <= 160 ? rawDescription : `${rawDescription.slice(0, 157).replace(/\s+\S*$/, '').replace(/[\s,;:.—–-]+$/, '')}…`;
+// Pages without their own image share the portrait, so links never preview blank.
+const ogImageUrl = new URL(ogImage ?? withBase('/assets/kasturi-portrait.jpg'), Astro.site).toString();
 ---
 
 <!DOCTYPE html>
@@ -46,8 +50,10 @@ const ogImageUrl = ogImage ? new URL(ogImage, Astro.site).toString() : undefined
   <meta property="og:title" content={title} />
   <meta property="og:description" content={description} />
   <meta property="og:url" content={canonicalUrl} />
-  {ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
-  <meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+  <meta property="og:image" content={ogImageUrl} />
+  <meta name="twitter:card" content={ogImage ? 'summary_large_image' : 'summary'} />
+  <meta name="twitter:image" content={ogImageUrl} />
+  <link rel="sitemap" href={withBase('/sitemap.xml')} />
   <meta name="twitter:title" content={title} />
   <meta name="twitter:description" content={description} />
   <link rel="preconnect" href="https://fonts.googleapis.com" />

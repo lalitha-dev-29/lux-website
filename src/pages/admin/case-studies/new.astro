@@ -71,7 +71,7 @@ import { withBase } from '../../../lib/url';
 
       try {
         const images = await gallery.resolve((file) => uploadContentImage(`case-studies/${draftId}/gallery`, file));
-        const entry = await createCaseStudy(toCaseStudyInput(values, images), status);
+        const entry = await createCaseStudy(toCaseStudyInput(values, images), status, draftId);
         dirty = false;
         showToast(status === 'published' ? 'Case study published.' : 'Draft saved.');
         window.location.href = withBase(`/admin/case-studies/edit/?id=${entry.id}`);

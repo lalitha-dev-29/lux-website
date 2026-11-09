@@ -14,7 +14,9 @@ const brandCount = new Set(caseStudies.map((c) => c.category.trim().toLowerCase(
 const themeCount = new Set(caseStudies.flatMap((c) => c.tags.map((t) => t.trim().toLowerCase()))).size;
 ---
 
-<Layout title="Case Studies | Kasturi Lalitha Manogna">
+<Layout title="Case Studies | Kasturi Lalitha Manogna"
+  description="Brand audits and strategy deep dives by Kasturi Lalitha Manogna on how luxury houses like CHANEL build desire at every touchpoint."
+>
   <section class="tight">
     <div class="container">
       <div class="section-head listing-head reveal">
