@@ -1856,6 +1856,8 @@ a.card[hidden],a.feature-card[hidden]{display:none;}
 .gallery-plate figcaption{display:flex; flex-direction:column; gap:2px;}
 .gallery-plate-num{font-size:var(--fs-2xs); letter-spacing:.16em; text-transform:uppercase; color:var(--gold-ink); font-weight:500;}
 .gallery-plate-caption{font-size:var(--fs-sm); color:var(--stone); line-height:1.6;}
+.gallery-plate.is-wide .gallery-open img{object-fit:contain;}
+.gallery-grid-wide .gallery-open{aspect-ratio:16/9;}
 .gallery-grid-single .gallery-open{aspect-ratio:auto; max-height:min(72vh,680px);}
 .gallery-grid-single .gallery-open img{object-fit:contain; max-height:min(72vh,680px);}
 

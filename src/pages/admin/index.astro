@@ -5,13 +5,15 @@ import { withBase } from '../../lib/url';
 
 <AdminLayout title="Dashboard">
   <h1>Dashboard</h1>
-  <p class="admin-lede">A quick look at Journal and Case Study content.</p>
+  <p class="admin-lede">A quick look at your Journal posts, Case Studies and Projects.</p>
 
   <div class="admin-stats" id="statsGrid">
     <div class="admin-stat"><span class="num" id="statJournalTotal">—</span><span class="label">Journal Posts</span></div>
     <div class="admin-stat"><span class="num" id="statJournalPublished">—</span><span class="label">Journal Published</span></div>
     <div class="admin-stat"><span class="num" id="statCaseStudyTotal">—</span><span class="label">Case Studies</span></div>
     <div class="admin-stat"><span class="num" id="statCaseStudyPublished">—</span><span class="label">Case Studies Published</span></div>
+    <div class="admin-stat"><span class="num" id="statProjectTotal">—</span><span class="label">Projects</span></div>
+    <div class="admin-stat"><span class="num" id="statProjectPublished">—</span><span class="label">Projects Published</span></div>
   </div>
 
   <div class="admin-section-head">
@@ -34,23 +36,32 @@ import { withBase } from '../../lib/url';
   </div>
 
   <script>
-    import { listAllJournalPosts, listAllCaseStudies } from '../../lib/supabaseAdmin';
+    import { listAllJournalPosts, listAllCaseStudies, listAllProjects } from '../../lib/supabaseAdmin';
     import { withBase } from '../../lib/url';
     import { escapeHtml } from '../../lib/html';
 
     document.addEventListener('admin:ready', async () => {
       const rows = document.getElementById('recentRows')!;
       try {
-        const [posts, caseStudies] = await Promise.all([listAllJournalPosts(), listAllCaseStudies()]);
+        // Projects are optional: if the projects table isn't set up yet, the
+        // rest of the dashboard still loads.
+        const [posts, caseStudies, projects] = await Promise.all([
+          listAllJournalPosts(),
+          listAllCaseStudies(),
+          listAllProjects().catch(() => []),
+        ]);
 
         document.getElementById('statJournalTotal')!.textContent = String(posts.length);
         document.getElementById('statJournalPublished')!.textContent = String(posts.filter((p) => p.status === 'published').length);
         document.getElementById('statCaseStudyTotal')!.textContent = String(caseStudies.length);
         document.getElementById('statCaseStudyPublished')!.textContent = String(caseStudies.filter((c) => c.status === 'published').length);
+        document.getElementById('statProjectTotal')!.textContent = String(projects.length);
+        document.getElementById('statProjectPublished')!.textContent = String(projects.filter((p) => p.status === 'published').length);
 
         const combined = [
           ...posts.map((p) => ({ id: p.id, title: p.title, status: p.status, updated_at: p.updated_at, type: 'Journal', editHref: `/admin/journal/edit/?id=${p.id}` })),
           ...caseStudies.map((c) => ({ id: c.id, title: c.title, status: c.status, updated_at: c.updated_at, type: 'Case Study', editHref: `/admin/case-studies/edit/?id=${c.id}` })),
+          ...projects.map((p) => ({ id: p.id, title: p.title, status: p.status, updated_at: p.updated_at, type: 'Project', editHref: `/admin/projects/edit/?id=${p.id}` })),
         ].sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
 
         const recent = combined.slice(0, 8);
