@@ -3,6 +3,7 @@ import { calculateReadingTime } from './readingTime';
 import { readLinks, writeLinks } from './linksForm';
 import type { ContentLink } from './contentLinks';
 import type { CaseStudyInput } from './supabaseAdmin';
+import { keyFiguresFromText, keyFiguresToText, type GalleryImage, type KeyFigure } from './gallery';
 
 export interface CaseStudyFormValues {
   title: string;
@@ -19,6 +20,8 @@ export interface CaseStudyFormValues {
   seo_description: string;
   og_image: string;
   links: ContentLink[];
+  key_figures: string;
+  conclusion: string;
 }
 
 export function readCaseStudyForm(): CaseStudyFormValues {
@@ -39,6 +42,8 @@ export function readCaseStudyForm(): CaseStudyFormValues {
     seo_description: val('fSeoDescription').trim(),
     og_image: val('fOgImage').trim(),
     links: readLinks('caseStudyLinks'),
+    key_figures: val('fKeyFigures').trim(),
+    conclusion: val('fConclusion').trim(),
   };
 }
 
@@ -57,6 +62,8 @@ export function writeCaseStudyForm(values: {
   seo_description: string | null;
   og_image: string | null;
   links: ContentLink[];
+  key_figures?: KeyFigure[];
+  conclusion?: string | null;
 }): void {
   const set = (id: string, v: string | undefined | null) => {
     const el = document.getElementById(id) as HTMLInputElement | HTMLTextAreaElement | null;
@@ -73,6 +80,8 @@ export function writeCaseStudyForm(values: {
   set('fSeoTitle', values.seo_title ?? '');
   set('fSeoDescription', values.seo_description ?? '');
   set('fOgImage', values.og_image ?? '');
+  set('fKeyFigures', keyFiguresToText(values.key_figures ?? []));
+  set('fConclusion', values.conclusion ?? '');
   const featuredEl = document.getElementById('fFeatured') as HTMLInputElement | null;
   if (featuredEl) featuredEl.checked = values.featured;
   const comingSoonEl = document.getElementById('fComingSoon') as HTMLInputElement | null;
@@ -88,7 +97,11 @@ export function validateCaseStudyForm(values: CaseStudyFormValues): string | nul
   return null;
 }
 
-export function toCaseStudyInput(values: CaseStudyFormValues, existingSlug?: string): CaseStudyInput {
+export function toCaseStudyInput(
+  values: CaseStudyFormValues,
+  gallery: GalleryImage[],
+  existingSlug?: string
+): CaseStudyInput {
   return {
     title: values.title,
     slug: existingSlug || slugify(values.title),
@@ -108,5 +121,8 @@ export function toCaseStudyInput(values: CaseStudyFormValues, existingSlug?: str
     seo_description: values.seo_description || null,
     og_image: values.og_image || null,
     links: values.links,
+    gallery,
+    key_figures: keyFiguresFromText(values.key_figures),
+    conclusion: values.conclusion || null,
   };
 }

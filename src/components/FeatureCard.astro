@@ -1,0 +1,88 @@
+---
+// Wide, editorial listing card used on the Case Studies and Guest Lectures
+// index pages: copy on the left, a framed image (or a designed "plate" passed
+// in through the `plate` slot when there is no image) on the right, and a
+// hairline footer carrying the call to action and reading details.
+interface Props {
+  href: string;
+  /** Short label shown as a gold pill, e.g. the brand or "Guest Lecture". */
+  kicker?: string | null;
+  /** Secondary meta separated by dots, e.g. a date. */
+  meta?: (string | null | undefined)[];
+  title: string;
+  excerpt?: string | null;
+  tags?: string[];
+  image?: string | null;
+  imageAlt?: string;
+  ctaLabel: string;
+  /** Right-hand footer details, e.g. ["8 min read", "24-page PDF"]. */
+  details?: (string | null | undefined)[];
+  /** Corner badge, e.g. "Featured" or "Coming Soon". */
+  badge?: string | null;
+  badgeTone?: 'gold' | 'plain';
+  /** Running number shown above the title, e.g. "Case 01". */
+  number?: string | null;
+  revealClass?: string;
+  /** Rendered as a JSON `data-tags` attribute so the topic filter can show/hide cards. */
+  dataTags?: string[];
+  /** Image on the left instead of the right (Projects). */
+  reverse?: boolean;
+}
+
+const {
+  href,
+  kicker,
+  meta = [],
+  title,
+  excerpt,
+  tags = [],
+  image,
+  imageAlt = '',
+  ctaLabel,
+  details = [],
+  badge,
+  badgeTone = 'plain',
+  number,
+  revealClass = '',
+  dataTags,
+  reverse = false,
+} = Astro.props;
+
+const metaParts = meta.filter(Boolean) as string[];
+const detailParts = details.filter(Boolean) as string[];
+const hasPlate = Astro.slots.has('plate');
+---
+
+<a
+  href={href}
+  class={`feature-card reveal ${reverse ? 'feature-card-reverse' : ''} ${revealClass}`}
+  data-tags={dataTags ? JSON.stringify(dataTags) : undefined}
+>
+  <div class="feature-card-copy">
+    <div class="feature-card-meta">
+      {kicker && <span class="pill">{kicker}</span>}
+      {metaParts.map((part) => (
+        <>
+          <span class="dot" aria-hidden="true"></span>
+          <span>{part}</span>
+        </>
+      ))}
+      {badge && <span class={`feature-badge ${badgeTone === 'gold' ? 'feature-badge-gold' : ''}`}>{badge}</span>}
+    </div>
+    {number && <span class="feature-card-num">{number}</span>}
+    <h3>{title}</h3>
+    {excerpt && <p class="feature-card-excerpt">{excerpt}</p>}
+    {tags.length > 0 && <div class="tags">{tags.map((t) => <span>{t}</span>)}</div>}
+  </div>
+
+  {(image || hasPlate) && (
+    <div class="feature-card-media">
+      {image ? <img src={image} alt={imageAlt} loading="lazy" width="800" height="600" /> : <slot name="plate" />}
+    </div>
+  )}
+
+  <div class="feature-card-foot">
+    <span class="link-arrow">{ctaLabel} <span class="arrow" aria-hidden="true">→</span></span>
+    {detailParts.length > 0 && <span class="feature-card-details">{detailParts.join(' · ')}</span>}
+  </div>
+</a>

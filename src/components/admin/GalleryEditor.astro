@@ -1,0 +1,27 @@
+---
+// Admin photo-gallery field: pick any number of images, give each a caption,
+// reorder them, remove them. Behaviour lives in src/lib/galleryEditor.ts;
+// photos are only uploaded when the form is saved.
+interface Props {
+  id: string;
+  label?: string;
+  hint?: string;
+}
+const {
+  id,
+  label = 'Photo Gallery',
+  hint = 'Add as many photos as you like. Each one can have a caption, and the arrows change their order. Photos are uploaded when you save.',
+} = Astro.props;
+---
+
+<fieldset class="field-group gallery-editor" id={id}>
+  <legend>{label} <span class="hint-inline">(optional)</span></legend>
+  <p class="hint" style="margin-top:0;">{hint}</p>
+  <ul class="gallery-editor-list" data-gallery-list></ul>
+  <label class="btn-line gallery-editor-add">
+    + Add Photos
+    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple hidden data-gallery-input />
+  </label>
+  <p class="form-error" data-gallery-error hidden></p>
+  <p class="hint">JPG, PNG, WebP or GIF, up to 10MB each (iPhone HEIC photos need converting to JPG first).</p>
+</fieldset>

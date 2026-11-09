@@ -1,0 +1,225 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { withBase } from '../../lib/url';
+import { fetchAllPublishedProjects } from '../../lib/buildTimeData';
+import { renderWithChapters } from '../../lib/chapters';
+import { videoEmbedUrl } from '../../lib/projectTypes';
+import ExternalLinks from '../../components/ExternalLinks.astro';
+import PDFViewer from '../../components/PDFViewer.astro';
+import PrevNext from '../../components/PrevNext.astro';
+import Gallery from '../../components/Gallery.astro';
+import KeyFigures from '../../components/KeyFigures.astro';
+import CoreConclusion from '../../components/CoreConclusion.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
+import ReadingChrome from '../../components/ReadingChrome.astro';
+
+export async function getStaticPaths() {
+  const projects = await fetchAllPublishedProjects();
+  return projects.map((p, i) => ({
+    params: { slug: p.slug },
+    props: { project: p, index: i, projects },
+  }));
+}
+
+const { project: p, index, projects } = Astro.props;
+const { html: contentHtml, chapters } = renderWithChapters(p.content);
+const embed = videoEmbedUrl(p.video_url);
+
+// Facts strip: the structured fields first, then the admin's own "Label | Value" lines.
+const facts = [
+  { label: 'Project Type', value: p.project_type },
+  { label: 'Course', value: p.course },
+  { label: 'University', value: p.institution },
+  { label: 'When', value: p.period },
+  { label: 'My Role', value: p.my_role },
+  ...p.details,
+].filter((f): f is { label: string; value: string } => Boolean(f.value));
+
+const isMe = (name: string) => /kasturi|lalitha|manogna/i.test(name);
+
+const contents = [
+  ...chapters.map((ch, i) => ({ href: `#${ch.id}`, label: ch.title, num: String(i + 1).padStart(2, '0') })),
+  ...(p.key_figures.length > 0 ? [{ href: '#by-the-numbers', label: 'By the Numbers', num: '' }] : []),
+  ...(p.gallery.length > 0 ? [{ href: '#project-visuals', label: `Project Visuals (${p.gallery.length})`, num: '' }] : []),
+  ...(p.pdf_url ? [{ href: '#full-deck', label: 'The Final Deck', num: '' }] : []),
+  ...(p.team.length > 0 ? [{ href: '#team', label: 'The Team', num: '' }] : []),
+  ...(p.conclusion ? [{ href: '#reflection', label: 'What It Taught Me', num: '' }] : []),
+];
+
+const prev = projects[index - 1];
+const next = projects[index + 1];
+---
+
+<Layout
+  title={`${p.title} | Projects | Kasturi Lalitha Manogna`}
+  description={p.excerpt}
+  ogImage={p.cover_image || p.gallery[0]?.url || undefined}
+  ogType="article"
+>
+  <ReadingChrome />
+
+  <section class="tight detail-hero project-hero">
+    <div class="container">
+      <nav class="breadcrumb reveal" aria-label="Breadcrumb">
+        <a href={withBase('/')}>Home</a><span aria-hidden="true">/</span>
+        <a href={withBase('/projects/')}>Projects</a><span aria-hidden="true">/</span>
+        <span aria-current="page">{p.title}</span>
+      </nav>
+
+      <div class="project-hero-copy reveal">
+        <div class="feature-card-meta">
+          {p.project_type && <span class="pill pill-solid">{p.project_type}</span>}
+          {p.tags.slice(0, 3).map((t) => <span class="pill">{t}</span>)}
+          {p.progress === 'in_progress' && <span class="pill">In progress</span>}
+          {[p.course, p.period, p.reading_time_minutes ? `${p.reading_time_minutes} min read` : null].filter(Boolean).map((part) => (
+            <><span class="dot" aria-hidden="true"></span><span>{part}</span></>
+          ))}
+        </div>
+        <h1 class="detail-title">{p.title}</h1>
+        {p.tagline && <p class="project-tagline">{p.tagline}</p>}
+        <div class="project-intro">
+          <p>{p.excerpt}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {(p.cover_image || embed) && (
+    <section class="tight flush-top">
+      <div class="container">
+        {embed ? (
+          <figure class="project-media project-video reveal">
+            <div class="project-video-frame">
+              <iframe
+                src={embed}
+                title={`Video: ${p.title}`}
+                loading="lazy"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen
+              ></iframe>
+            </div>
+            <figcaption>
+              <span><span class="building-dot" aria-hidden="true"></span>Watch the project film</span>
+              {p.video_url && <a href={p.video_url} target="_blank" rel="noopener">Open in a new tab ↗</a>}
+            </figcaption>
+          </figure>
+        ) : (
+          <figure class="project-media reveal">
+            <img src={p.cover_image!} alt="" width="1600" height="900" />
+            <figcaption><span>Figure 1.0 · The project identity</span></figcaption>
+          </figure>
+        )}
+
+        {facts.length > 0 && (
+          <dl class="facts-strip reveal">
+            {facts.map((f) => (
+              <div><dt>{f.label}</dt><dd>{f.value}</dd></div>
+            ))}
+          </dl>
+        )}
+
+        {embed && p.cover_image && (
+          <figure class="project-media reveal" style="margin-top:var(--sp-6);">
+            <img src={p.cover_image} alt="" width="1600" height="900" />
+            <figcaption><span>Figure 1.0 · The project identity</span></figcaption>
+          </figure>
+        )}
+      </div>
+    </section>
+  )}
+
+  {!(p.cover_image || embed) && facts.length > 0 && (
+    <section class="tight flush-top">
+      <div class="container">
+        <dl class="facts-strip reveal">
+          {facts.map((f) => (
+            <div><dt>{f.label}</dt><dd>{f.value}</dd></div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  )}
+
+  {(contentHtml || p.links.length > 0) && (
+    <section class="tight">
+      <div class="container split">
+        <div class="split-aside reveal">
+          {contents.length >= 2 ? (
+            <nav class="contents-nav" aria-label="Contents">
+              <div class="contents-nav-head">
+                <span class="eyebrow">Contents</span>
+                <span class="contents-count">{contents.length} sections</span>
+              </div>
+              <ol>
+                {contents.map((item) => (
+                  <li><a href={item.href}>{item.num && <span class="contents-num">{item.num}</span>}<span>{item.label}</span></a></li>
+                ))}
+              </ol>
+            </nav>
+          ) : (
+            <div class="section-head">
+              <span class="eyebrow">The Project</span>
+              <h2>From Brief to Pitch</h2>
+            </div>
+          )}
+        </div>
+        <div class="split-body reveal reveal-delay-1">
+          {contentHtml && <div class="prose chapter-prose chapter-prose-sections" set:html={contentHtml} />}
+          <ExternalLinks links={p.links} />
+        </div>
+      </div>
+    </section>
+  )}
+
+  <KeyFigures figures={p.key_figures} id="by-the-numbers" />
+
+  <Gallery images={p.gallery} eyebrow="Project Visuals" title="Inside the Work" id="project-visuals" />
+
+  {p.pdf_url && (
+    <section class="tight flush-top" id="full-deck">
+      <div class="container">
+        <div class="chapter-label reveal"><span>The Final Deck</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+        <h2 class="visually-hidden">Final project deck</h2>
+        <PDFViewer pdfUrl={p.pdf_url} title={p.title} />
+      </div>
+    </section>
+  )}
+
+  {p.team.length > 0 && (
+    <section class="tight" id="team">
+      <div class="container">
+        <div class="team-panel reveal">
+          <div class="team-panel-head">
+            <div>
+              <span class="eyebrow">The Team</span>
+              <h2>The Minds Behind the Project</h2>
+            </div>
+            {p.institution && <span class="gallery-count">{p.institution}</span>}
+          </div>
+          <ul class="team-grid">
+            {p.team.map((m) => (
+              <li class={`team-member ${isMe(m.name) ? 'team-member-me' : ''}`}>
+                {m.role && <span class="team-role">{m.role}</span>}
+                <span class="team-name">{m.name}</span>
+              </li>
+            ))}
+            <li class="team-member team-member-count">
+              <span class="team-name">{p.team.length}-Person Team</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  )}
+
+  <CoreConclusion text={p.conclusion} label="What This Project Taught Me" backHref="/projects/" backLabel="Back to All Projects" id="reflection" />
+
+  <AuthorCard role="Project Write-up" />
+
+  <PrevNext
+    base="/projects/"
+    backLabel="All Projects"
+    prev={prev ? { href: `/projects/${prev.slug}/`, title: prev.title, kicker: prev.project_type } : null}
+    next={next ? { href: `/projects/${next.slug}/`, title: next.title, kicker: next.project_type } : null}
+  />
+</Layout>

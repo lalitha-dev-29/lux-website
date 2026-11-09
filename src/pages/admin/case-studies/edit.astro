@@ -60,7 +60,9 @@ import { withBase } from '../../../lib/url';
       uploadCaseStudyPdf,
       updateCaseStudyPdf,
       deleteCaseStudyPdfObject,
+      uploadContentImage,
     } from '../../../lib/supabaseAdmin';
+    import { initGalleryEditor } from '../../../lib/galleryEditor';
     import { readCaseStudyForm, writeCaseStudyForm, validateCaseStudyForm, toCaseStudyInput } from '../../../lib/caseStudyForm';
     import { withBase } from '../../../lib/url';
     import { wireContentFormImages, showExistingContentImages } from '../../../lib/imageUpload';
@@ -93,6 +95,10 @@ import { withBase } from '../../../lib/url';
 
     let current: CaseStudy | null = null;
     let dirty = false;
+    const gallery = initGalleryEditor('caseStudyGallery');
+    gallery.onChange(() => {
+      dirty = true;
+    });
 
     function renderStatus() {
       if (!current) return;
@@ -132,6 +138,7 @@ import { withBase } from '../../../lib/url';
         }
         current = entry;
         writeCaseStudyForm(entry);
+        gallery.set(entry.gallery);
         initLinksEditor('caseStudyLinks');
         wireContentFormImages(`case-studies/${entry.id}`);
         showExistingContentImages(entry.cover_image, entry.og_image);
@@ -166,7 +173,9 @@ import { withBase } from '../../../lib/url';
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving…';
       try {
-        current = await updateCaseStudy(current.id, toCaseStudyInput(values, current.slug));
+        const id = current.id;
+        const images = await gallery.resolve((file) => uploadContentImage(`case-studies/${id}/gallery`, file));
+        current = await updateCaseStudy(id, toCaseStudyInput(values, images, current.slug));
         dirty = false;
         renderStatus();
         showToast('Changes saved.');

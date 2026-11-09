@@ -1,19 +1,35 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import CaseStudyCard from '../../components/CaseStudyCard.astro';
+import FeatureCard from '../../components/FeatureCard.astro';
+import TopicFilter from '../../components/TopicFilter.astro';
+import ExploreMore from '../../components/ExploreMore.astro';
+import { withBase } from '../../lib/url';
 import { fetchAllPublishedCaseStudies } from '../../lib/buildTimeData';
+import { caseStudyDetails, caseStudyMonth } from '../../lib/caseStudyDisplay';
 
 const caseStudies = await fetchAllPublishedCaseStudies();
+// Same order (and so the same "Case 01" numbering) as the detail pages.
+const ordered = caseStudies;
+const brandCount = new Set(caseStudies.map((c) => c.category.trim().toLowerCase()).filter(Boolean)).size;
+const themeCount = new Set(caseStudies.flatMap((c) => c.tags.map((t) => t.trim().toLowerCase()))).size;
 ---
 
 <Layout title="Case Studies | Kasturi Lalitha Manogna">
   <section class="tight">
     <div class="container">
-      <div class="section-head reveal">
-        <span class="eyebrow">Case Studies</span>
+      <div class="section-head listing-head reveal">
+        <span class="eyebrow">Case Studies &amp; Brand Research</span>
         <h1>Brands I'm Curious About. Questions I'm Trying to Answer.</h1>
         <p>I like looking beyond what a brand is showing us and trying to understand what is happening underneath. Why does this brand feel different? Why does this product have so much meaning? Why does a certain campaign work? Why do consumers keep coming back? And what can another brand learn from it? These projects are my way of exploring those questions.</p>
       </div>
+
+      {caseStudies.length > 0 && (
+        <dl class="stat-row reveal reveal-delay-1">
+          <div><dt>Case studies</dt><dd>{String(caseStudies.length).padStart(2, '0')}</dd></div>
+          <div><dt>Brands studied</dt><dd>{String(brandCount).padStart(2, '0')}</dd></div>
+          <div><dt>Themes explored</dt><dd>{String(themeCount).padStart(2, '0')}</dd></div>
+        </dl>
+      )}
     </div>
   </section>
 
@@ -27,20 +43,52 @@ const caseStudies = await fetchAllPublishedCaseStudies();
           <h2>How I Look at a Brand</h2>
         </div>
       </div>
-      <div class="split-body prose reveal reveal-delay-1">
-        <p>I usually start with the brand itself. Then I look at the consumer. Then the culture around it. And finally, I try to connect everything back to strategy.</p>
-        <p>I'm interested in the bigger picture, but I also enjoy getting into the details.</p>
+      <div class="split-body reveal reveal-delay-1">
+        <ol class="method-steps">
+          <li><span class="method-num">01</span><strong>The brand</strong><span>Heritage, codes and what the house stands for.</span></li>
+          <li><span class="method-num">02</span><strong>The consumer</strong><span>Who desires it, and why it means something to them.</span></li>
+          <li><span class="method-num">03</span><strong>The culture</strong><span>The moment, the generation and the world around it.</span></li>
+          <li><span class="method-num">04</span><strong>The strategy</strong><span>Connecting it all back to what the brand should do next.</span></li>
+        </ol>
+        <p class="method-note">I'm interested in the bigger picture, but I also enjoy getting into the details.</p>
       </div>
     </div>
   </section>
 
   <section class="tight">
     <div class="container">
-      <h2 class="visually-hidden">All case studies</h2>
-      {caseStudies.length > 0 ? (
-        <div class="grid-3">
-          {caseStudies.map((entry, i) => (
-            <CaseStudyCard entry={entry} revealClass={i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''} />
+      <div class="section-head reveal">
+        <span class="eyebrow">Featured Research</span>
+        <h2>The Case Studies</h2>
+      </div>
+
+      <TopicFilter itemTags={ordered.map((c) => c.tags)} target="caseStudyList" noun={['case study', 'case studies']} />
+
+      {ordered.length > 0 ? (
+        <div class="feature-list" id="caseStudyList">
+          {ordered.map((c, i) => (
+            <FeatureCard
+              href={withBase(`/case-studies/${c.slug}/`)}
+              kicker={c.category}
+              meta={[caseStudyMonth(c)]}
+              number={`Case ${String(i + 1).padStart(2, '0')}`}
+              title={c.title}
+              excerpt={c.excerpt}
+              tags={c.tags}
+              image={c.cover_image ?? c.gallery[0]?.url ?? null}
+              ctaLabel={c.coming_soon ? 'Preview case study' : 'Read case study'}
+              details={caseStudyDetails(c)}
+              badge={c.coming_soon ? 'Coming Soon' : c.featured ? 'Featured' : null}
+              badgeTone={c.featured && !c.coming_soon ? 'gold' : 'plain'}
+              dataTags={c.tags}
+            >
+              <div slot="plate" class="brand-plate" aria-hidden="true">
+                <span class="brand-plate-label">Case Study · {String(i + 1).padStart(2, '0')}</span>
+                <span class="brand-plate-name">{c.category}</span>
+                <span class="brand-plate-rule"></span>
+                <span class="brand-plate-foot">{c.tags.slice(0, 3).join(' · ')}</span>
+              </div>
+            </FeatureCard>
           ))}
         </div>
       ) : (
@@ -65,4 +113,8 @@ const caseStudies = await fetchAllPublishedCaseStudies();
       </div>
     </div>
   </section>
+
+  <div class="divider"></div>
+
+  <ExploreMore current="case-studies" />
 </Layout>

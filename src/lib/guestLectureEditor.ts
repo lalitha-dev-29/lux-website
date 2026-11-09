@@ -8,6 +8,7 @@
  */
 import { uploadGuestLectureAsset, deleteGuestLectureAssets, type GuestLectureInput } from './supabaseAdmin';
 import type { GuestLecture, GuestLectureFile, GuestLectureFileType, GuestSpeaker } from './guestLectureTypes';
+import { initGalleryEditor } from './galleryEditor';
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const DOC_TYPES: Record<string, GuestLectureFileType> = {
@@ -61,6 +62,8 @@ export function createGuestLectureEditor() {
   let files: FileItem[] = [];
   const onChange: Array<() => void> = [];
   const changed = () => onChange.forEach((fn) => fn());
+  const gallery = initGalleryEditor('lectureGallery');
+  gallery.onChange(changed);
 
   // ---- tags ------------------------------------------------------------
   const tagsInput = $<HTMLInputElement>('fTags');
@@ -244,6 +247,8 @@ export function createGuestLectureEditor() {
     $<HTMLInputElement>('fLectureDate').value = lecture.lecture_date;
     $<HTMLTextAreaElement>('fKeyLearnings').value = lecture.key_learnings;
     $<HTMLInputElement>('fTags').value = lecture.tags.join(', ');
+    $<HTMLInputElement>('fCoreQuestion').value = lecture.core_question ?? '';
+    gallery.set(lecture.gallery);
     renderTagSuggestions();
     rows.splice(0).forEach((r) => r.el.remove());
     (lecture.speakers.length ? lecture.speakers : [{}]).forEach((s) => addSpeaker(s));
@@ -297,6 +302,9 @@ export function createGuestLectureEditor() {
           outFiles.push({ url, name: f.file.name, type: DOC_TYPES[f.file.type] });
         }
       }
+      const galleryImages = await gallery.resolve((file) => uploadGuestLectureAsset(lectureId, file));
+      // Gallery uploads stay remembered by the gallery editor itself, so a retried save reuses them.
+      const coreQuestion = $<HTMLInputElement>('fCoreQuestion').value.trim();
       return {
         id: lectureId,
         topic: $<HTMLInputElement>('fTopic').value.trim(),
@@ -305,6 +313,8 @@ export function createGuestLectureEditor() {
         tags: parseTags($<HTMLInputElement>('fTags').value),
         key_learnings: $<HTMLTextAreaElement>('fKeyLearnings').value.trim(),
         files: outFiles,
+        gallery: galleryImages,
+        core_question: coreQuestion || null,
       };
     } catch (err) {
       await deleteGuestLectureAssets(uploaded);
@@ -321,7 +331,11 @@ export function createGuestLectureEditor() {
     onChange: (fn: () => void) => onChange.push(fn),
     /** Public URLs of every photo/handout this lecture currently references. */
     assetUrls(lecture: GuestLecture): string[] {
-      return [...lecture.speakers.flatMap((s) => s.photos), ...lecture.files.map((f) => f.url)];
+      return [
+        ...lecture.speakers.flatMap((s) => s.photos),
+        ...lecture.files.map((f) => f.url),
+        ...lecture.gallery.map((g) => g.url),
+      ];
     },
   };
 }

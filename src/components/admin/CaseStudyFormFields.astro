@@ -4,6 +4,9 @@
 // separately in edit.astro (a case study needs to exist before a PDF can be
 // attached to it).
 import LinksEditor from './LinksEditor.astro';
+import GalleryEditor from './GalleryEditor.astro';
+
+const keyFiguresPlaceholder = '$12B | Brand value, 2026\n7 | Touchpoints analysed\n91.5 | Brand Strength Index';
 ---
 
 <div class="field">
@@ -72,6 +75,24 @@ import LinksEditor from './LinksEditor.astro';
     <button type="button" class="btn-line" id="fCoverImageRemove" hidden>Remove</button>
   </div>
   <p class="hint">The main photo — shown on the listing card and at the top of the case study. JPG, PNG, WebP, GIF or SVG only (not HEIC/HEIF — iPhone photos may need converting first).</p>
+</div>
+
+<GalleryEditor
+  id="caseStudyGallery"
+  label="Visual Archive — Photo Gallery"
+  hint="Field photos, campaign images, store visits, slides — as many as you like. They appear as a numbered photo grid near the end of the case study, and visitors can click any photo to see it full size. Each photo can have a caption; the arrows change the order. Photos are uploaded when you save."
+/>
+
+<div class="field">
+  <label for="fKeyFigures">Key Figures <span class="hint-inline">(optional)</span></label>
+  <textarea id="fKeyFigures" name="key_figures" rows="4" maxlength="1200" placeholder={keyFiguresPlaceholder}></textarea>
+  <p class="hint">Shown as large "By the Numbers" cards. One per line: the number or fact, then a vertical bar <code>|</code>, then what it means. Three or four work best.</p>
+</div>
+
+<div class="field">
+  <label for="fConclusion">Core Conclusion <span class="hint-inline">(optional)</span></label>
+  <textarea id="fConclusion" name="conclusion" rows="3" maxlength="800" placeholder="The one idea you want a reader to leave with…"></textarea>
+  <p class="hint">Your closing statement, shown in a highlighted panel at the end of the case study. A blank line splits it into a headline and a follow-up line.</p>
 </div>
 
 <div class="field field-checkbox">

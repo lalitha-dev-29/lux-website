@@ -1,0 +1,26 @@
+---
+// "By the Numbers" stat cards — large serif figures with a short label.
+import type { KeyFigure } from '../lib/gallery';
+
+interface Props {
+  figures: KeyFigure[];
+  id?: string;
+}
+const { figures, id } = Astro.props;
+---
+
+{figures.length > 0 && (
+  <section class="tight flush-top" id={id}>
+    <div class="container">
+      <div class="chapter-label reveal"><span>By the Numbers</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+      <dl class="key-figures">
+        {figures.map((f, i) => (
+          <div class={`key-figure reveal ${i % 4 === 1 ? 'reveal-delay-1' : i % 4 === 2 ? 'reveal-delay-2' : i % 4 === 3 ? 'reveal-delay-3' : ''}`}>
+            <dd>{f.value}</dd>
+            {f.label && <dt>{f.label}</dt>}
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+)}

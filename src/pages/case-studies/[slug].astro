@@ -2,25 +2,54 @@
 import Layout from '../../layouts/Layout.astro';
 import { withBase } from '../../lib/url';
 import { fetchAllPublishedCaseStudies, fetchAllPublishedJournalPosts } from '../../lib/buildTimeData';
-import { renderMarkdown } from '../../lib/markdown';
-import ContentMetadata from '../../components/ContentMetadata.astro';
+import { renderWithChapters } from '../../lib/chapters';
+import { caseStudyMonth } from '../../lib/caseStudyDisplay';
 import ExternalLinks from '../../components/ExternalLinks.astro';
 import RelatedContent from '../../components/RelatedContent.astro';
 import PDFViewer from '../../components/PDFViewer.astro';
+import PrevNext from '../../components/PrevNext.astro';
+import Gallery from '../../components/Gallery.astro';
+import KeyFigures from '../../components/KeyFigures.astro';
+import CoreConclusion from '../../components/CoreConclusion.astro';
+import AuthorCard from '../../components/AuthorCard.astro';
+import ReadingChrome from '../../components/ReadingChrome.astro';
 
 export async function getStaticPaths() {
   const [caseStudies, journalPosts] = await Promise.all([
     fetchAllPublishedCaseStudies(),
     fetchAllPublishedJournalPosts(),
   ]);
-  return caseStudies.map((entry) => ({
+  return caseStudies.map((entry, i) => ({
     params: { slug: entry.slug },
-    props: { entry, caseStudies, journalPosts },
+    props: { entry, index: i, caseStudies, journalPosts },
   }));
 }
 
-const { entry: c, caseStudies, journalPosts } = Astro.props;
-const contentHtml = renderMarkdown(c.content);
+const { entry: c, index, caseStudies, journalPosts } = Astro.props;
+const month = caseStudyMonth(c);
+
+const { html: contentHtml, chapters } = renderWithChapters(c.content);
+
+const facts = [
+  { label: 'Brand', value: c.category },
+  { label: 'Published', value: month },
+  { label: 'Reading time', value: c.reading_time_minutes ? `${c.reading_time_minutes} min` : null },
+  { label: 'Full deck', value: c.pdf_url ? (c.pdf_page_count ? `${c.pdf_page_count} pages` : 'PDF') : null },
+  { label: 'Photographs', value: c.gallery.length > 0 ? String(c.gallery.length) : null },
+].filter((f): f is { label: string; value: string } => Boolean(f.value));
+
+// Contents list: the write-up's chapters, then each extra section that exists.
+const contents = [
+  ...chapters.map((ch, i) => ({ href: `#${ch.id}`, label: ch.title, num: String(i + 1).padStart(2, '0') })),
+  ...(c.key_figures.length > 0 ? [{ href: '#by-the-numbers', label: 'By the Numbers', num: '' }] : []),
+  ...(c.gallery.length > 0 ? [{ href: '#visual-archive', label: `Visual Archive (${c.gallery.length})`, num: '' }] : []),
+  ...(c.pdf_url ? [{ href: '#full-deck', label: 'The Full Case Study', num: '' }] : []),
+  ...(c.conclusion ? [{ href: '#conclusion', label: 'Core Conclusion', num: '' }] : []),
+];
+const showContents = contents.length >= 3;
+
+const prev = caseStudies[index - 1];
+const next = caseStudies[index + 1];
 ---
 
 <Layout
@@ -29,40 +58,96 @@ const contentHtml = renderMarkdown(c.content);
   ogImage={c.og_image || c.cover_image || undefined}
   ogType="article"
 >
-  <section class="tight case-detail-head">
+  <ReadingChrome />
+
+  <section class="tight detail-hero">
     <div class="container">
       <a href={withBase('/case-studies/')} class="btn-line case-back reveal"><span class="arrow" aria-hidden="true">←</span> All Case Studies</a>
-      <div class="reveal">
-        <ContentMetadata category={c.category} author={c.author} publishedAt={c.published_at} readingTimeMinutes={c.reading_time_minutes} />
-        <h1 class="case-detail-title">{c.title}</h1>
-        {c.tags.length > 0 && <div class="tags" style="margin-top:var(--sp-5);">{c.tags.map((t) => <span>{t}</span>)}</div>}
+      <div class={`detail-hero-grid ${c.cover_image ? '' : 'detail-hero-solo'}`}>
+        <div class="detail-hero-copy reveal">
+          <div class="feature-card-meta">
+            <span class="pill">Case Study {String(index + 1).padStart(2, '0')}</span>
+            {month && <><span class="dot" aria-hidden="true"></span><span>{month}</span></>}
+            <span class="dot" aria-hidden="true"></span><span>{c.author}</span>
+          </div>
+          <h1 class="detail-title">{c.title}</h1>
+          {c.excerpt && <p class="detail-lede">{c.excerpt}</p>}
+          {facts.length > 0 && (
+            <dl class="fact-grid">
+              {facts.map((f) => (
+                <div class="fact"><dt>{f.label}</dt><dd>{f.value}</dd></div>
+              ))}
+            </dl>
+          )}
+          {c.tags.length > 0 && <div class="tags detail-tags">{c.tags.map((t) => <span>{t}</span>)}</div>}
+          {(c.pdf_url || c.gallery.length > 0) && (
+            <div class="detail-actions">
+              {c.pdf_url && <a href="#full-deck" class="btn-solid">Read the Full Case Study</a>}
+              {c.gallery.length > 0 && <a href="#visual-archive" class="btn-line">View the Photos <span class="arrow" aria-hidden="true">→</span></a>}
+            </div>
+          )}
+        </div>
+        {c.cover_image && (
+          <figure class="detail-hero-media reveal reveal-delay-1">
+            <img src={c.cover_image} alt="" width="1200" height="1500" />
+          </figure>
+        )}
       </div>
     </div>
   </section>
 
-  {c.cover_image && (
-    <section class="tight flush-top">
-      <div class="container">
-        <div class="case-detail-media reveal">
-          <img src={c.cover_image} alt="" width="1600" height="800" />
+  {(contentHtml || c.links.length > 0) && (
+    <section class="tight">
+      <div class="container split">
+        <div class="split-aside reveal">
+          {showContents ? (
+            <nav class="contents-nav" aria-label="Contents">
+              <span class="eyebrow">Contents</span>
+              <ol>
+                {contents.map((item) => (
+                  <li><a href={item.href}>{item.num && <span class="contents-num">{item.num}</span>}<span>{item.label}</span></a></li>
+                ))}
+              </ol>
+            </nav>
+          ) : (
+            <div class="section-head">
+              <span class="eyebrow">Overview</span>
+              <h2>What This Case Explores</h2>
+            </div>
+          )}
+        </div>
+        <div class="split-body reveal reveal-delay-1">
+          {contentHtml && <div class="prose chapter-prose" set:html={contentHtml} />}
+          <ExternalLinks links={c.links} />
         </div>
       </div>
     </section>
   )}
 
-  <section class="tight">
-    <div class="container">
-      {contentHtml && <div class="prose reveal" set:html={contentHtml} />}
-      <ExternalLinks links={c.links} />
-    </div>
-  </section>
+  <KeyFigures figures={c.key_figures} id="by-the-numbers" />
 
-  <section class="tight flush-top">
-    <div class="container">
-      <h2 class="visually-hidden">Full case study document</h2>
-      <PDFViewer pdfUrl={c.pdf_url} title={c.title} />
-    </div>
-  </section>
+  <Gallery images={c.gallery} title="From the Field" id="visual-archive" />
+
+  {c.pdf_url && (
+    <section class="tight flush-top" id="full-deck">
+      <div class="container">
+        <div class="chapter-label reveal"><span>The Full Case Study</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+        <h2 class="visually-hidden">Full case study document</h2>
+        <PDFViewer pdfUrl={c.pdf_url} title={c.title} />
+      </div>
+    </section>
+  )}
+
+  <CoreConclusion text={c.conclusion} backHref="/case-studies/" backLabel="Back to All Case Studies" id="conclusion" />
+
+  <AuthorCard role="Research & Analysis" />
+
+  <PrevNext
+    base="/case-studies/"
+    backLabel="All Case Studies"
+    prev={prev ? { href: `/case-studies/${prev.slug}/`, title: prev.title, kicker: prev.category } : null}
+    next={next ? { href: `/case-studies/${next.slug}/`, title: next.title, kicker: next.category } : null}
+  />
 
   <RelatedContent
     currentSlug={c.slug}

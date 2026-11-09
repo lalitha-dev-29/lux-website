@@ -1,0 +1,41 @@
+---
+// "Explore more work" band at the foot of the listing pages: cross-links to
+// the other sections so a visitor who finishes one list has somewhere to go.
+import { withBase } from '../lib/url';
+
+interface Props {
+  /** Which section the visitor is on — left out of the list. */
+  current: 'case-studies' | 'projects' | 'guest-lectures' | 'journal' | 'learning';
+}
+
+const { current } = Astro.props;
+
+const sections = [
+  { key: 'case-studies', href: '/case-studies/', label: 'Case Studies', blurb: 'Brand audits and strategy deep dives on the houses I study.' },
+  { key: 'projects', href: '/projects/', label: 'Projects', blurb: 'University projects: strategies, campaigns and research taken from brief to pitch.' },
+  { key: 'guest-lectures', href: '/guest-lectures/', label: 'Guest Lectures', blurb: 'Notes and takeaways from the industry voices I have learned from.' },
+  { key: 'journal', href: '/journal/', label: 'Journal', blurb: 'Shorter thinking on luxury, culture and consumer behaviour.' },
+  { key: 'learning', href: '/learning/', label: 'Learning', blurb: 'Education, certifications and what I am studying right now.' },
+]
+  .filter((s) => s.key !== current)
+  .slice(0, 3);
+---
+
+<section class="tight">
+  <div class="container">
+    <div class="section-head reveal">
+      <span class="eyebrow">Explore More Work</span>
+      <h2>Beyond This Page</h2>
+    </div>
+    <div class="explore-grid">
+      {sections.map((s, i) => (
+        <a href={withBase(s.href)} class={`explore-link reveal ${i === 1 ? 'reveal-delay-1' : i === 2 ? 'reveal-delay-2' : ''}`}>
+          <span class="explore-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+          <span class="explore-label">{s.label}</span>
+          <span class="explore-blurb">{s.blurb}</span>
+          <span class="link-arrow">Visit <span class="arrow" aria-hidden="true">→</span></span>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>

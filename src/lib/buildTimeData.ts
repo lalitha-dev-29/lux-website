@@ -1,9 +1,10 @@
 import type { GuestLecture } from './guestLectureTypes';
-import { PUBLIC_GUEST_LECTURE_FIELDS, normalizeGuestLecture } from './guestLectureTypes';
+import { PUBLIC_GUEST_LECTURE_FIELDS, PUBLIC_GUEST_LECTURE_MEDIA_FIELDS, normalizeGuestLecture } from './guestLectureTypes';
 import type { JournalPost } from './journalTypes';
 import { PUBLIC_JOURNAL_FIELDS } from './journalTypes';
 import type { CaseStudy } from './caseStudyTypes';
-import { PUBLIC_CASE_STUDY_FIELDS } from './caseStudyTypes';
+import { PUBLIC_CASE_STUDY_FIELDS, PUBLIC_CASE_STUDY_MEDIA_FIELDS } from './caseStudyTypes';
+import { parseGallery, parseKeyFigures } from './gallery';
 import { parseLinks } from './contentLinks';
 import type { LearningOverview, LearningRightNowItem, LearningEducationItem, LearningCertification } from './learningTypes';
 import {
@@ -15,6 +16,7 @@ import {
 import type { AtlasCountry, AtlasBrand, AtlasCategory } from './atlasTypes';
 import { PUBLIC_ATLAS_COUNTRY_FIELDS, PUBLIC_ATLAS_BRAND_FIELDS, PUBLIC_ATLAS_CATEGORY_FIELDS } from './atlasTypes';
 import { renderMarkdown } from './markdown';
+import { PUBLIC_PROJECT_FIELDS, normalizeProject, type Project } from './projectTypes';
 
 /**
  * Build-time reads against Supabase's PostgREST API, used by `getStaticPaths()`
@@ -76,7 +78,13 @@ function normalizeJournalPost(row: Record<string, unknown>): JournalPost {
 }
 
 function normalizeCaseStudy(row: Record<string, unknown>): CaseStudy {
-  return { ...row, links: parseLinks(row.links) } as CaseStudy;
+  return {
+    ...row,
+    links: parseLinks(row.links),
+    gallery: parseGallery(row.gallery),
+    key_figures: parseKeyFigures(row.key_figures),
+    conclusion: typeof row.conclusion === 'string' && row.conclusion.trim() ? row.conclusion.trim() : null,
+  } as CaseStudy;
 }
 
 export async function fetchAllPublishedJournalPosts(): Promise<JournalPost[]> {
@@ -95,9 +103,14 @@ export async function fetchPublishedJournalPostBySlug(slug: string): Promise<Jou
 }
 
 export async function fetchAllPublishedCaseStudies(): Promise<CaseStudy[]> {
-  const rows = await restGet(
-    `case_studies?select=${PUBLIC_CASE_STUDY_FIELDS}&status=eq.published&order=order_index.asc`
-  );
+  const query = (fields: string) => `case_studies?select=${fields}&status=eq.published&order=order_index.asc`;
+  let rows: unknown[];
+  try {
+    rows = await restGet(query(`${PUBLIC_CASE_STUDY_FIELDS},${PUBLIC_CASE_STUDY_MEDIA_FIELDS}`));
+  } catch {
+    // supabase/portfolio_media.sql not applied yet — build without galleries/figures.
+    rows = await restGet(query(PUBLIC_CASE_STUDY_FIELDS));
+  }
   return (rows as Record<string, unknown>[]).map(normalizeCaseStudy);
 }
 
@@ -126,6 +139,12 @@ export async function fetchAllRightNow(): Promise<LearningRightNowItem[]> {
  */
 export async function fetchAllGuestLectures(): Promise<GuestLecture[]> {
   const order = '&order=lecture_date.desc';
+  try {
+    const rows = await restGet(`guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS},${PUBLIC_GUEST_LECTURE_MEDIA_FIELDS}${order}`);
+    return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
+  } catch {
+    // portfolio_media.sql not applied yet: fall through to the older column sets.
+  }
   try {
     const rows = await restGet(`guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS}${order}`);
     return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
@@ -222,4 +241,18 @@ export async function buildAtlasMapData(): Promise<Record<string, AtlasMapPanelD
     };
   }
   return result;
+}
+
+/**
+ * Projects are an additive section: until supabase/projects.sql has been run
+ * the table doesn't exist, and the build must keep working (the page shows
+ * its empty state) rather than fail.
+ */
+export async function fetchAllPublishedProjects(): Promise<Project[]> {
+  try {
+    const rows = await restGet(`projects?select=${PUBLIC_PROJECT_FIELDS}&status=eq.published&order=order_index.asc,published_at.desc`);
+    return (rows as Record<string, unknown>[]).map(normalizeProject);
+  } catch {
+    return [];
+  }
 }

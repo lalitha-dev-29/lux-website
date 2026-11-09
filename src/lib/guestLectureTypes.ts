@@ -1,6 +1,8 @@
 /** Shared types + formatting helpers for the standalone Guest Lectures CMS. */
 import { monthName } from './learningTypes';
 import { slugify } from './slugify';
+import { escapeHtml } from './html';
+import { parseGallery, type GalleryImage } from './gallery';
 
 export interface GuestSpeaker {
   name: string;
@@ -32,11 +34,18 @@ export interface GuestLecture {
   tags: string[];
   key_learnings: string;
   files: GuestLectureFile[];
+  /** Photos from the session (supabase/portfolio_media.sql). */
+  gallery: GalleryImage[];
+  /** The one question the session set out to answer. */
+  core_question: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export const PUBLIC_GUEST_LECTURE_FIELDS = 'id,topic,lecture_date,speakers,tags,key_learnings,files' as const;
+
+/** Added by supabase/portfolio_media.sql — requested only when present, so older databases keep building. */
+export const PUBLIC_GUEST_LECTURE_MEDIA_FIELDS = 'gallery,core_question' as const;
 
 /** "12 March 2026" from YYYY-MM-DD, parsed as a calendar date (no timezone shift). */
 export function formatLectureDate(isoDate: string): string {
@@ -68,7 +77,14 @@ export function normalizeGuestLecture(row: Record<string, unknown>): GuestLectur
     .filter((t): t is string => typeof t === 'string')
     .map((t) => t.trim())
     .filter(Boolean);
-  return { ...(row as unknown as GuestLecture), speakers, tags, files };
+  return {
+    ...(row as unknown as GuestLecture),
+    speakers,
+    tags,
+    files,
+    gallery: parseGallery(row.gallery),
+    core_question: str(row.core_question),
+  };
 }
 
 /**
@@ -99,4 +115,75 @@ export function lectureCoverImage(lecture: GuestLecture): string | null {
 export function lectureExcerpt(lecture: GuestLecture, max = 170): string {
   const flat = lecture.key_learnings.split('\n').map((l) => l.trim()).filter(Boolean).join(' · ');
   return flat.length > max ? `${flat.slice(0, max).replace(/\s+\S*$/, '')}…` : flat;
+}
+
+export interface LearningPoint {
+  /** "Claude Code - Turning designs into functional websites" — null for an untitled bullet. */
+  title: string | null;
+  body: string;
+}
+
+export interface StructuredLearnings {
+  /** Opening paragraph(s) before the first takeaway. */
+  intro: string[];
+  points: LearningPoint[];
+  /** Closing paragraph(s) after the last takeaway, e.g. "Overall, ...". */
+  outro: string[];
+}
+
+/**
+ * Splits the free-text "What I learned" field into an intro, a list of
+ * takeaways and a conclusion, so the detail page can lay them out as numbered
+ * cards. A line reading "Title: explanation" becomes a titled takeaway; a
+ * short line ending in ":" (e.g. "Key learnings from the session:") is
+ * treated as a heading and dropped. Text before the first takeaway is the
+ * intro; text after the last one is the conclusion. Leading bullet markers
+ * ("-", "•", "*", "1.") are ignored.
+ */
+export function structureLearnings(text: string): StructuredLearnings {
+  const lines = text
+    .split('\n')
+    .map((l) =>
+      l
+        .trim()
+        .replace(/^(?:[-•*–]|\d+[.)])\s+/, '')
+        // "Title:** text" / "**Title**: text" — a bold marker hugging the colon.
+        .replace(/\*\*\s*:\s*\*\*|:\s*\*\*|\*\*\s*:/g, ':')
+        .trim()
+    )
+    .filter(Boolean);
+
+  const intro: string[] = [];
+  const points: LearningPoint[] = [];
+  const outro: string[] = [];
+
+  for (const line of lines) {
+    if (line.endsWith(':') && line.length <= 90) continue;
+    const titled = /^(.{3,110}?):\s+(.+)$/.exec(line);
+    // Ignore a colon that belongs to a URL or a time ("https://", "10:30").
+    const isTitled = titled && !/https?$/i.test(titled[1]) && !/\d$/.test(titled[1]);
+    if (isTitled) {
+      // Anything collected as "outro" since the last point was really part of
+      // the list (an untitled bullet between titled ones).
+      for (const loose of outro.splice(0)) points.push({ title: null, body: loose });
+      points.push({ title: titled![1].replace(/\*+/g, '').trim(), body: titled![2] });
+    } else if (points.length === 0) {
+      intro.push(line);
+    } else {
+      outro.push(line);
+    }
+  }
+  return { intro, points, outro };
+}
+
+/**
+ * Admin text → safe inline HTML: escapes everything, then turns `code` into
+ * <code> and **bold** into <strong>; any unmatched "**" left over from a
+ * half-typed bold is removed rather than shown.
+ */
+export function inlineFormat(text: string): string {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*\*/g, '');
 }

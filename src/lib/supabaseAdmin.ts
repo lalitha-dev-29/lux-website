@@ -4,8 +4,10 @@ import { createClient, type SupabaseClient, type Session } from '@supabase/supab
 import { withBase } from './url';
 import type { JournalPost, JournalStatus } from './journalTypes';
 import type { CaseStudy, CaseStudyStatus } from './caseStudyTypes';
+import { normalizeProject, type Project, type ProjectStatus, type ProjectProgress, type ProjectDetail, type TeamMember } from './projectTypes';
 import type { ContentLink } from './contentLinks';
 import { parseLinks } from './contentLinks';
+import { parseGallery, parseKeyFigures, type GalleryImage, type KeyFigure } from './gallery';
 import type {
   LearningOverview,
   LearningRightNowItem,
@@ -100,6 +102,28 @@ function normalizeRow<T extends { links?: unknown }>(row: T): T {
   return { ...row, links: parseLinks(row.links) };
 }
 
+function normalizeCaseStudyRow(row: CaseStudy): CaseStudy {
+  const r = row as unknown as Record<string, unknown>;
+  return {
+    ...normalizeRow(row),
+    gallery: parseGallery(r.gallery),
+    key_figures: parseKeyFigures(r.key_figures),
+    conclusion: typeof r.conclusion === 'string' && r.conclusion.trim() ? r.conclusion : null,
+  };
+}
+
+/**
+ * A save that names a column the database doesn't have yet fails with
+ * PostgREST's "Could not find the 'gallery' column ... in the schema cache".
+ * Turn that into an instruction the site owner can act on.
+ */
+function friendlyError(message: string): string {
+  if (/could not find the '(gallery|key_figures|conclusion|core_question)' column/i.test(message)) {
+    return 'The database is missing the new gallery fields. Run supabase/portfolio_media.sql once in the Supabase SQL Editor, then save again.';
+  }
+  return message;
+}
+
 // ---------------------------------------------------------------------------
 // Journal
 // ---------------------------------------------------------------------------
@@ -157,7 +181,7 @@ export async function createJournalPost(
       .single();
 
     if (!error) return normalizeRow(data as JournalPost);
-    if (error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
+    if (error.code !== UNIQUE_VIOLATION) throw new Error(friendlyError(error.message));
   }
 
   throw new Error('Could not generate a unique URL slug for this title. Try a different title.');
@@ -217,6 +241,9 @@ export interface CaseStudyInput {
   seo_description: string | null;
   og_image: string | null;
   links: ContentLink[];
+  gallery: GalleryImage[];
+  key_figures: KeyFigure[];
+  conclusion: string | null;
 }
 
 export async function listAllCaseStudies(): Promise<CaseStudy[]> {
@@ -225,13 +252,13 @@ export async function listAllCaseStudies(): Promise<CaseStudy[]> {
     .select('*')
     .order('updated_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return (data as CaseStudy[]).map(normalizeRow);
+  return (data as CaseStudy[]).map(normalizeCaseStudyRow);
 }
 
 export async function getCaseStudyById(id: string): Promise<CaseStudy | null> {
   const { data, error } = await getSupabaseClient().from('case_studies').select('*').eq('id', id).maybeSingle();
   if (error) throw new Error(error.message);
-  return data ? normalizeRow(data as CaseStudy) : null;
+  return data ? normalizeCaseStudyRow(data as CaseStudy) : null;
 }
 
 export async function createCaseStudy(
@@ -253,7 +280,7 @@ export async function createCaseStudy(
       .select()
       .single();
 
-    if (!error) return normalizeRow(data as CaseStudy);
+    if (!error) return normalizeCaseStudyRow(data as CaseStudy);
     if (error.code !== UNIQUE_VIOLATION) throw new Error(error.message);
   }
 
@@ -267,8 +294,8 @@ export async function updateCaseStudy(id: string, input: CaseStudyInput): Promis
     .eq('id', id)
     .select()
     .single();
-  if (error) throw new Error(error.message);
-  return normalizeRow(data as CaseStudy);
+  if (error) throw new Error(friendlyError(error.message));
+  return normalizeCaseStudyRow(data as CaseStudy);
 }
 
 export async function setCaseStudyStatus(id: string, status: CaseStudyStatus): Promise<CaseStudy> {
@@ -282,7 +309,7 @@ export async function setCaseStudyStatus(id: string, status: CaseStudyStatus): P
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return normalizeRow(data as CaseStudy);
+  return normalizeCaseStudyRow(data as CaseStudy);
 }
 
 export async function deleteCaseStudy(id: string): Promise<void> {
@@ -302,7 +329,7 @@ export async function updateCaseStudyPdf(
     .select()
     .single();
   if (error) throw new Error(error.message);
-  return normalizeRow(data as CaseStudy);
+  return normalizeCaseStudyRow(data as CaseStudy);
 }
 
 // ---------------------------------------------------------------------------
@@ -607,6 +634,117 @@ export async function deleteCertificateFileObject(fileUrl: string): Promise<void
 }
 
 // ---------------------------------------------------------------------------
+// Projects (supabase/projects.sql). Images live in the content-images bucket
+// and decks in case-study-pdfs, both under projects/<id>/.
+// ---------------------------------------------------------------------------
+
+export interface ProjectInput {
+  title: string;
+  slug: string;
+  tagline: string | null;
+  excerpt: string;
+  content: string | null;
+  project_type: string | null;
+  course: string | null;
+  institution: string | null;
+  period: string | null;
+  my_role: string | null;
+  progress: ProjectProgress;
+  tags: string[];
+  cover_image: string | null;
+  video_url: string | null;
+  details: ProjectDetail[];
+  key_figures: KeyFigure[];
+  team: TeamMember[];
+  gallery: GalleryImage[];
+  conclusion: string | null;
+  links: ContentLink[];
+  order_index: number;
+  reading_time_minutes: number | null;
+}
+
+function projectError(message: string): string {
+  if (/relation "public\.projects" does not exist|could not find the table 'public\.projects'/i.test(message)) {
+    return 'The Projects table does not exist yet. Run supabase/projects.sql once in the Supabase SQL Editor, then try again.';
+  }
+  return message;
+}
+
+export async function listAllProjects(): Promise<Project[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('projects')
+    .select('*')
+    .order('order_index', { ascending: true })
+    .order('updated_at', { ascending: false });
+  if (error) throw new Error(projectError(error.message));
+  return (data as Record<string, unknown>[]).map(normalizeProject);
+}
+
+export async function getProjectById(id: string): Promise<Project | null> {
+  const { data, error } = await getSupabaseClient().from('projects').select('*').eq('id', id).maybeSingle();
+  if (error) throw new Error(projectError(error.message));
+  return data ? normalizeProject(data as Record<string, unknown>) : null;
+}
+
+export async function createProject(input: ProjectInput, status: ProjectStatus, id?: string): Promise<Project> {
+  const supabase = getSupabaseClient();
+  const payload = {
+    ...input,
+    ...(id ? { id } : {}),
+    status,
+    published_at: status === 'published' ? new Date().toISOString() : null,
+  };
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const slug = attempt === 0 ? input.slug : `${input.slug}-${attempt + 1}`;
+    const { data, error } = await supabase.from('projects').insert({ ...payload, slug }).select().single();
+    if (!error) return normalizeProject(data as Record<string, unknown>);
+    if (error.code !== UNIQUE_VIOLATION || !/slug/i.test(error.message)) throw new Error(projectError(error.message));
+  }
+  throw new Error('Could not generate a unique URL for this title. Try a different title.');
+}
+
+export async function updateProject(id: string, input: ProjectInput): Promise<Project> {
+  const { data, error } = await getSupabaseClient().from('projects').update(input).eq('id', id).select().single();
+  if (error) throw new Error(projectError(error.message));
+  return normalizeProject(data as Record<string, unknown>);
+}
+
+export async function setProjectStatus(id: string, status: ProjectStatus): Promise<Project> {
+  const { data, error } = await getSupabaseClient()
+    .from('projects')
+    .update({ status, published_at: status === 'published' ? new Date().toISOString() : null })
+    .eq('id', id)
+    .select()
+    .single();
+  if (error) throw new Error(projectError(error.message));
+  return normalizeProject(data as Record<string, unknown>);
+}
+
+export async function updateProjectPdf(
+  id: string,
+  pdf: { pdf_url: string | null; pdf_filename: string | null }
+): Promise<Project> {
+  const { data, error } = await getSupabaseClient().from('projects').update(pdf).eq('id', id).select().single();
+  if (error) throw new Error(projectError(error.message));
+  return normalizeProject(data as Record<string, unknown>);
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  const { error } = await getSupabaseClient().from('projects').delete().eq('id', id);
+  if (error) throw new Error(projectError(error.message));
+}
+
+export async function uploadProjectPdf(projectId: string, file: File): Promise<UploadedPdf> {
+  if (file.type !== 'application/pdf') throw new Error('Please choose a PDF file.');
+  const supabase = getSupabaseClient();
+  const path = `projects/${projectId}/${uniqueObjectName(file)}`;
+  const { error } = await supabase.storage.from('case-study-pdfs').upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from('case-study-pdfs').getPublicUrl(path);
+  return { url: data.publicUrl, filename: file.name };
+}
+
+// ---------------------------------------------------------------------------
 // Guest Lectures — standalone CMS (supabase/guest_lectures.sql). Speaker
 // photos and optional PDF/PPT handouts live in the public `guest-lectures`
 // Storage bucket under `<lectureId>/…`; rows reference them by public URL.
@@ -621,6 +759,8 @@ export interface GuestLectureInput {
   tags: string[];
   key_learnings: string;
   files: GuestLectureFile[];
+  gallery: GalleryImage[];
+  core_question: string | null;
 }
 
 export async function listAllGuestLectures(): Promise<GuestLecture[]> {
@@ -640,7 +780,7 @@ export async function getGuestLectureById(id: string): Promise<GuestLecture | nu
 
 export async function createGuestLecture(input: GuestLectureInput): Promise<GuestLecture> {
   const { data, error } = await getSupabaseClient().from('guest_lectures').insert(input).select().single();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyError(error.message));
   return normalizeGuestLecture(data as Record<string, unknown>);
 }
 
@@ -652,7 +792,7 @@ export async function updateGuestLecture(id: string, input: GuestLectureInput): 
     .eq('id', id)
     .select()
     .single();
-  if (error) throw new Error(error.message);
+  if (error) throw new Error(friendlyError(error.message));
   return normalizeGuestLecture(data as Record<string, unknown>);
 }
 

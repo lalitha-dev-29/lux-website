@@ -1,0 +1,133 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Projects">
+  <div class="admin-section-head">
+    <div>
+      <h1>Projects</h1>
+      <p class="admin-lede">Your university and personal projects. Create, edit, publish and manage them here.</p>
+    </div>
+    <a href={withBase('/admin/projects/new/')} class="btn-solid">New Project</a>
+  </div>
+
+  <div class="admin-toolbar">
+    <input type="search" id="searchInput" placeholder="Search by title, course or summary…" aria-label="Search Projects" />
+    <select id="statusFilter" aria-label="Filter by status">
+      <option value="all">All statuses</option>
+      <option value="published">Published</option>
+      <option value="draft">Draft</option>
+    </select>
+  </div>
+
+  <div class="admin-table-wrap">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Title</th><th>Status</th><th>Stage</th><th>Course</th><th>Photos</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="7" class="admin-empty">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    import { listAllProjects, setProjectStatus, deleteProject } from '../../../lib/supabaseAdmin';
+    import { withBase } from '../../../lib/url';
+    import { escapeHtml } from '../../../lib/html';
+    import { showToast } from '../../../lib/toast';
+    import type { Project } from '../../../lib/projectTypes';
+
+    let all: Project[] = [];
+    const rows = document.getElementById('rows')!;
+    const searchInput = document.getElementById('searchInput') as HTMLInputElement;
+    const statusFilter = document.getElementById('statusFilter') as HTMLSelectElement;
+
+    function render() {
+      const query = searchInput.value.trim().toLowerCase();
+      const status = statusFilter.value;
+      const filtered = all.filter((p) => {
+        const matchesStatus = status === 'all' || p.status === status;
+        const haystack = `${p.title} ${p.excerpt} ${p.course ?? ''} ${p.institution ?? ''}`.toLowerCase();
+        return matchesStatus && (!query || haystack.includes(query));
+      });
+
+      if (filtered.length === 0) {
+        rows.innerHTML = `<tr><td colspan="7" class="admin-empty">${all.length === 0 ? 'No projects yet — click "New Project" to add your first one.' : 'No matching projects.'}</td></tr>`;
+        return;
+      }
+
+      rows.innerHTML = filtered
+        .map(
+          (p) => `
+        <tr data-id="${p.id}">
+          <td class="title-cell"><a href="${withBase(`/admin/projects/edit/?id=${p.id}`)}">${escapeHtml(p.title)}</a></td>
+          <td><span class="badge badge-${p.status}">${p.status}</span></td>
+          <td>${p.progress === 'in_progress' ? '<span class="badge badge-featured">In progress</span>' : 'Completed'}</td>
+          <td>${p.course ? escapeHtml(p.course) : '—'}</td>
+          <td>${p.gallery.length || '—'}</td>
+          <td>${new Date(p.updated_at).toLocaleDateString()}</td>
+          <td class="actions-cell">
+            <button type="button" class="toggle-status-btn" data-id="${p.id}" data-next="${p.status === 'published' ? 'draft' : 'published'}">
+              ${p.status === 'published' ? 'Unpublish' : 'Publish'}
+            </button>
+            <a href="${withBase(`/admin/projects/edit/?id=${p.id}`)}">Edit</a>
+            <button type="button" class="danger delete-btn" data-id="${p.id}" data-title="${escapeHtml(p.title)}">Delete</button>
+          </td>
+        </tr>`
+        )
+        .join('');
+    }
+
+    async function load() {
+      try {
+        all = await listAllProjects();
+        render();
+      } catch (err) {
+        rows.innerHTML = `<tr><td colspan="7" class="admin-empty">${escapeHtml(err instanceof Error ? err.message : 'Failed to load.')}</td></tr>`;
+      }
+    }
+
+    rows.addEventListener('click', async (e) => {
+      const target = e.target as HTMLElement;
+
+      const toggleBtn = target.closest('.toggle-status-btn') as HTMLButtonElement | null;
+      if (toggleBtn) {
+        const id = toggleBtn.dataset.id!;
+        const next = toggleBtn.dataset.next as 'draft' | 'published';
+        toggleBtn.disabled = true;
+        try {
+          const updated = await setProjectStatus(id, next);
+          all = all.map((p) => (p.id === id ? updated : p));
+          render();
+          showToast(next === 'published' ? 'Project published.' : 'Project unpublished.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to update status.', 'error');
+          toggleBtn.disabled = false;
+        }
+        return;
+      }
+
+      const deleteBtn = target.closest('.delete-btn') as HTMLButtonElement | null;
+      if (deleteBtn) {
+        const id = deleteBtn.dataset.id!;
+        if (!confirm(`Delete "${deleteBtn.dataset.title}"? This cannot be undone.`)) return;
+        deleteBtn.disabled = true;
+        try {
+          await deleteProject(id);
+          all = all.filter((p) => p.id !== id);
+          render();
+          showToast('Project deleted.');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Failed to delete.', 'error');
+          deleteBtn.disabled = false;
+        }
+      }
+    });
+
+    searchInput.addEventListener('input', render);
+    statusFilter.addEventListener('change', render);
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

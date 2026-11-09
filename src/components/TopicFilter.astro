@@ -1,0 +1,97 @@
+---
+// "Browse by topic" chip row. Counts how many items carry each tag
+// (case-insensitively) and filters any element with a `data-tags` attribute
+// inside the element whose id is `target`. The choice is mirrored in ?tag=
+// so a filtered view can be shared or bookmarked.
+interface Props {
+  /** One tag list per item being filtered. */
+  itemTags: string[][];
+  /** id of the element wrapping the filterable cards. */
+  target: string;
+  /** Singular/plural noun for the status line, e.g. ["case study", "case studies"]. */
+  noun: [string, string];
+  label?: string;
+}
+
+const { itemTags, target, noun, label = 'Browse by topic' } = Astro.props;
+
+const counts = new Map<string, { label: string; count: number }>();
+for (const tags of itemTags) {
+  const seen = new Set<string>();
+  for (const tag of tags) {
+    const key = tag.trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const entry = counts.get(key);
+    if (entry) entry.count += 1;
+    else counts.set(key, { label: tag.trim(), count: 1 });
+  }
+}
+const allTags = [...counts.values()].sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+const labelId = `${target}FilterLabel`;
+---
+
+{allTags.length > 0 && (
+  <div class="topic-filter reveal" data-topic-filter data-target={target} data-noun-one={noun[0]} data-noun-many={noun[1]} role="group" aria-labelledby={labelId}>
+    <p class="topic-filter-label" id={labelId}>{label}</p>
+    <div class="tag-filter-chips">
+      <button type="button" class="tag-chip" data-tag="" aria-pressed="true">
+        All <span class="tag-chip-count">{itemTags.length}</span>
+      </button>
+      {allTags.map((tag) => (
+        <button type="button" class="tag-chip" data-tag={tag.label} aria-pressed="false">
+          {tag.label} <span class="tag-chip-count">{tag.count}</span>
+        </button>
+      ))}
+    </div>
+    <p class="tag-filter-status" aria-live="polite"></p>
+  </div>
+)}
+
+<script>
+  const norm = (s: string) => s.trim().toLowerCase();
+
+  for (const filter of document.querySelectorAll<HTMLElement>('[data-topic-filter]')) {
+    const grid = document.getElementById(filter.dataset.target ?? '');
+    if (!grid) continue;
+    const status = filter.querySelector<HTMLElement>('.tag-filter-status');
+    const chips = Array.from(filter.querySelectorAll<HTMLButtonElement>('.tag-chip'));
+    const cards = Array.from(grid.querySelectorAll<HTMLElement>('[data-tags]'));
+    const one = filter.dataset.nounOne ?? 'item';
+    const many = filter.dataset.nounMany ?? 'items';
+
+    const apply = (tag: string, updateUrl: boolean) => {
+      const wanted = norm(tag);
+      let shown = 0;
+      for (const card of cards) {
+        let tags: string[] = [];
+        try {
+          tags = JSON.parse(card.dataset.tags ?? '[]');
+        } catch {
+          /* malformed data-tags: treat as untagged */
+        }
+        const match = !wanted || tags.some((t) => norm(t) === wanted);
+        card.hidden = !match;
+        if (match) shown += 1;
+      }
+      for (const chip of chips) chip.setAttribute('aria-pressed', String(norm(chip.dataset.tag ?? '') === wanted));
+      if (status) status.textContent = wanted ? `Showing ${shown} ${shown === 1 ? one : many} tagged "${tag}".` : '';
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        if (wanted) url.searchParams.set('tag', tag);
+        else url.searchParams.delete('tag');
+        history.replaceState(null, '', url);
+      }
+    };
+
+    for (const chip of chips) {
+      chip.addEventListener('click', () => {
+        const alreadyActive = chip.getAttribute('aria-pressed') === 'true';
+        apply(alreadyActive ? '' : chip.dataset.tag ?? '', true);
+      });
+    }
+
+    const initial = new URLSearchParams(window.location.search).get('tag');
+    if (initial && chips.some((c) => norm(c.dataset.tag ?? '') === norm(initial))) apply(initial, false);
+  }
+</script>

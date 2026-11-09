@@ -1,0 +1,37 @@
+---
+// Reading progress bar along the top edge plus a "back to top" button, for
+// long detail pages (same progress logic as the Journal post page).
+---
+
+<div class="reading-progress" data-reading-progress aria-hidden="true"></div>
+<button type="button" class="back-to-top" data-back-to-top aria-label="Back to top" hidden>↑</button>
+
+<script>
+  const bar = document.querySelector<HTMLElement>('[data-reading-progress]');
+  const topBtn = document.querySelector<HTMLButtonElement>('[data-back-to-top]');
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (bar && !reduce) bar.classList.add('reading-progress-animated');
+
+  let ticking = false;
+  const update = () => {
+    ticking = false;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const pct = max > 0 ? Math.min(100, (window.scrollY / max) * 100) : 100;
+    if (bar) bar.style.width = `${pct}%`;
+    if (topBtn) topBtn.hidden = window.scrollY < window.innerHeight * 0.8;
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(update);
+      }
+    },
+    { passive: true }
+  );
+  window.addEventListener('resize', update);
+  update();
+
+  topBtn?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }));
+</script>

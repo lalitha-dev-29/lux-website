@@ -1,0 +1,27 @@
+---
+// "Written by" card at the end of a case study or lecture note.
+import { withBase } from '../lib/url';
+
+interface Props {
+  /** e.g. "Research & Analysis" or "Lecture Notes". */
+  role?: string;
+}
+const { role = 'Research & Analysis' } = Astro.props;
+---
+
+<section class="tight flush-top">
+  <div class="container">
+    <aside class="author-card reveal" aria-label="About the author">
+      <img src={withBase('/assets/kasturi-portrait.jpg')} alt="" class="author-card-photo" width="96" height="96" loading="lazy" />
+      <div class="author-card-body">
+        <span class="author-card-role">{role}</span>
+        <p class="author-card-name">Kasturi Lalitha Manogna</p>
+        <p class="author-card-bio">Emerging luxury marketer interested in brand strategy, consumer behaviour and the role culture plays in shaping what people desire.</p>
+        <div class="author-card-links">
+          <a href="https://www.linkedin.com/in/lalitha-manogna-kasturi/" target="_blank" rel="noopener" class="link-arrow">LinkedIn <span class="arrow" aria-hidden="true">↗</span><span class="visually-hidden"> (opens in a new tab)</span></a>
+          <a href={withBase('/connect/')} class="link-arrow">Work With Me <span class="arrow" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </aside>
+  </div>
+</section>

@@ -1,0 +1,158 @@
+---
+// Shared field markup for src/pages/admin/projects/new.astro and edit.astro.
+// Read/write logic lives in src/lib/projectForm.ts. The PDF deck is attached
+// on the edit page once the project exists (same as Case Studies).
+import LinksEditor from './LinksEditor.astro';
+import GalleryEditor from './GalleryEditor.astro';
+
+const detailsPlaceholder = 'Course | Digital Platforms\nTeam | 6 members\nMarket | Singapore\nDuration | 8 weeks';
+const figuresPlaceholder = '4 | Launch markets\n12 | Scenes in the ad\n3 | Platforms';
+const teamPlaceholder = 'Kasturi Lalitha Manogna | Strategy & Research\nJane Doe | Creative Direction';
+---
+
+<fieldset class="field-group">
+  <legend>The Basics</legend>
+
+  <div class="field">
+    <label for="fTitle">Project Title</label>
+    <input id="fTitle" name="title" type="text" required maxlength="200" placeholder="e.g. Bun Voyage: From Consumer Insight to Campaign" />
+  </div>
+
+  <div class="field">
+    <label for="fTagline">Tagline <span class="hint-inline">(optional)</span></label>
+    <input id="fTagline" name="tagline" type="text" maxlength="240" placeholder="e.g. Different cravings. One journey." />
+    <p class="hint">An italic line shown under the title on the project page.</p>
+  </div>
+
+  <div class="field">
+    <label for="fExcerpt">Summary</label>
+    <textarea id="fExcerpt" name="excerpt" required maxlength="500" rows="3"></textarea>
+    <p class="hint">Two or three sentences shown on the Projects listing card and at the top of the project page.</p>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="fProjectType">Project Type <span class="hint-inline">(optional)</span></label>
+      <input id="fProjectType" name="project_type" type="text" maxlength="80" placeholder="e.g. Brand Strategy & Ad Campaign" />
+      <p class="hint">Shown as the gold label on the card.</p>
+    </div>
+    <div class="field">
+      <label for="fProgress">Status of the Work</label>
+      <select id="fProgress" name="progress" class="field-select">
+        <option value="completed">Completed — show as a full project</option>
+        <option value="in_progress">In progress — show in "Currently Building"</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="fCourse">Course / Module <span class="hint-inline">(optional)</span></label>
+      <input id="fCourse" name="course" type="text" maxlength="120" placeholder="e.g. Advertising Strategy" />
+    </div>
+    <div class="field">
+      <label for="fInstitution">University / Organisation <span class="hint-inline">(optional)</span></label>
+      <input id="fInstitution" name="institution" type="text" maxlength="120" placeholder="e.g. ESSEC Business School" />
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="fPeriod">When <span class="hint-inline">(optional)</span></label>
+      <input id="fPeriod" name="period" type="text" maxlength="60" placeholder="e.g. October 2026 or Fall 2026" />
+    </div>
+    <div class="field">
+      <label for="fMyRole">My Role <span class="hint-inline">(optional)</span></label>
+      <input id="fMyRole" name="my_role" type="text" maxlength="120" placeholder="e.g. Strategy lead & copywriter" />
+    </div>
+  </div>
+
+  <div class="field-row">
+    <div class="field">
+      <label for="fTags">Tags <span class="hint-inline">(optional)</span></label>
+      <input id="fTags" name="tags" type="text" placeholder="Comma separated, e.g. Brand Strategy, AI Advertising" />
+      <p class="hint">Shown as pills, and used for the "Browse by topic" filter.</p>
+    </div>
+    <div class="field">
+      <label for="fOrderIndex">Display Order</label>
+      <input id="fOrderIndex" name="order_index" type="number" step="1" value="0" />
+      <p class="hint">Lower numbers appear first.</p>
+    </div>
+  </div>
+</fieldset>
+
+<fieldset class="field-group">
+  <legend>Visuals</legend>
+
+  <div class="field">
+    <label for="fCoverImageFile">Cover Image</label>
+    <input type="file" id="fCoverImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" />
+    <input type="hidden" id="fCoverImage" name="cover_image" />
+    <span class="upload-status" id="fCoverImageStatus"></span>
+    <div class="image-preview-row">
+      <img id="fCoverImagePreview" class="image-preview" alt="Cover image preview" hidden />
+      <button type="button" class="btn-line" id="fCoverImageRemove" hidden>Remove</button>
+    </div>
+    <p class="hint">The key visual — shown large on the Projects page and at the top of the project. JPG, PNG, WebP, GIF or SVG.</p>
+  </div>
+
+  <div class="field">
+    <label for="fVideoUrl">Video Link <span class="hint-inline">(optional)</span></label>
+    <input id="fVideoUrl" name="video_url" type="url" maxlength="400" placeholder="https://www.youtube.com/watch?v=…" />
+    <p class="hint">A YouTube or Vimeo link (e.g. your ad, pitch or demo). It's embedded as a player on the project page.</p>
+  </div>
+
+  <GalleryEditor
+    id="projectGallery"
+    label="Project Photos & Visuals"
+    hint="Mood boards, mock-ups, campaign visuals, slides, photos of the team — as many as you like. They appear as a numbered grid and open full size when clicked. Each can have a caption; the arrows change the order. Photos are uploaded when you save."
+  />
+</fieldset>
+
+<fieldset class="field-group">
+  <legend>The Write-up</legend>
+
+  <div class="field">
+    <label for="fContent">Project Write-up <span class="hint-inline">(optional)</span></label>
+    <div class="content-toolbar">
+      <button type="button" class="btn-line insert-image-btn" id="insertImageBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="10" r="1.5"></circle><path d="M21 16.5 15.5 11 5 20"></path></svg>
+        Insert Image
+      </button>
+      <span class="upload-status" id="contentImageStatus"></span>
+      <input type="file" id="fContentImageFile" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" hidden />
+    </div>
+    <textarea id="fContent" name="content" rows="16"></textarea>
+    <p class="hint">
+      Supports Markdown. Start each section with <code>## Section title</code> — sections are numbered automatically and listed in
+      a "Contents" box beside the text. Use <code>&gt; </code> at the start of a line for a pull quote. "Insert Image" puts a
+      photo into the text at your cursor. Reading time is calculated from this text.
+    </p>
+  </div>
+
+  <div class="field">
+    <label for="fDetails">Project Facts <span class="hint-inline">(optional)</span></label>
+    <textarea id="fDetails" name="details" rows="4" maxlength="1500" placeholder={detailsPlaceholder}></textarea>
+    <p class="hint">Shown as a facts strip under the cover (course, university, date and role are added automatically). One per line: label, <code>|</code>, value.</p>
+  </div>
+
+  <div class="field">
+    <label for="fKeyFigures">Key Figures <span class="hint-inline">(optional)</span></label>
+    <textarea id="fKeyFigures" name="key_figures" rows="3" maxlength="1200" placeholder={figuresPlaceholder}></textarea>
+    <p class="hint">Large "By the Numbers" cards. One per line: number, <code>|</code>, what it means.</p>
+  </div>
+
+  <div class="field">
+    <label for="fTeam">Team <span class="hint-inline">(optional)</span></label>
+    <textarea id="fTeam" name="team" rows="4" maxlength="2000" placeholder={teamPlaceholder}></textarea>
+    <p class="hint">Shown as "The Team Behind the Project". One person per line: name, <code>|</code>, role. Your own name is highlighted.</p>
+  </div>
+
+  <div class="field">
+    <label for="fConclusion">What This Project Taught Me <span class="hint-inline">(optional)</span></label>
+    <textarea id="fConclusion" name="conclusion" rows="3" maxlength="800"></textarea>
+    <p class="hint">Your closing reflection, shown in a highlighted panel at the end. A blank line splits it into a headline and a follow-up line.</p>
+  </div>
+</fieldset>
+
+<LinksEditor id="projectLinks" />

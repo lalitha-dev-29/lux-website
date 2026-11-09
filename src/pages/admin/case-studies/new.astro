@@ -24,7 +24,8 @@ import { withBase } from '../../../lib/url';
   </form>
 
   <script>
-    import { createCaseStudy } from '../../../lib/supabaseAdmin';
+    import { createCaseStudy, uploadContentImage } from '../../../lib/supabaseAdmin';
+    import { initGalleryEditor } from '../../../lib/galleryEditor';
     import { readCaseStudyForm, validateCaseStudyForm, toCaseStudyInput } from '../../../lib/caseStudyForm';
     import { withBase } from '../../../lib/url';
     import { wireContentFormImages } from '../../../lib/imageUpload';
@@ -47,6 +48,10 @@ import { withBase } from '../../../lib/url';
     window.addEventListener('beforeunload', (e) => {
       if (dirty) e.preventDefault();
     });
+    const gallery = initGalleryEditor('caseStudyGallery');
+    gallery.onChange(() => {
+      dirty = true;
+    });
 
     async function submit(status: 'draft' | 'published') {
       errorEl.hidden = true;
@@ -65,7 +70,8 @@ import { withBase } from '../../../lib/url';
       busyBtn.textContent = 'Saving…';
 
       try {
-        const entry = await createCaseStudy(toCaseStudyInput(values), status);
+        const images = await gallery.resolve((file) => uploadContentImage(`case-studies/${draftId}/gallery`, file));
+        const entry = await createCaseStudy(toCaseStudyInput(values, images), status);
         dirty = false;
         showToast(status === 'published' ? 'Case study published.' : 'Draft saved.');
         window.location.href = withBase(`/admin/case-studies/edit/?id=${entry.id}`);

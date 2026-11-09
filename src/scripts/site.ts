@@ -59,14 +59,14 @@ if (siteNav) {
 }
 
 /* ============ MOBILE NAV DRAWER ============
-   Below 880px the nav is an off-canvas drawer. While it's open we lock body
+   Below 1120px the nav is an off-canvas drawer. While it's open we lock body
    scroll, trap Tab inside it, close on Escape, and return focus to the
    toggle — so keyboard and screen-reader users aren't stranded behind it. */
 const navToggle = document.getElementById('navToggle') as HTMLButtonElement | null;
 const primaryLinks = document.getElementById('primaryLinks');
 
 if (navToggle && primaryLinks) {
-  const isDrawer = () => window.matchMedia('(max-width: 879.98px)').matches;
+  const isDrawer = () => window.matchMedia('(max-width: 1119.98px)').matches;
 
   function setNavOpen(open: boolean) {
     primaryLinks!.classList.toggle('open', open);
@@ -116,7 +116,7 @@ if (navToggle && primaryLinks) {
   });
 
   // Leaving the drawer breakpoint should never strand the page in a locked state.
-  window.matchMedia('(max-width: 879.98px)').addEventListener('change', (e) => {
+  window.matchMedia('(max-width: 1119.98px)').addEventListener('change', (e) => {
     if (!e.matches) setNavOpen(false);
   });
 }

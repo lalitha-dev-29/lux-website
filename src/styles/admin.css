@@ -300,3 +300,31 @@ a.cert-thumb-pdf{
   border-radius:999px; padding:2px 10px; font-size:var(--fs-2xs, .75rem); cursor:pointer;
 }
 .tag-suggestion:hover{border-color:var(--gold, #c9a45c);}
+
+/* ---- Photo gallery editor (Case Studies + Guest Lectures) --------------- */
+.gallery-editor-list{list-style:none; padding:0; margin:0 0 var(--sp-4); display:flex; flex-direction:column; gap:var(--sp-3);}
+.gallery-editor-list:empty{display:none;}
+.gallery-editor-item{
+  display:grid; grid-template-columns:96px 1fr auto; gap:var(--sp-4); align-items:center;
+  padding:var(--sp-3); border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);
+}
+.gallery-editor-item img{width:96px; height:72px; object-fit:cover; border-radius:var(--r-sm); background:var(--ivory-2);}
+.gallery-editor-body{display:flex; flex-direction:column; gap:var(--sp-2); min-width:0;}
+.gallery-editor-num{font-size:var(--fs-2xs); letter-spacing:.12em; text-transform:uppercase; color:var(--stone-mute);}
+.gallery-editor-body input{
+  width:100%; min-height:40px; padding:var(--sp-2) var(--sp-3);
+  border:1px solid var(--line-strong); border-radius:var(--r-sm); background:var(--card); font-size:var(--fs-sm);
+}
+.gallery-editor-actions{display:flex; gap:var(--sp-1);}
+.gallery-editor-btn{
+  width:36px; height:36px; border:1px solid var(--line-strong); border-radius:var(--r-sm);
+  background:transparent; color:var(--stone-mute); cursor:pointer;
+}
+.gallery-editor-btn:hover:not(:disabled){border-color:var(--gold-ink); color:var(--gold-ink);}
+.gallery-editor-btn:disabled{opacity:.35; cursor:default;}
+.gallery-editor-add{cursor:pointer;}
+@media (max-width:560px){
+  .gallery-editor-item{grid-template-columns:72px 1fr;}
+  .gallery-editor-item img{width:72px; height:56px;}
+  .gallery-editor-actions{grid-column:1 / -1; justify-content:flex-end;}
+}

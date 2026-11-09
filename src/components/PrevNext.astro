@@ -1,0 +1,43 @@
+---
+// Previous / next navigation at the foot of a detail page. With neither
+// neighbour (a section with a single entry) it falls back to a lone
+// "back to all" link so the page still ends somewhere useful.
+import { withBase } from '../lib/url';
+
+interface Neighbour {
+  href: string;
+  title: string;
+  kicker?: string | null;
+}
+
+interface Props {
+  base: string;
+  backLabel: string;
+  prev: Neighbour | null;
+  next: Neighbour | null;
+}
+
+const { base, backLabel, prev, next } = Astro.props;
+---
+
+<section class="tight">
+  <div class="container">
+    <nav class="prev-next reveal" aria-label="More in this section">
+      {prev ? (
+        <a href={withBase(prev.href)} class="prev-next-link">
+          <span class="prev-next-dir"><span aria-hidden="true">←</span> Previous</span>
+          {prev.kicker && <span class="prev-next-kicker">{prev.kicker}</span>}
+          <span class="prev-next-title">{prev.title}</span>
+        </a>
+      ) : <span class="prev-next-spacer" aria-hidden="true"></span>}
+      <a href={withBase(base)} class="prev-next-back">{backLabel}</a>
+      {next ? (
+        <a href={withBase(next.href)} class="prev-next-link prev-next-link-next">
+          <span class="prev-next-dir">Next <span aria-hidden="true">→</span></span>
+          {next.kicker && <span class="prev-next-kicker">{next.kicker}</span>}
+          <span class="prev-next-title">{next.title}</span>
+        </a>
+      ) : <span class="prev-next-spacer" aria-hidden="true"></span>}
+    </nav>
+  </div>
+</section>

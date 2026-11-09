@@ -1,0 +1,117 @@
+---
+// Numbered photo grid ("plates") with a full-screen viewer. Any number of
+// images; the first is shown larger when there are three or more. Clicking a
+// plate opens a <dialog> with previous/next, captions and keyboard support.
+import type { GalleryImage } from '../lib/gallery';
+
+interface Props {
+  images: GalleryImage[];
+  eyebrow?: string;
+  title: string;
+  /** Anchor id for the section (used by the contents list). */
+  id?: string;
+}
+
+const { images, eyebrow = 'Visual Archive', title, id } = Astro.props;
+const uid = `gallery${Math.random().toString(36).slice(2, 8)}`;
+---
+
+{images.length > 0 && (
+  <section class="tight" id={id}>
+    <div class="container">
+      <div class="gallery-head reveal">
+        <div class="section-head">
+          <span class="eyebrow">{eyebrow}</span>
+          <h2>{title}</h2>
+        </div>
+        <span class="gallery-count">{String(images.length).padStart(2, '0')} {images.length === 1 ? 'plate' : 'plates'}</span>
+      </div>
+
+      <ul class={`gallery-grid ${images.length >= 3 ? 'gallery-grid-lead' : ''} ${images.length === 1 ? 'gallery-grid-single' : ''}`} data-gallery={uid}>
+        {images.map((img, i) => (
+          <li class={`gallery-plate reveal ${i % 3 === 1 ? 'reveal-delay-1' : i % 3 === 2 ? 'reveal-delay-2' : ''}`}>
+            <button type="button" class="gallery-open" data-index={i} aria-label={`View photo ${i + 1} of ${images.length}${img.caption ? `: ${img.caption}` : ''}`}>
+              <img src={img.url} alt={img.caption ?? ''} loading="lazy" />
+            </button>
+            <figcaption>
+              <span class="gallery-plate-num">Plate {String(i + 1).padStart(2, '0')}</span>
+              {img.caption && <span class="gallery-plate-caption">{img.caption}</span>}
+            </figcaption>
+          </li>
+        ))}
+      </ul>
+
+      <dialog class="lightbox" data-lightbox={uid} aria-label="Photo viewer">
+        <div class="lightbox-inner">
+          <button type="button" class="lightbox-close" data-lb="close" aria-label="Close photo viewer">✕</button>
+          <figure class="lightbox-figure">
+            <img data-lb="img" alt="" />
+            <figcaption>
+              <span class="gallery-plate-num" data-lb="num"></span>
+              <span data-lb="caption"></span>
+            </figcaption>
+          </figure>
+          {images.length > 1 && (
+            <>
+              <button type="button" class="lightbox-nav lightbox-prev" data-lb="prev" aria-label="Previous photo">←</button>
+              <button type="button" class="lightbox-nav lightbox-next" data-lb="next" aria-label="Next photo">→</button>
+            </>
+          )}
+        </div>
+      </dialog>
+
+      <script type="application/json" data-gallery-data={uid} set:html={JSON.stringify(images).replace(/</g, '\\u003c')} />
+    </div>
+  </section>
+)}
+
+<script>
+  import type { GalleryImage } from '../lib/gallery';
+
+  for (const grid of document.querySelectorAll<HTMLElement>('[data-gallery]')) {
+    const uid = grid.dataset.gallery!;
+    const dialog = document.querySelector<HTMLDialogElement>(`[data-lightbox="${uid}"]`);
+    const dataEl = document.querySelector<HTMLScriptElement>(`[data-gallery-data="${uid}"]`);
+    if (!dialog || !dataEl) continue;
+    const images = JSON.parse(dataEl.textContent || '[]') as GalleryImage[];
+    const q = <T extends HTMLElement>(name: string) => dialog.querySelector(`[data-lb="${name}"]`) as T | null;
+    const img = q<HTMLImageElement>('img')!;
+    const num = q<HTMLElement>('num')!;
+    const caption = q<HTMLElement>('caption')!;
+    let index = 0;
+    let opener: HTMLElement | null = null;
+
+    const show = (i: number) => {
+      index = (i + images.length) % images.length;
+      const item = images[index];
+      img.src = item.url;
+      img.alt = item.caption ?? '';
+      num.textContent = `Plate ${String(index + 1).padStart(2, '0')} / ${String(images.length).padStart(2, '0')}`;
+      caption.textContent = item.caption ?? '';
+    };
+
+    grid.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('.gallery-open');
+      if (!btn) return;
+      opener = btn;
+      show(Number(btn.dataset.index));
+      dialog.showModal();
+      document.body.classList.add('lightbox-open');
+    });
+
+    q('close')?.addEventListener('click', () => dialog.close());
+    q('prev')?.addEventListener('click', () => show(index - 1));
+    q('next')?.addEventListener('click', () => show(index + 1));
+    dialog.addEventListener('click', (e) => {
+      if (e.target === dialog) dialog.close();
+    });
+    dialog.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowLeft') show(index - 1);
+      if (e.key === 'ArrowRight') show(index + 1);
+    });
+    dialog.addEventListener('close', () => {
+      document.body.classList.remove('lightbox-open');
+      opener?.focus();
+    });
+  }
+</script>

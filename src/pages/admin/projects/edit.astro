@@ -1,0 +1,257 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import ProjectFormFields from '../../../components/admin/ProjectFormFields.astro';
+import { withBase } from '../../../lib/url';
+---
+
+<AdminLayout title="Edit Project">
+  <div class="admin-section-head">
+    <div>
+      <h1>Edit Project</h1>
+      <p class="admin-lede" id="statusLede">Loading…</p>
+    </div>
+  </div>
+
+  <div class="admin-pdf-section" id="pdfSection" hidden>
+    <h2>Final Deck / Report (PDF)</h2>
+    <div class="pdf-current-info" id="pdfCurrentInfo" hidden>
+      <span id="pdfCurrentFilename"></span>
+      <a id="pdfCurrentView" href="#" target="_blank" rel="noopener" class="btn-line">Preview</a>
+      <button type="button" class="btn-line danger" id="pdfRemoveBtn">Remove</button>
+    </div>
+    <p class="hint" id="pdfEmptyState">No PDF attached yet. It's shown in a page-by-page viewer on the project page.</p>
+    <div class="field">
+      <label for="pdfFileInput" id="pdfFileLabel">Upload PDF</label>
+      <input type="file" id="pdfFileInput" accept="application/pdf" />
+      <span class="upload-status" id="pdfUploadStatus"></span>
+    </div>
+  </div>
+
+  <form class="admin-form" id="projectForm" novalidate hidden>
+    <ProjectFormFields />
+
+    <div aria-live="polite" aria-atomic="true">
+      <p class="form-error" id="formError" hidden></p>
+    </div>
+
+    <div class="admin-form-actions">
+      <a href={withBase('/admin/projects/')} class="btn-line">Back to Projects</a>
+      <div class="spacer"></div>
+      <button type="button" class="btn-line" id="toggleStatusBtn"></button>
+      <button type="button" class="btn-solid" id="saveBtn">Save Changes</button>
+    </div>
+
+    <div class="admin-danger-zone">
+      <h2>Danger Zone</h2>
+      <button type="button" class="btn-line" id="deleteBtn">Delete This Project</button>
+    </div>
+  </form>
+
+  <p class="admin-empty" id="loadError" hidden></p>
+
+  <script>
+    import {
+      getProjectById,
+      updateProject,
+      setProjectStatus,
+      deleteProject,
+      uploadContentImage,
+      uploadProjectPdf,
+      updateProjectPdf,
+      deleteCaseStudyPdfObject,
+    } from '../../../lib/supabaseAdmin';
+    import { writeProjectForm, validateProjectForm, toProjectInput } from '../../../lib/projectForm';
+    import { initGalleryEditor } from '../../../lib/galleryEditor';
+    import { wireSingleImageField, wireInlineImageInsert, showExistingImage } from '../../../lib/imageUpload';
+    import { initLinksEditor } from '../../../lib/linksForm';
+    import { withBase } from '../../../lib/url';
+    import { showToast } from '../../../lib/toast';
+    import type { Project } from '../../../lib/projectTypes';
+
+    const byId = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+    const id = new URLSearchParams(window.location.search).get('id');
+    const form = byId<HTMLFormElement>('projectForm');
+    const statusLede = byId('statusLede');
+    const loadError = byId('loadError');
+    const errorEl = byId<HTMLParagraphElement>('formError');
+    const saveBtn = byId<HTMLButtonElement>('saveBtn');
+    const toggleBtn = byId<HTMLButtonElement>('toggleStatusBtn');
+    const deleteBtn = byId<HTMLButtonElement>('deleteBtn');
+    const pdfSection = byId('pdfSection');
+    const pdfCurrentInfo = byId('pdfCurrentInfo');
+    const pdfCurrentFilename = byId('pdfCurrentFilename');
+    const pdfCurrentView = byId<HTMLAnchorElement>('pdfCurrentView');
+    const pdfRemoveBtn = byId<HTMLButtonElement>('pdfRemoveBtn');
+    const pdfEmptyState = byId('pdfEmptyState');
+    const pdfFileInput = byId<HTMLInputElement>('pdfFileInput');
+    const pdfFileLabel = byId('pdfFileLabel');
+    const pdfUploadStatus = byId('pdfUploadStatus');
+
+    let current: Project | null = null;
+    let dirty = false;
+    const gallery = initGalleryEditor('projectGallery');
+    gallery.onChange(() => {
+      dirty = true;
+    });
+
+    function renderStatus() {
+      if (!current) return;
+      statusLede.textContent = `Status: ${current.status === 'published' ? 'Published' : 'Draft'} · Last updated ${new Date(current.updated_at).toLocaleString()}`;
+      toggleBtn.textContent = current.status === 'published' ? 'Unpublish' : 'Publish';
+    }
+
+    function renderPdf() {
+      if (!current) return;
+      const has = !!current.pdf_url;
+      pdfCurrentInfo.hidden = !has;
+      pdfEmptyState.hidden = has;
+      pdfFileLabel.textContent = has ? 'Replace PDF' : 'Upload PDF';
+      if (has) {
+        pdfCurrentFilename.textContent = current.pdf_filename || 'project.pdf';
+        pdfCurrentView.href = current.pdf_url!;
+      }
+    }
+
+    async function load() {
+      if (!id) {
+        loadError.textContent = 'No project specified.';
+        loadError.hidden = false;
+        return;
+      }
+      try {
+        const entry = await getProjectById(id);
+        if (!entry) {
+          loadError.textContent = 'Project not found.';
+          loadError.hidden = false;
+          return;
+        }
+        current = entry;
+        writeProjectForm(entry);
+        gallery.set(entry.gallery);
+        initLinksEditor('projectLinks');
+        const prefix = `projects/${entry.id}`;
+        wireSingleImageField(prefix, {
+          fileInput: byId('fCoverImageFile'),
+          hiddenInput: byId('fCoverImage'),
+          preview: byId('fCoverImagePreview'),
+          removeBtn: byId('fCoverImageRemove'),
+          status: byId('fCoverImageStatus'),
+        });
+        showExistingImage(entry.cover_image, byId('fCoverImagePreview'), byId('fCoverImageRemove'));
+        wireInlineImageInsert(prefix, byId('fContent'), byId('fContentImageFile'), byId('contentImageStatus'), byId('insertImageBtn'));
+        renderStatus();
+        renderPdf();
+        pdfSection.hidden = false;
+        form.hidden = false;
+      } catch (err) {
+        loadError.textContent = err instanceof Error ? err.message : 'Failed to load project.';
+        loadError.hidden = false;
+      }
+    }
+
+    form.addEventListener('input', () => {
+      dirty = true;
+    });
+    window.addEventListener('beforeunload', (e) => {
+      if (dirty) e.preventDefault();
+    });
+
+    saveBtn.addEventListener('click', async () => {
+      if (!current) return;
+      errorEl.hidden = true;
+      const problem = validateProjectForm();
+      if (problem) {
+        errorEl.textContent = problem;
+        errorEl.hidden = false;
+        return;
+      }
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving…';
+      try {
+        const pid = current.id;
+        const images = await gallery.resolve((file) => uploadContentImage(`projects/${pid}/gallery`, file));
+        current = await updateProject(pid, toProjectInput(images, current.slug));
+        dirty = false;
+        renderStatus();
+        showToast('Changes saved.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to save.';
+        errorEl.hidden = false;
+        showToast('Failed to save changes.', 'error');
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Changes';
+      }
+    });
+
+    toggleBtn.addEventListener('click', async () => {
+      if (!current) return;
+      const next = current.status === 'published' ? 'draft' : 'published';
+      toggleBtn.disabled = true;
+      try {
+        current = await setProjectStatus(current.id, next);
+        renderStatus();
+        showToast(next === 'published' ? 'Project published.' : 'Project unpublished.');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to update status.';
+        errorEl.hidden = false;
+      } finally {
+        toggleBtn.disabled = false;
+      }
+    });
+
+    deleteBtn.addEventListener('click', async () => {
+      if (!current) return;
+      if (!confirm(`Delete "${current.title}"? This cannot be undone.`)) return;
+      deleteBtn.disabled = true;
+      try {
+        await deleteProject(current.id);
+        dirty = false;
+        window.location.href = withBase('/admin/projects/');
+      } catch (err) {
+        errorEl.textContent = err instanceof Error ? err.message : 'Failed to delete.';
+        errorEl.hidden = false;
+        deleteBtn.disabled = false;
+      }
+    });
+
+    pdfFileInput.addEventListener('change', async () => {
+      if (!current) return;
+      const file = pdfFileInput.files?.[0];
+      if (!file) return;
+      pdfUploadStatus.textContent = 'Uploading…';
+      const previous = current.pdf_url;
+      try {
+        const uploaded = await uploadProjectPdf(current.id, file);
+        current = await updateProjectPdf(current.id, { pdf_url: uploaded.url, pdf_filename: uploaded.filename });
+        renderPdf();
+        pdfUploadStatus.textContent = '';
+        showToast('PDF uploaded.');
+        if (previous) await deleteCaseStudyPdfObject(previous);
+      } catch (err) {
+        pdfUploadStatus.textContent = err instanceof Error ? err.message : 'Upload failed.';
+      } finally {
+        pdfFileInput.value = '';
+      }
+    });
+
+    pdfRemoveBtn.addEventListener('click', async () => {
+      if (!current?.pdf_url) return;
+      if (!confirm('Remove the attached PDF? This cannot be undone.')) return;
+      pdfRemoveBtn.disabled = true;
+      const previous = current.pdf_url;
+      try {
+        current = await updateProjectPdf(current.id, { pdf_url: null, pdf_filename: null });
+        renderPdf();
+        showToast('PDF removed.');
+        await deleteCaseStudyPdfObject(previous);
+      } catch (err) {
+        showToast(err instanceof Error ? err.message : 'Failed to remove PDF.', 'error');
+      } finally {
+        pdfRemoveBtn.disabled = false;
+      }
+    });
+
+    document.addEventListener('admin:ready', load);
+  </script>
+</AdminLayout>

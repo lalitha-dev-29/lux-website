@@ -2,6 +2,7 @@
 // Shared field markup for src/pages/admin/guest-lectures/new.astro and edit.astro.
 // Behaviour (speaker repeater, photo/handout handling, save) lives in
 // src/lib/guestLectureEditor.ts.
+import GalleryEditor from './GalleryEditor.astro';
 ---
 
 <div class="field">
@@ -20,6 +21,12 @@
   <label for="fLectureDate">Date of the Lecture</label>
   <input id="fLectureDate" name="lecture_date" type="date" required />
   <p class="hint">Lectures are listed newest first.</p>
+</div>
+
+<div class="field">
+  <label for="fCoreQuestion">Session Core Question <span class="hint-inline">(optional)</span></label>
+  <input id="fCoreQuestion" name="core_question" type="text" maxlength="300" placeholder="e.g. How do you get back in the game when the rules change?" />
+  <p class="hint">The one question the session set out to answer. Shown in a highlighted box at the top of the lecture page.</p>
 </div>
 
 <fieldset class="field-group">
@@ -69,8 +76,17 @@
 <div class="field">
   <label for="fKeyLearnings">What I Learned</label>
   <textarea id="fKeyLearnings" name="key_learnings" required rows="10" maxlength="6000" placeholder="My key takeaways and insights from the session — put each point on its own line…"></textarea>
-  <p class="hint">Each line is shown as its own bullet on the public page.</p>
+  <p class="hint">
+    Put each point on its own line. A line written as <code>Title: explanation</code> becomes its own numbered takeaway card.
+    Lines before the first takeaway become the introduction, and lines after the last one (e.g. "Overall, …") become the highlighted Core Takeaway.
+  </p>
 </div>
+
+<GalleryEditor
+  id="lectureGallery"
+  label="Photos From the Session"
+  hint="Photos of the room, the slides, the speakers — as many as you like. They appear as a photo grid on the lecture page and open full size when clicked. Each can have a caption; the arrows change the order. Photos are uploaded when you save."
+/>
 
 <div class="field">
   <label for="fFiles">Slides / Handouts <span class="hint-inline">(optional)</span></label>

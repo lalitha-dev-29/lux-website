@@ -1,0 +1,28 @@
+---
+// Closing statement panel. The first paragraph is the headline; anything
+// after a blank line is shown beneath it in italic gold.
+import { withBase } from '../lib/url';
+
+interface Props {
+  text: string | null;
+  label?: string;
+  backHref: string;
+  backLabel: string;
+  id?: string;
+}
+const { text, label = 'The Core Conclusion', backHref, backLabel, id } = Astro.props;
+const [headline, ...rest] = (text ?? '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+---
+
+{headline && (
+  <section class="tight" id={id}>
+    <div class="container">
+      <div class="core-conclusion reveal">
+        <span class="core-conclusion-label">{label}</span>
+        <p class="core-conclusion-headline">{headline}</p>
+        {rest.map((p) => <p class="core-conclusion-follow">{p}</p>)}
+        <a href={withBase(backHref)} class="core-conclusion-btn">{backLabel}</a>
+      </div>
+    </div>
+  </section>
+)}
