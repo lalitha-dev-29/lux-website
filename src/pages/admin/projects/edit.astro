@@ -60,7 +60,7 @@ import { withBase } from '../../../lib/url';
       updateProjectPdf,
       deleteCaseStudyPdfObject,
     } from '../../../lib/supabaseAdmin';
-    import { writeProjectForm, validateProjectForm, toProjectInput } from '../../../lib/projectForm';
+    import { writeProjectForm, validateProjectForm, toProjectInput, wireVideoUpload } from '../../../lib/projectForm';
     import { initGalleryEditor } from '../../../lib/galleryEditor';
     import { wireSingleImageField, wireInlineImageInsert, showExistingImage } from '../../../lib/imageUpload';
     import { initLinksEditor } from '../../../lib/linksForm';
@@ -139,6 +139,9 @@ import { withBase } from '../../../lib/url';
         });
         showExistingImage(entry.cover_image, byId('fCoverImagePreview'), byId('fCoverImageRemove'));
         wireInlineImageInsert(prefix, byId('fContent'), byId('fContentImageFile'), byId('contentImageStatus'), byId('insertImageBtn'));
+        wireVideoUpload(prefix, () => {
+          dirty = true;
+        });
         renderStatus();
         renderPdf();
         pdfSection.hidden = false;

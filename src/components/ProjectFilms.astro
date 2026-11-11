@@ -1,0 +1,63 @@
+---
+// "Films" band on a project page: extra videos beyond the main one at the top.
+// Each is a YouTube/Vimeo embed or a direct video file played by the browser.
+import { isDirectVideo, videoEmbedUrl, type ProjectVideo } from '../lib/projectTypes';
+
+interface Props {
+  videos: ProjectVideo[];
+  id?: string;
+}
+
+const { videos, id = 'films' } = Astro.props;
+const items = videos.map((v) => ({ ...v, embed: videoEmbedUrl(v.url), direct: isDirectVideo(v.url) }));
+---
+
+{items.length > 0 && (
+  <section class="tight" id={id}>
+    <div class="container">
+      <div class="gallery-head reveal">
+        <div class="section-head">
+          <span class="eyebrow">The Films</span>
+          <h2>Watch the Work</h2>
+        </div>
+        <span class="gallery-count">{String(items.length).padStart(2, '0')} {items.length === 1 ? 'film' : 'films'}</span>
+      </div>
+      <ul class={`film-grid ${items.length === 1 ? 'film-grid-single' : ''}`}>
+        {items.map((v, i) => (
+          <li class={`film reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
+            <div class="project-video-frame film-frame">
+              {v.direct ? (
+                <video controls preload="metadata" playsinline aria-label={v.title ?? `Film ${i + 1}`}>
+                  <source src={v.url} />
+                  <a href={v.url}>Open the video</a>
+                </video>
+              ) : v.embed ? (
+                <iframe
+                  src={v.embed}
+                  title={v.title ?? `Film ${i + 1}`}
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              ) : (
+                <a class="film-fallback" href={v.url} target="_blank" rel="noopener">Open the video ↗</a>
+              )}
+            </div>
+            <p class="film-title"><span class="gallery-plate-num">Film {String(i + 1).padStart(2, '0')}</span>{v.title && <span>{v.title}</span>}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+)}
+
+<script>
+  // Portrait clips (TikTok/Reels cuts) get a tall frame instead of black bars.
+  document.querySelectorAll<HTMLVideoElement>('.film video').forEach((video) => {
+    const mark = () => {
+      if (video.videoHeight > video.videoWidth) video.closest('.film')?.classList.add('is-portrait');
+    };
+    if (video.readyState >= 1) mark();
+    else video.addEventListener('loadedmetadata', mark, { once: true });
+  });
+</script>

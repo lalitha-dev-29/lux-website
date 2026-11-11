@@ -16,7 +16,7 @@ const teammates = projects.reduce((n, p) => n + p.team.length, 0);
 function details(p: Project): (string | null)[] {
   return [
     p.reading_time_minutes ? `${p.reading_time_minutes} min read` : null,
-    p.video_url ? 'Video' : null,
+    p.video_url || p.videos.length > 0 ? (p.videos.length + (p.video_url ? 1 : 0) > 1 ? `${p.videos.length + (p.video_url ? 1 : 0)} videos` : 'Video') : null,
     p.gallery.length > 0 ? `${p.gallery.length} ${p.gallery.length === 1 ? 'visual' : 'visuals'}` : null,
     p.pdf_url ? 'Full deck' : null,
   ];

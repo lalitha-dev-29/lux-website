@@ -32,6 +32,7 @@ export interface Project {
   tags: string[];
   cover_image: string | null;
   video_url: string | null;
+  videos: ProjectVideo[];
   details: ProjectDetail[];
   key_figures: KeyFigure[];
   team: TeamMember[];
@@ -48,9 +49,18 @@ export interface Project {
   updated_at: string;
 }
 
+/** An extra film on a project page: a YouTube/Vimeo link or a direct video file. */
+export interface ProjectVideo {
+  url: string;
+  title: string | null;
+}
+
 /** Fields the public site renders — never more than this for anon requests. */
 export const PUBLIC_PROJECT_FIELDS =
-  'id,slug,title,tagline,excerpt,content,project_type,course,institution,period,my_role,progress,tags,cover_image,video_url,details,key_figures,team,gallery,conclusion,pdf_url,pdf_filename,links,order_index,reading_time_minutes,published_at' as const;
+  'id,slug,title,tagline,excerpt,content,project_type,course,institution,period,my_role,progress,tags,cover_image,video_url,videos,details,key_figures,team,gallery,conclusion,pdf_url,pdf_filename,links,order_index,reading_time_minutes,published_at' as const;
+
+/** Same list without `videos`, for builds that run before supabase/project_videos.sql has been applied. */
+export const PUBLIC_PROJECT_FIELDS_LEGACY = PUBLIC_PROJECT_FIELDS.replace(',videos', '');
 
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
@@ -61,6 +71,20 @@ function parsePairs<T>(raw: unknown, a: string, b: string, make: (x: string, y: 
     const x = str(o[a]);
     return x ? [make(x, str(o[b]) ?? '')] : [];
   });
+}
+
+function parseVideos(raw: unknown): ProjectVideo[] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((item) => {
+    const o = (item ?? {}) as Record<string, unknown>;
+    const url = str(o.url);
+    return url && /^https?:\/\//i.test(url) ? [{ url, title: str(o.title) }] : [];
+  });
+}
+
+/** True for a direct video file (played with the browser's own player rather than an embed). */
+export function isDirectVideo(url: string | null | undefined): boolean {
+  return !!url && /\.(mp4|webm|mov|m4v)(\?|#|$)/i.test(url);
 }
 
 /** Defensive normalisation — jsonb columns can hold anything. */
@@ -76,6 +100,7 @@ export function normalizeProject(row: Record<string, unknown>): Project {
     progress: row.progress === 'in_progress' ? 'in_progress' : 'completed',
     tags: Array.isArray(row.tags) ? row.tags.filter((t): t is string => typeof t === 'string' && !!t.trim()) : [],
     video_url: str(row.video_url),
+    videos: parseVideos(row.videos),
     details: parsePairs(row.details, 'label', 'value', (label, value) => ({ label, value })),
     key_figures: parseKeyFigures(row.key_figures),
     team: parsePairs(row.team, 'name', 'role', (name, role) => ({ name, role })),
@@ -86,6 +111,24 @@ export function normalizeProject(row: Record<string, unknown>): Project {
 }
 
 /** Admin textarea ("Left | Right" per line) <-> pairs. */
+/** Admin textarea ("Title | URL" per line) <-> videos. A line with no "|" is treated as just a URL. */
+export function videosFromText(text: string): ProjectVideo[] {
+  return text
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((l) => {
+      const bar = l.indexOf('|');
+      if (bar === -1) return { url: l, title: null };
+      return { title: l.slice(0, bar).trim() || null, url: l.slice(bar + 1).trim() };
+    })
+    .filter((v) => /^https?:\/\//i.test(v.url));
+}
+
+export function videosToText(videos: ProjectVideo[]): string {
+  return videos.map((v) => (v.title ? `${v.title} | ${v.url}` : v.url)).join('\n');
+}
+
 export function pairsFromText(text: string): [string, string][] {
   return text
     .split('\n')

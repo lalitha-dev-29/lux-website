@@ -3,7 +3,8 @@ import Layout from '../../layouts/Layout.astro';
 import { withBase } from '../../lib/url';
 import { fetchAllPublishedProjects } from '../../lib/buildTimeData';
 import { renderWithChapters } from '../../lib/chapters';
-import { videoEmbedUrl } from '../../lib/projectTypes';
+import { videoEmbedUrl, isDirectVideo } from '../../lib/projectTypes';
+import ProjectFilms from '../../components/ProjectFilms.astro';
 import ExternalLinks from '../../components/ExternalLinks.astro';
 import PDFViewer from '../../components/PDFViewer.astro';
 import PrevNext from '../../components/PrevNext.astro';
@@ -24,6 +25,8 @@ export async function getStaticPaths() {
 const { project: p, index, projects } = Astro.props;
 const { html: contentHtml, chapters } = renderWithChapters(p.content);
 const embed = videoEmbedUrl(p.video_url);
+const direct = isDirectVideo(p.video_url);
+const hasVideo = Boolean(embed || direct);
 
 // Facts strip: the structured fields first, then the admin's own "Label | Value" lines.
 const facts = [
@@ -40,6 +43,7 @@ const isMe = (name: string) => /kasturi|lalitha|manogna/i.test(name);
 const contents = [
   ...chapters.map((ch, i) => ({ href: `#${ch.id}`, label: ch.title, num: String(i + 1).padStart(2, '0') })),
   ...(p.key_figures.length > 0 ? [{ href: '#by-the-numbers', label: 'By the Numbers', num: '' }] : []),
+  ...(p.videos.length > 0 ? [{ href: '#films', label: `The Films (${p.videos.length})`, num: '' }] : []),
   ...(p.gallery.length > 0 ? [{ href: '#project-visuals', label: `Project Visuals (${p.gallery.length})`, num: '' }] : []),
   ...(p.pdf_url ? [{ href: '#full-deck', label: 'The Final Deck', num: '' }] : []),
   ...(p.team.length > 0 ? [{ href: '#team', label: 'The Team', num: '' }] : []),
@@ -84,12 +88,17 @@ const next = projects[index + 1];
     </div>
   </section>
 
-  {(p.cover_image || embed) && (
+  {(p.cover_image || hasVideo) && (
     <section class="tight flush-top">
       <div class="container">
-        {embed ? (
+        {hasVideo ? (
           <figure class="project-media project-video reveal">
             <div class="project-video-frame">
+              {direct ? (
+                <video controls preload="metadata" playsinline poster={p.cover_image ?? undefined} aria-label={`Video: ${p.title}`}>
+                  <source src={p.video_url!} />
+                </video>
+              ) : (
               <iframe
                 src={embed}
                 title={`Video: ${p.title}`}
@@ -97,6 +106,7 @@ const next = projects[index + 1];
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowfullscreen
               ></iframe>
+              )}
             </div>
             <figcaption>
               <span><span class="building-dot" aria-hidden="true"></span>Watch the project film</span>
@@ -118,7 +128,7 @@ const next = projects[index + 1];
           </dl>
         )}
 
-        {embed && p.cover_image && (
+        {hasVideo && p.cover_image && (
           <figure class="project-media reveal" style="margin-top:var(--sp-6);">
             <img src={p.cover_image} alt="" width="1600" height="900" />
             <figcaption><span>Figure 1.0 · The project identity</span></figcaption>
@@ -128,7 +138,7 @@ const next = projects[index + 1];
     </section>
   )}
 
-  {!(p.cover_image || embed) && facts.length > 0 && (
+  {!(p.cover_image || hasVideo) && facts.length > 0 && (
     <section class="tight flush-top">
       <div class="container">
         <dl class="facts-strip reveal">
@@ -172,6 +182,8 @@ const next = projects[index + 1];
   )}
 
   <KeyFigures figures={p.key_figures} id="by-the-numbers" />
+
+  <ProjectFilms videos={p.videos} id="films" />
 
   <Gallery images={p.gallery} eyebrow="Project Visuals" title="Inside the Work" id="project-visuals" />
 

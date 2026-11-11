@@ -4,7 +4,7 @@ import { createClient, type SupabaseClient, type Session } from '@supabase/supab
 import { withBase } from './url';
 import type { JournalPost, JournalStatus } from './journalTypes';
 import type { CaseStudy, CaseStudyStatus } from './caseStudyTypes';
-import { normalizeProject, type Project, type ProjectStatus, type ProjectProgress, type ProjectDetail, type TeamMember } from './projectTypes';
+import { normalizeProject, type Project, type ProjectStatus, type ProjectProgress, type ProjectDetail, type ProjectVideo, type TeamMember } from './projectTypes';
 import type { ContentLink } from './contentLinks';
 import { parseLinks } from './contentLinks';
 import { parseGallery, parseKeyFigures, type GalleryImage, type KeyFigure } from './gallery';
@@ -703,6 +703,7 @@ export interface ProjectInput {
   tags: string[];
   cover_image: string | null;
   video_url: string | null;
+  videos: ProjectVideo[];
   details: ProjectDetail[];
   key_figures: KeyFigure[];
   team: TeamMember[];
@@ -788,8 +789,19 @@ export async function deleteProject(id: string): Promise<void> {
   await removeUploadFolders([
     ['content-images', `projects/${id}`],
     ['content-images', `projects/${id}/gallery`],
+    ['content-images', `projects/${id}/videos`],
     ['case-study-pdfs', `projects/${id}`],
   ]);
+}
+
+/** Uploads a video file (mp4/webm/mov) for a project and returns its public URL. */
+export async function uploadProjectVideo(prefix: string, file: File): Promise<string> {
+  if (!/^video\/(mp4|webm|quicktime)$/.test(file.type) && !/\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
+    throw new Error('Please choose an MP4, WebM or MOV video file.');
+  }
+  const path = `${prefix}/videos/${uniqueObjectName(file)}`;
+  await uploadToBucket('content-images', path, file);
+  return getSupabaseClient().storage.from('content-images').getPublicUrl(path).data.publicUrl;
 }
 
 export async function uploadProjectPdf(projectId: string, file: File): Promise<UploadedPdf> {

@@ -16,7 +16,7 @@ import {
 import type { AtlasCountry, AtlasBrand, AtlasCategory } from './atlasTypes';
 import { PUBLIC_ATLAS_COUNTRY_FIELDS, PUBLIC_ATLAS_BRAND_FIELDS, PUBLIC_ATLAS_CATEGORY_FIELDS } from './atlasTypes';
 import { renderMarkdown } from './markdown';
-import { PUBLIC_PROJECT_FIELDS, normalizeProject, type Project } from './projectTypes';
+import { PUBLIC_PROJECT_FIELDS, PUBLIC_PROJECT_FIELDS_LEGACY, normalizeProject, type Project } from './projectTypes';
 
 /**
  * Build-time reads against Supabase's PostgREST API, used by `getStaticPaths()`
@@ -249,10 +249,15 @@ export async function buildAtlasMapData(): Promise<Record<string, AtlasMapPanelD
  * its empty state) rather than fail.
  */
 export async function fetchAllPublishedProjects(): Promise<Project[]> {
+  const query = (fields: string) => `projects?select=${fields}&status=eq.published&order=order_index.asc,published_at.desc`;
   try {
-    const rows = await restGet(`projects?select=${PUBLIC_PROJECT_FIELDS}&status=eq.published&order=order_index.asc,published_at.desc`);
-    return (rows as Record<string, unknown>[]).map(normalizeProject);
+    return ((await restGet(query(PUBLIC_PROJECT_FIELDS))) as Record<string, unknown>[]).map(normalizeProject);
   } catch {
-    return [];
+    // supabase/project_videos.sql may not have been run yet — retry without the new column.
+    try {
+      return ((await restGet(query(PUBLIC_PROJECT_FIELDS_LEGACY))) as Record<string, unknown>[]).map(normalizeProject);
+    } catch {
+      return [];
+    }
   }
 }
