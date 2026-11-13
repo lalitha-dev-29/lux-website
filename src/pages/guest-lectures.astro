@@ -68,14 +68,14 @@ function initials(name: string): string {
             return (
               <FeatureCard
                 href={withBase(`/guest-lectures/${slugs.get(lecture.id)}/`)}
-                kicker="Guest Lecture"
+                kicker={lecture.company?.name ?? 'Guest Lecture'}
                 meta={[formatLectureDate(lecture.lecture_date)]}
                 number={`Session ${String(i + 1).padStart(2, '0')}`}
                 title={lecture.topic}
                 excerpt={lectureExcerpt(lecture, 220)}
                 tags={lecture.tags}
-                image={lectureCoverImage(lecture) ?? lecture.gallery[0]?.url ?? null}
-                imageAlt={`Photo of ${lecture.speakers[0]?.name ?? 'the speaker'}`}
+                image={lecture.gallery[0]?.url ?? lectureCoverImage(lecture) ?? null}
+                imageAlt={lecture.gallery[0]?.caption ?? `Photo of ${lecture.speakers[0]?.name ?? 'the speaker'}`}
                 ctaLabel="Read my notes"
                 details={[
                   `${lecture.speakers.length} ${lecture.speakers.length === 1 ? 'speaker' : 'speakers'}`,

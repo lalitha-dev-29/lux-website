@@ -7,7 +7,9 @@
  * leaves stray objects in Storage.
  */
 import { uploadGuestLectureAsset, deleteGuestLectureAssets, type GuestLectureInput } from './supabaseAdmin';
-import type { GuestLecture, GuestLectureFile, GuestLectureFileType, GuestSpeaker } from './guestLectureTypes';
+import type { GuestLecture, GuestLectureFile, GuestLectureFileType, GuestSpeaker, LectureCompany } from './guestLectureTypes';
+import { keyFiguresFromText, keyFiguresToText } from './gallery';
+import { pairsFromText, pairsToText } from './projectTypes';
 import { initGalleryEditor } from './galleryEditor';
 
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -242,7 +244,32 @@ export function createGuestLectureEditor() {
     });
   }
 
+  // ---- company profile -------------------------------------------------
+  let hadCompany = false;
+
+  function setCompany(company: LectureCompany | null) {
+    hadCompany = Boolean(company);
+    $<HTMLInputElement>('fCompanyName').value = company?.name ?? '';
+    $<HTMLInputElement>('fCompanyWebsite').value = company?.website ?? '';
+    $<HTMLTextAreaElement>('fCompanyOverview').value = company?.overview ?? '';
+    $<HTMLTextAreaElement>('fCompanyFigures').value = company ? keyFiguresToText(company.figures) : '';
+    $<HTMLTextAreaElement>('fCompanyMilestones').value = company ? pairsToText(company.milestones.map((m) => [m.year, m.text])) : '';
+  }
+
+  function readCompany(): LectureCompany | null {
+    const name = $<HTMLInputElement>('fCompanyName').value.trim();
+    if (!name) return null;
+    return {
+      name,
+      website: $<HTMLInputElement>('fCompanyWebsite').value.trim() || null,
+      overview: $<HTMLTextAreaElement>('fCompanyOverview').value.trim() || null,
+      figures: keyFiguresFromText($<HTMLTextAreaElement>('fCompanyFigures').value),
+      milestones: pairsFromText($<HTMLTextAreaElement>('fCompanyMilestones').value).map(([year, text]) => ({ year, text })),
+    };
+  }
+
   function setValue(lecture: GuestLecture) {
+    setCompany(lecture.company);
     $<HTMLInputElement>('fTopic').value = lecture.topic;
     $<HTMLInputElement>('fLectureDate').value = lecture.lecture_date;
     $<HTMLTextAreaElement>('fKeyLearnings').value = lecture.key_learnings;
@@ -264,6 +291,8 @@ export function createGuestLectureEditor() {
       if (!speakers[i].name) return `Speaker ${i + 1}: name is required (remove the speaker if you don't need it).`;
     }
     if (!$<HTMLTextAreaElement>('fKeyLearnings').value.trim()) return 'What I learned is required.';
+    const website = $<HTMLInputElement>('fCompanyWebsite').value.trim();
+    if (website && !/^https?:\/\//i.test(website)) return 'Company website must start with http:// or https://.';
     return null;
   }
 
@@ -305,6 +334,7 @@ export function createGuestLectureEditor() {
       const galleryImages = await gallery.resolve((file) => uploadGuestLectureAsset(lectureId, file));
       // Gallery uploads stay remembered by the gallery editor itself, so a retried save reuses them.
       const coreQuestion = $<HTMLInputElement>('fCoreQuestion').value.trim();
+      const company = readCompany();
       return {
         id: lectureId,
         topic: $<HTMLInputElement>('fTopic').value.trim(),
@@ -315,6 +345,8 @@ export function createGuestLectureEditor() {
         files: outFiles,
         gallery: galleryImages,
         core_question: coreQuestion || null,
+        // Only sent when used, so lectures still save before lecture_company.sql has been run.
+        ...(company || hadCompany ? { company } : {}),
       };
     } catch (err) {
       await deleteGuestLectureAssets(uploaded);

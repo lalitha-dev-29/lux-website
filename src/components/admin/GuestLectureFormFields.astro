@@ -82,6 +82,38 @@ import GalleryEditor from './GalleryEditor.astro';
   </p>
 </div>
 
+<fieldset class="field-group">
+  <legend>About the Company <span class="hint-inline">(optional)</span></legend>
+  <p class="hint">A short profile of the speaker's company. It appears as a "Behind the Brand" section on the lecture page. Needs the lecture_company.sql update in Supabase.</p>
+
+  <div class="field">
+    <label for="fCompanyName">Company / Brand Name</label>
+    <input id="fCompanyName" type="text" maxlength="120" placeholder="e.g. Chopard" />
+  </div>
+
+  <div class="field">
+    <label for="fCompanyWebsite">Website <span class="hint-inline">(optional)</span></label>
+    <input id="fCompanyWebsite" type="url" maxlength="300" placeholder="https://www.example.com" />
+  </div>
+
+  <div class="field">
+    <label for="fCompanyOverview">Overview <span class="hint-inline">(optional)</span></label>
+    <textarea id="fCompanyOverview" rows="6" maxlength="3000" placeholder="Who they are, what they make, what makes them different. Leave a blank line between paragraphs."></textarea>
+  </div>
+
+  <div class="field">
+    <label for="fCompanyFigures">Key Figures <span class="hint-inline">(optional)</span></label>
+    <textarea id="fCompanyFigures" rows="4" maxlength="1200" placeholder={'1860 | Year founded\n2,000 | People\n45 | Crafts in-house'}></textarea>
+    <p class="hint">One per line as <code>Number | What it means</code>.</p>
+  </div>
+
+  <div class="field">
+    <label for="fCompanyMilestones">Milestones <span class="hint-inline">(optional)</span></label>
+    <textarea id="fCompanyMilestones" rows="6" maxlength="3000" placeholder={'1860 | Founded in Sonvilier, Switzerland\n1963 | Acquired by the Scheufele family'}></textarea>
+    <p class="hint">One per line as <code>Year | What happened</code>, oldest first.</p>
+  </div>
+</fieldset>
+
 <GalleryEditor
   id="lectureGallery"
   label="Photos From the Session"

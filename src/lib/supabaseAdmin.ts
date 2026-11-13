@@ -1,4 +1,4 @@
-import type { GuestLecture, GuestSpeaker, GuestLectureFile } from './guestLectureTypes';
+import type { GuestLecture, GuestSpeaker, GuestLectureFile, LectureCompany } from './guestLectureTypes';
 import { normalizeGuestLecture } from './guestLectureTypes';
 import { createClient, type SupabaseClient, type Session } from '@supabase/supabase-js';
 import { withBase } from './url';
@@ -830,6 +830,8 @@ export interface GuestLectureInput {
   files: GuestLectureFile[];
   gallery: GalleryImage[];
   core_question: string | null;
+  /** Needs supabase/lecture_company.sql; omitted from the payload when there is none. */
+  company?: LectureCompany | null;
 }
 
 export async function listAllGuestLectures(): Promise<GuestLecture[]> {

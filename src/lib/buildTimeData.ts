@@ -1,5 +1,5 @@
 import type { GuestLecture } from './guestLectureTypes';
-import { PUBLIC_GUEST_LECTURE_FIELDS, PUBLIC_GUEST_LECTURE_MEDIA_FIELDS, normalizeGuestLecture } from './guestLectureTypes';
+import { PUBLIC_GUEST_LECTURE_FIELDS, PUBLIC_GUEST_LECTURE_MEDIA_FIELDS, PUBLIC_GUEST_LECTURE_COMPANY_FIELD, normalizeGuestLecture } from './guestLectureTypes';
 import type { JournalPost } from './journalTypes';
 import { PUBLIC_JOURNAL_FIELDS } from './journalTypes';
 import type { CaseStudy } from './caseStudyTypes';
@@ -139,6 +139,14 @@ export async function fetchAllRightNow(): Promise<LearningRightNowItem[]> {
  */
 export async function fetchAllGuestLectures(): Promise<GuestLecture[]> {
   const order = '&order=lecture_date.desc';
+  try {
+    const rows = await restGet(
+      `guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS},${PUBLIC_GUEST_LECTURE_MEDIA_FIELDS},${PUBLIC_GUEST_LECTURE_COMPANY_FIELD}${order}`
+    );
+    return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);
+  } catch {
+    // lecture_company.sql not applied yet: retry without the company column.
+  }
   try {
     const rows = await restGet(`guest_lectures?select=${PUBLIC_GUEST_LECTURE_FIELDS},${PUBLIC_GUEST_LECTURE_MEDIA_FIELDS}${order}`);
     return (rows as Record<string, unknown>[]).map(normalizeGuestLecture);

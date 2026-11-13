@@ -2123,3 +2123,51 @@ body.lightbox-open{overflow:hidden;}
 @media (hover: none){
   .building-card:hover{transform:none;}
 }
+
+/* ---- Guest Lecture detail page (projects-style layout) -------------------- */
+.split-body > * + *{margin-top:var(--sp-8, var(--sp-7));}
+.takeaway-grid.takeaway-grid-single{grid-template-columns:1fr;}
+.lecture-spotlight{
+  display:grid; grid-template-columns:1fr; gap:var(--sp-5); margin-top:var(--sp-5);
+  padding:clamp(20px,3.5vw,40px); border:1px solid var(--line); border-radius:calc(var(--r-lg) * 1.4);
+  background:var(--card); box-shadow:var(--shadow-sm);
+}
+.lecture-spotlight-photo img{
+  width:100%; max-width:260px; aspect-ratio:4/5; object-fit:cover; object-position:center top;
+  border-radius:var(--r-lg); border:1px solid var(--line);
+}
+.lecture-spotlight-photo .lecture-avatar{width:120px; height:120px;}
+.lecture-spotlight-body{min-width:0;}
+.lecture-spotlight .lecture-speaker-name{font-size:var(--display-3);}
+.lecture-bio-para{line-height:1.75; margin-top:var(--sp-3); color:var(--charcoal-soft);}
+.lecture-bio-para a{color:var(--gold-ink); text-decoration:underline; text-underline-offset:3px; word-break:break-all;}
+.lecture-learned-group .lecture-intro{margin:var(--sp-4) 0 var(--sp-5);}
+@media (min-width: 640px){
+  .lecture-spotlight{grid-template-columns:minmax(150px, 220px) 1fr; align-items:start;}
+}
+
+.company-panel{
+  padding:clamp(24px,4vw,48px); border:1px solid var(--line); border-radius:calc(var(--r-lg) * 1.6);
+  background:var(--card); box-shadow:var(--shadow-sm);
+}
+.company-panel-head{display:flex; align-items:flex-end; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; margin-bottom:var(--sp-5);}
+.company-panel-head h2{font-size:var(--display-3); margin-top:var(--sp-3);}
+.company-overview{display:grid; gap:var(--sp-4); max-width:74ch;}
+.company-overview p{line-height:1.8; color:var(--charcoal-soft); font-size:var(--fs-md);}
+.company-overview a{color:var(--gold-ink); text-decoration:underline; text-underline-offset:3px;}
+
+.milestones{
+  list-style:none; position:relative; display:grid; gap:var(--sp-4);
+  padding-left:var(--sp-6); margin-top:var(--sp-5);
+}
+.milestones::before{content:""; position:absolute; left:6px; top:6px; bottom:6px; width:1px; background:var(--line-strong, var(--line));}
+.milestone{position:relative; display:grid; gap:var(--sp-1); padding:var(--sp-4) var(--sp-5); border:1px solid var(--line); border-radius:var(--r-md); background:var(--card);}
+.milestone::before{
+  content:""; position:absolute; left:calc(-1 * var(--sp-6) + 1px); top:var(--sp-5);
+  width:11px; height:11px; border-radius:50%; background:var(--gold-ink); box-shadow:0 0 0 4px var(--ivory);
+}
+.milestone-year{font-family:var(--font-display); font-size:var(--display-4); color:var(--gold-ink); line-height:1.1;}
+.milestone p{color:var(--charcoal-soft); line-height:1.65;}
+@media (min-width: 720px){
+  .milestone{grid-template-columns:110px 1fr; align-items:baseline; gap:var(--sp-4);}
+}

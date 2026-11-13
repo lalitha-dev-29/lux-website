@@ -2,7 +2,7 @@
 import { monthName } from './learningTypes';
 import { slugify } from './slugify';
 import { escapeHtml } from './html';
-import { parseGallery, type GalleryImage } from './gallery';
+import { parseGallery, parseKeyFigures, type GalleryImage, type KeyFigure } from './gallery';
 
 export interface GuestSpeaker {
   name: string;
@@ -24,6 +24,21 @@ export interface GuestLectureFile {
   type: GuestLectureFileType;
 }
 
+export interface CompanyMilestone {
+  year: string;
+  text: string;
+}
+
+/** Optional profile of the speaker's company (supabase/lecture_company.sql). */
+export interface LectureCompany {
+  name: string;
+  website: string | null;
+  /** Paragraphs separated by blank lines. */
+  overview: string | null;
+  figures: KeyFigure[];
+  milestones: CompanyMilestone[];
+}
+
 export interface GuestLecture {
   id: string;
   topic: string;
@@ -38,6 +53,8 @@ export interface GuestLecture {
   gallery: GalleryImage[];
   /** The one question the session set out to answer. */
   core_question: string | null;
+  /** Profile of the company behind the session, if the admin added one. */
+  company: LectureCompany | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +63,24 @@ export const PUBLIC_GUEST_LECTURE_FIELDS = 'id,topic,lecture_date,speakers,tags,
 
 /** Added by supabase/portfolio_media.sql — requested only when present, so older databases keep building. */
 export const PUBLIC_GUEST_LECTURE_MEDIA_FIELDS = 'gallery,core_question' as const;
+
+/** Added by supabase/lecture_company.sql. */
+export const PUBLIC_GUEST_LECTURE_COMPANY_FIELD = 'company' as const;
+
+export function parseCompany(raw: unknown): LectureCompany | null {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+  const o = raw as Record<string, unknown>;
+  const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
+  const name = str(o.name);
+  if (!name) return null;
+  const milestones = (Array.isArray(o.milestones) ? o.milestones : []).flatMap((m) => {
+    const x = (m ?? {}) as Record<string, unknown>;
+    const year = str(x.year);
+    const text = str(x.text);
+    return year && text ? [{ year, text }] : [];
+  });
+  return { name, website: str(o.website), overview: str(o.overview), figures: parseKeyFigures(o.figures), milestones };
+}
 
 /** "12 March 2026" from YYYY-MM-DD, parsed as a calendar date (no timezone shift). */
 export function formatLectureDate(isoDate: string): string {
@@ -84,6 +119,7 @@ export function normalizeGuestLecture(row: Record<string, unknown>): GuestLectur
     files,
     gallery: parseGallery(row.gallery),
     core_question: str(row.core_question),
+    company: parseCompany(row.company),
   };
 }
 
@@ -186,4 +222,25 @@ export function inlineFormat(text: string): string {
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*\*/g, '');
+}
+
+/**
+ * Free text -> safe HTML paragraphs: escapes everything, turns bare http(s)
+ * links into anchors and a blank line into a new paragraph. A line like
+ * "LinkedIn: https://..." keeps its label and links the address.
+ */
+export function paragraphsWithLinks(text: string): string[] {
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) =>
+      escapeHtml(p)
+        .replace(/(https?:\/\/[^\s<]+)/g, (url) => {
+          const clean = url.replace(/[.,;)]+$/, '');
+          const tail = url.slice(clean.length);
+          return `<a href="${clean}" target="_blank" rel="noopener">${clean.replace(/^https?:\/\/(www\.)?/, '')}</a>${tail}`;
+        })
+        .replace(/\n/g, '<br />')
+    );
 }

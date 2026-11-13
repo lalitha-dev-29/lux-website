@@ -2,6 +2,8 @@
 import Layout from '../../layouts/Layout.astro';
 import PrevNext from '../../components/PrevNext.astro';
 import Gallery from '../../components/Gallery.astro';
+import KeyFigures from '../../components/KeyFigures.astro';
+import CoreConclusion from '../../components/CoreConclusion.astro';
 import AuthorCard from '../../components/AuthorCard.astro';
 import ReadingChrome from '../../components/ReadingChrome.astro';
 import { withBase } from '../../lib/url';
@@ -12,6 +14,8 @@ import {
   lectureCoverImage,
   lectureExcerpt,
   lectureSlugs,
+  paragraphsWithLinks,
+  speakerNames,
   structureLearnings,
 } from '../../lib/guestLectureTypes';
 
@@ -34,146 +38,224 @@ export async function getStaticPaths() {
 }
 
 const { lecture, index, prev, next } = Astro.props;
-const cover = lectureCoverImage(lecture);
-const tags = lecture.tags;
 const { intro, points, outro } = structureLearnings(lecture.key_learnings);
 // Nothing parsed as "Title: explanation" — fall back to a plain bullet list of every line.
 const plainLines = points.length === 0 ? [...intro, ...outro] : [];
-const hasBios = lecture.speakers.some((s) => s.description || s.quote || s.photos.length > 0);
+const company = lecture.company;
+
+// The first session photo doubles as the wide opening image; the rest stay in the gallery.
+const hero = lecture.gallery[0] ?? null;
+const moreGallery = hero ? lecture.gallery.slice(1) : [];
+const lead = intro[0] && points.length > 0 ? intro[0] : null;
+
+const facts = [
+  { label: 'Date', value: formatLectureDate(lecture.lecture_date) },
+  { label: lecture.speakers.length === 1 ? 'Speaker' : 'Speakers', value: speakerNames(lecture) },
+  { label: 'Organisation', value: company?.name ?? null },
+  { label: 'Takeaways', value: points.length > 0 ? String(points.length) : null },
+  { label: 'Resources', value: lecture.files.length > 0 ? String(lecture.files.length) : null },
+].filter((f): f is { label: string; value: string } => Boolean(f.value));
+
+const hasSpeakers = lecture.speakers.length > 0;
+const contents = [
+  ...(lecture.core_question ? [{ href: '#core-question', label: 'The Question' }] : []),
+  ...(hasSpeakers ? [{ href: '#speaker', label: lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker' }] : []),
+  { href: '#learned', label: points.length > 0 ? `What I Learned (${points.length})` : 'What I Learned' },
+  ...(company ? [{ href: '#behind-the-brand', label: `Behind ${company.name}` }] : []),
+  ...(lecture.gallery.length > 0 ? [{ href: '#session-photos', label: `Session Visuals (${lecture.gallery.length})` }] : []),
+  ...(lecture.files.length > 0 ? [{ href: '#resources', label: 'Resources' }] : []),
+  ...(outro.length > 0 ? [{ href: '#core-takeaway', label: 'The Core Takeaway' }] : []),
+].map((c, i) => ({ ...c, num: String(i + 1).padStart(2, '0') }));
 
 function initials(name: string): string {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join('');
 }
-
-const facts = [
-  { label: 'Date', value: formatLectureDate(lecture.lecture_date) },
-  { label: lecture.speakers.length === 1 ? 'Speaker' : 'Speakers', value: String(lecture.speakers.length) },
-  { label: 'Takeaways', value: points.length > 0 ? String(points.length) : null },
-  { label: 'Resources', value: lecture.files.length > 0 ? String(lecture.files.length) : null },
-  { label: 'Photographs', value: lecture.gallery.length > 0 ? String(lecture.gallery.length) : null },
-].filter((f): f is { label: string; value: string } => Boolean(f.value));
 ---
 
 <Layout
   title={`${lecture.topic} | Guest Lectures | Kasturi Lalitha Manogna`}
   description={lectureExcerpt(lecture, 155)}
-  ogImage={cover || undefined}
+  ogImage={hero?.url || lectureCoverImage(lecture) || undefined}
   ogType="article"
 >
   <ReadingChrome />
 
-  <section class="tight detail-hero">
+  <section class="tight detail-hero project-hero">
     <div class="container">
-      <a href={withBase('/guest-lectures/')} class="btn-line case-back reveal"><span class="arrow" aria-hidden="true">←</span> All Guest Lectures</a>
-      <div class="detail-hero-grid">
-        <div class="detail-hero-copy reveal">
-          <div class="feature-card-meta">
-            <span class="pill">Guest Lecture {String(index + 1).padStart(2, '0')}</span>
-            <span class="dot" aria-hidden="true"></span>
-            <span>{formatLectureDate(lecture.lecture_date)}</span>
-          </div>
-          <h1 class="detail-title">{lecture.topic}</h1>
-          {intro[0] && points.length > 0 && <p class="detail-lede" set:html={inlineFormat(intro[0])} />}
-          <dl class="fact-grid">
-            {facts.map((f) => (
-              <div class="fact"><dt>{f.label}</dt><dd>{f.value}</dd></div>
-            ))}
-          </dl>
-          {tags.length > 0 && <div class="tags detail-tags">{tags.map((t) => <span>{t}</span>)}</div>}
-        </div>
+      <nav class="breadcrumb reveal" aria-label="Breadcrumb">
+        <a href={withBase('/')}>Home</a><span aria-hidden="true">/</span>
+        <a href={withBase('/guest-lectures/')}>Guest Lectures</a><span aria-hidden="true">/</span>
+        <span aria-current="page">{lecture.topic}</span>
+      </nav>
 
-        <aside class="speaker-panel reveal reveal-delay-1" aria-label="Speakers">
-          <span class="brand-plate-label">{lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker'}</span>
-          <ul class="speaker-panel-list">
-            {lecture.speakers.map((s) => (
-              <li>
-                {s.photos[0] ? (
-                  <img src={s.photos[0]} alt="" class="speaker-panel-avatar" loading="lazy" />
-                ) : (
-                  <span class="speaker-panel-avatar" aria-hidden="true">{initials(s.name)}</span>
-                )}
-                <span class="speaker-plate-text">
-                  <span class="speaker-panel-name">{s.name}</span>
-                  {s.role && <span class="speaker-plate-role">{s.role}</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </aside>
+      <div class="project-hero-copy reveal">
+        <div class="feature-card-meta">
+          <span class="pill pill-solid">Guest Lecture {String(index + 1).padStart(2, '0')}</span>
+          {lecture.tags.slice(0, 3).map((t) => <span class="pill">{t}</span>)}
+          <span class="dot" aria-hidden="true"></span>
+          <span>{formatLectureDate(lecture.lecture_date)}</span>
+        </div>
+        <h1 class="detail-title">{lecture.topic}</h1>
+        {lecture.speakers[0] && (
+          <p class="project-tagline">
+            {speakerNames(lecture)}{lecture.speakers.length === 1 && lecture.speakers[0].role ? ` · ${lecture.speakers[0].role}` : ''}
+          </p>
+        )}
+        {lead && (
+          <div class="project-intro">
+            <p set:html={inlineFormat(lead)} />
+          </div>
+        )}
       </div>
     </div>
   </section>
 
-  {lecture.core_question && (
-    <section class="tight flush-top">
-      <div class="container">
-        <div class="core-question reveal">
-          <span class="core-conclusion-label">Session Core Question</span>
-          <p>{lecture.core_question}</p>
-        </div>
-      </div>
-    </section>
-  )}
-
-  {hasBios && (
-    <section class="tight">
-      <div class="container">
-        <div class="chapter-label reveal"><span>The Speakers</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
-        <h2 class="visually-hidden">The Speakers</h2>
-        <div class="lecture-speakers reveal">
-          {lecture.speakers.map((speaker) => (
-            <div class="lecture-speaker">
-              <div class="lecture-photos">
-                {speaker.photos.length > 0 ? (
-                  speaker.photos.map((src) => <img src={src} alt={`Photo of ${speaker.name}`} loading="lazy" />)
-                ) : (
-                  <span class="lecture-avatar" aria-hidden="true">{speaker.name.trim().charAt(0).toUpperCase()}</span>
-                )}
-              </div>
-              <h3 class="lecture-speaker-name">{speaker.name}</h3>
-              {speaker.role && <p class="lecture-role">{speaker.role}</p>}
-              {speaker.description && <p class="lecture-bio">{speaker.description}</p>}
-              {speaker.quote && <blockquote class="lecture-quote">{speaker.quote}</blockquote>}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  )}
+  <section class="tight flush-top">
+    <div class="container">
+      {hero && (
+        <figure class="project-media reveal">
+          <img src={hero.url} alt={hero.caption ?? `Opening image for ${lecture.topic}`} width="1600" height="900" />
+          <figcaption><span>{hero.caption ?? 'Figure 1.0 · From the session'}</span></figcaption>
+        </figure>
+      )}
+      <dl class="facts-strip reveal">
+        {facts.map((f) => (
+          <div><dt>{f.label}</dt><dd>{f.value}</dd></div>
+        ))}
+      </dl>
+    </div>
+  </section>
 
   <section class="tight">
-    <div class="container">
-      <div class="chapter-label reveal"><span>What I Learned</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
-        <h2 class="visually-hidden">What I Learned</h2>
-
-      {points.length > 0 ? (
-        <>
-          {intro.slice(1).map((p) => <p class="lecture-intro reveal" set:html={inlineFormat(p)} />)}
-          <ol class="takeaway-grid">
-            {points.map((point, i) => (
-              <li class={`takeaway reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
-                <span class="takeaway-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
-                {point.title && <h3 class="takeaway-title" set:html={inlineFormat(point.title)} />}
-                <p class="takeaway-body" set:html={inlineFormat(point.body)} />
-              </li>
+    <div class="container split">
+      <div class="split-aside reveal">
+        <nav class="contents-nav" aria-label="Contents">
+          <div class="contents-nav-head">
+            <span class="eyebrow">Contents</span>
+            <span class="contents-count">{contents.length} sections</span>
+          </div>
+          <ol>
+            {contents.map((item) => (
+              <li><a href={item.href}><span class="contents-num">{item.num}</span><span>{item.label}</span></a></li>
             ))}
           </ol>
-          {outro.length > 0 && (
-            <div class="core-takeaway reveal">
-              <span class="brand-plate-label">The Core Takeaway</span>
-              {outro.map((p) => <p set:html={inlineFormat(p)} />)}
+        </nav>
+      </div>
+
+      <div class="split-body">
+        {lecture.core_question && (
+          <div class="core-question reveal" id="core-question">
+            <span class="core-conclusion-label">Session Core Question</span>
+            <p>{lecture.core_question}</p>
+          </div>
+        )}
+
+        {hasSpeakers && (
+          <div class="lecture-spotlight-group" id="speaker">
+            <div class="chapter-label reveal"><span>{lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker'}</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+            <h2 class="visually-hidden">{lecture.speakers.length > 1 ? 'The Speakers' : 'The Speaker'}</h2>
+            {lecture.speakers.map((speaker) => (
+              <article class="lecture-spotlight reveal">
+                <div class="lecture-spotlight-photo">
+                  {speaker.photos[0] ? (
+                    <img src={speaker.photos[0]} alt={`Photo of ${speaker.name}`} loading="lazy" />
+                  ) : (
+                    <span class="lecture-avatar" aria-hidden="true">{initials(speaker.name)}</span>
+                  )}
+                </div>
+                <div class="lecture-spotlight-body">
+                  <h3 class="lecture-speaker-name">{speaker.name}</h3>
+                  {speaker.role && <p class="lecture-role">{speaker.role}</p>}
+                  {speaker.description && paragraphsWithLinks(speaker.description).map((html) => <p class="lecture-bio-para" set:html={html} />)}
+                  {speaker.quote && <blockquote class="lecture-quote">{speaker.quote}</blockquote>}
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+
+        <div class="lecture-learned-group" id="learned">
+          <div class="chapter-label reveal"><span>What I Learned</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+          <h2 class="visually-hidden">What I Learned</h2>
+
+          {points.length > 0 ? (
+            <>
+              {intro.slice(1).map((p) => <p class="lecture-intro reveal" set:html={inlineFormat(p)} />)}
+              <ol class="takeaway-grid takeaway-grid-single">
+                {points.map((point, i) => (
+                  <li class="takeaway reveal">
+                    <span class="takeaway-num" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span>
+                    {point.title && <h3 class="takeaway-title" set:html={inlineFormat(point.title)} />}
+                    <p class="takeaway-body" set:html={inlineFormat(point.body)} />
+                  </li>
+                ))}
+              </ol>
+            </>
+          ) : (
+            <div class="prose reveal">
+              <ul class="lecture-learned">
+                {plainLines.map((line) => <li set:html={inlineFormat(line)} />)}
+              </ul>
             </div>
           )}
-        </>
-      ) : (
-        <div class="prose reveal">
-          <ul class="lecture-learned">
-            {plainLines.map((line) => <li set:html={inlineFormat(line)} />)}
-          </ul>
         </div>
-      )}
+      </div>
+    </div>
+  </section>
 
-      {lecture.files.length > 0 && (
+  {company && (
+    <section class="tight" id="behind-the-brand">
+      <div class="container">
+        <div class="chapter-label reveal"><span>Behind the Brand</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+        <div class="company-panel reveal">
+          <div class="company-panel-head">
+            <div>
+              <span class="eyebrow">The Company</span>
+              <h2>{company.name}</h2>
+            </div>
+            {company.website && (
+              <a href={company.website} target="_blank" rel="noopener" class="link-arrow">
+                Visit {company.website.replace(/^https?:\/\/(www\.)?/, '').replace(/\/.*$/, '')} <span class="arrow" aria-hidden="true">↗</span>
+                <span class="visually-hidden"> (opens in a new tab)</span>
+              </a>
+            )}
+          </div>
+          {company.overview && (
+            <div class="company-overview">
+              {paragraphsWithLinks(company.overview).map((html) => <p set:html={html} />)}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )}
+
+  {company && <KeyFigures figures={company.figures} id="company-figures" />}
+
+  {company && company.milestones.length > 0 && (
+    <section class="tight flush-top" id="milestones">
+      <div class="container">
+        <div class="chapter-label reveal"><span>A Timeline of {company.name}</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+        <h2 class="visually-hidden">Milestones</h2>
+        <ol class="milestones">
+          {company.milestones.map((m, i) => (
+            <li class={`milestone reveal ${i % 2 === 1 ? 'reveal-delay-1' : ''}`}>
+              <span class="milestone-year">{m.year}</span>
+              <p>{m.text}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  )}
+
+  <Gallery images={moreGallery} eyebrow="From the Session" title="Moments From the Room" id="session-photos" />
+
+  {lecture.files.length > 0 && (
+    <section class="tight flush-top" id="resources">
+      <div class="container">
+        <div class="chapter-label reveal"><span>Resources</span><span class="chapter-label-rule" aria-hidden="true"></span></div>
+        <h2 class="visually-hidden">Resources</h2>
         <div class="resource-list reveal">
           {lecture.files.map((file) => (
             <a href={file.url} target="_blank" rel="noopener" class="resource-card">
@@ -184,11 +266,17 @@ const facts = [
             </a>
           ))}
         </div>
-      )}
-    </div>
-  </section>
+      </div>
+    </section>
+  )}
 
-  <Gallery images={lecture.gallery} eyebrow="From the Session" title="Moments From the Room" id="session-photos" />
+  <CoreConclusion
+    text={outro.length > 0 ? outro.join('\n\n') : null}
+    label="The Core Takeaway"
+    backHref="/guest-lectures/"
+    backLabel="Back to All Guest Lectures"
+    id="core-takeaway"
+  />
 
   <AuthorCard role="Lecture Notes" />
 
